@@ -56,7 +56,6 @@ impl Block {
         let mut validators = Vec::new();
 
         for tx in block.block.data.txs.unwrap_or(Vec::new()) {
-
             let bytes = base64::decode(&tx)?;
 
             let hasher = sha2::Sha256::digest(&bytes);

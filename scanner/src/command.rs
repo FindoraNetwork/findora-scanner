@@ -1,6 +1,7 @@
 use clap::Parser;
+use tokio_postgres::NoTls;
 
-use crate::{block, Result};
+use crate::{block, db, Result};
 
 /// Scanner tool for findora.
 #[derive(Parser, Debug)]
@@ -17,6 +18,12 @@ pub struct Args {
     /// Target block height.
     #[clap(short, long)]
     height: i64,
+
+    /// Postgres.
+    ///
+    /// ie. "host=localhost user=postgres"
+    #[clap(short, long)]
+    postgres: String,
 }
 
 impl Args {
@@ -28,9 +35,20 @@ impl Args {
             begin = target - 1;
         }
 
+        let (client, connection) = tokio_postgres::connect(&self.postgres, NoTls).await?;
+
+        // The connection object performs the actual communication with the database,
+        // so spawn it off to run on its own.
+        tokio::spawn(async move {
+            if let Err(e) = connection.await {
+                eprintln!("connection error: {}", e);
+            }
+        });
+
         for idx in begin..target {
             println!("Got header {}", idx);
-            let _r = tokio::spawn(block::Block::load_height(self.server.clone(), idx)).await??;
+            let r = block::Block::load_height(self.server.clone(), idx).await?;
+            db::save(r, &client).await?;
         }
 
         Ok(())

@@ -6,7 +6,15 @@ pub enum Error {
     Base64Error(base64::DecodeError),
     SerdeJsonError(serde_json::Error),
     JoinError(tokio::task::JoinError),
+    DBError(tokio_postgres::Error),
+    TryIntoError(core::num::TryFromIntError),
     EvmTxParseError,
+}
+
+impl From<core::num::TryFromIntError> for Error {
+    fn from(e: core::num::TryFromIntError) -> Self {
+        Error::TryIntoError(e)
+    }
 }
 
 impl From<reqwest::Error> for Error {
@@ -42,6 +50,12 @@ impl From<serde_json::Error> for Error {
 impl From<tokio::task::JoinError> for Error {
     fn from(e: tokio::task::JoinError) -> Self {
         Error::JoinError(e)
+    }
+}
+
+impl From<tokio_postgres::Error> for Error {
+    fn from(e: tokio_postgres::Error) -> Self {
+        Error::DBError(e)
     }
 }
 

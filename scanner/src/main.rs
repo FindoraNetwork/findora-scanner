@@ -6,6 +6,7 @@ use clap::StructOpt;
 pub use error::*;
 
 pub mod command;
+pub mod db;
 
 #[tokio::main]
 async fn main() {
