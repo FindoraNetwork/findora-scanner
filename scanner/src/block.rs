@@ -87,9 +87,12 @@ impl Block {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
 
     #[tokio::test]
-    async fn test_parse() -> Result<(), Box<dyn std::error::Error>> {
+    async fn test_parse() -> Result<()> {
+        let r = Block::load_height("https://prod-mainnet.prod.findora.org:26657", 1550668).await?;
+        println!("{:#?}", r);
         Ok(())
     }
 }
