@@ -74,7 +74,8 @@ mod tests {
         let _ = Transaction::load_height(
             "https://prod-mainnet.prod.findora.org:26657",
             "c19fc22beb61030607367b42d4898a26ede1e6aa6b400330804c95b241f29bd0",
-        );
+        )
+        .await;
         Ok(())
     }
 }

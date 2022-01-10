@@ -2,8 +2,13 @@ pub mod block;
 pub mod utils;
 
 mod error;
+use clap::StructOpt;
 pub use error::*;
 
-fn main() {
-    println!("Hello, world!");
+pub mod command;
+
+#[tokio::main]
+async fn main() {
+    let args = command::Args::parse();
+    args.execute().await.unwrap();
 }

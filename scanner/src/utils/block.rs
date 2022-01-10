@@ -31,7 +31,7 @@ pub struct LastCommit {
 
 #[derive(Deserialize, Debug)]
 pub struct Data {
-    pub txs: Vec<String>,
+    pub txs: Option<Vec<String>>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -48,7 +48,7 @@ pub struct BlockRPC {
 }
 
 impl BlockRPC {
-    pub async fn load_height(url: &str, height: i64) -> Result<Self> {
+    pub async fn load_height(url: String, height: i64) -> Result<Self> {
         let url = format!("{}/block?height={}", url, height);
 
         let r = reqwest::get(url)
@@ -65,7 +65,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_parse() -> Result<()> {
-        let _ = BlockRPC::load_height("https://prod-mainnet.prod.findora.org:26657", 1550668);
+        let _ = BlockRPC::load_height(
+            String::from("https://prod-mainnet.prod.findora.org:26657"),
+            1550667,
+        )
+        .await;
         Ok(())
     }
 }

@@ -24,7 +24,7 @@ pub struct ValidatorsRPC {
 }
 
 impl ValidatorsRPC {
-    pub async fn load_height(url: &str, height: i64) -> Result<Self> {
+    pub async fn load_height(url: String, height: i64) -> Result<Self> {
         let url = format!("{}/validators?height={}", url, height);
 
         let r = reqwest::get(url)
@@ -41,7 +41,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_parse() -> Result<()> {
-        let _ = ValidatorsRPC::load_height("https://prod-mainnet.prod.findora.org:26657", 1550668);
+        let _ = ValidatorsRPC::load_height(
+            String::from("https://prod-mainnet.prod.findora.org:26657"),
+            1550667,
+        )
+        .await;
         Ok(())
     }
 }

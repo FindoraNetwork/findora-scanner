@@ -35,10 +35,15 @@ pub struct Block {
 }
 
 impl Block {
-    pub async fn load_height(url: &'static str, height: i64) -> Result<Self> {
-        let block = tokio::spawn(utils::block::BlockRPC::load_height(url, height)).await??;
-        let validator_info =
-            tokio::spawn(utils::validator::ValidatorsRPC::load_height(url, height)).await??;
+    pub async fn load_height(url: String, height: i64) -> Result<Self> {
+        let block =
+            tokio::spawn(utils::block::BlockRPC::load_height(url.clone(), height)).await??;
+
+        let validator_info = tokio::spawn(utils::validator::ValidatorsRPC::load_height(
+            url.clone(),
+            height,
+        ))
+        .await??;
 
         let block_id = block.block_id.hash;
         let height = i64::from_str_radix(&block.block.header.height, 10)?;
@@ -50,12 +55,13 @@ impl Block {
         let mut evm_txs = Vec::new();
         let mut validators = Vec::new();
 
-        for tx in block.block.data.txs {
+        for tx in block.block.data.txs.unwrap_or(Vec::new()) {
+
             let bytes = base64::decode(&tx)?;
 
             let hasher = sha2::Sha256::digest(&bytes);
             let txid = hex::encode(hasher);
-            let tx = utils::tx::Transaction::load_height(url, &txid).await?;
+            let tx = utils::tx::Transaction::load_height(&url, &txid).await?;
 
             match utils::tx::try_tx_catalog(&bytes) {
                 utils::tx::TxCatalog::EvmTx => {
@@ -138,7 +144,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_parse() -> Result<()> {
-        let _ = Block::load_height("https://prod-mainnet.prod.findora.org:26657", 1550668).await?;
+        let _ = Block::load_height(
+            String::from("https://prod-mainnet.prod.findora.org:26657"),
+            1550667,
+        )
+        .await?;
         Ok(())
     }
 }
