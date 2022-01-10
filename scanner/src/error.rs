@@ -4,6 +4,8 @@ pub enum Error {
     ChronoError(chrono::ParseError),
     ParseIntError(std::num::ParseIntError),
     Base64Error(base64::DecodeError),
+    SerdeJsonError(serde_json::Error),
+    EvmTxParseError,
 }
 
 impl From<reqwest::Error> for Error {
@@ -27,6 +29,12 @@ impl From<std::num::ParseIntError> for Error {
 impl From<base64::DecodeError> for Error {
     fn from(e: base64::DecodeError) -> Self {
         Error::Base64Error(e)
+    }
+}
+
+impl From<serde_json::Error> for Error {
+    fn from(e: serde_json::Error) -> Self {
+        Error::SerdeJsonError(e)
     }
 }
 

@@ -20,6 +20,7 @@ pub struct Block {
     pub app_hash: String,
     pub proposer: String,
     pub txs: Vec<serde_json::Value>,
+    pub evm_txs: Vec<serde_json::Value>,
     pub validators: Vec<Validator>,
 }
 
@@ -35,10 +36,22 @@ impl Block {
         let app_hash = block.block.header.app_hash;
         let proposer = block.block.header.proposer_address;
         let mut txs = Vec::new();
+        let mut evm_txs = Vec::new();
         let mut validators = Vec::new();
 
         for tx in block.block.data.txs {
             let bytes = base64::decode(&tx)?;
+            match utils::tx::try_tx_catalog(&bytes) {
+                utils::tx::TxCatalog::EvmTx => {
+                    let t = serde_json::from_slice(utils::tx::unwrap(&bytes)?)?;
+                    evm_txs.push(t);
+                }
+                utils::tx::TxCatalog::FindoraTx => {
+                    let t = serde_json::from_slice(&bytes)?;
+                    txs.push(t);
+                }
+                utils::tx::TxCatalog::Unknown => {}
+            }
         }
 
         for vv in validator_info.validators {
@@ -67,7 +80,12 @@ impl Block {
             };
 
             let validator = Validator {
-                address, power, pub_key, priority, signature, timestamp
+                address,
+                power,
+                pub_key,
+                priority,
+                signature,
+                timestamp,
             };
 
             validators.push(validator);
@@ -80,6 +98,7 @@ impl Block {
             app_hash,
             proposer,
             txs,
+            evm_txs,
             validators,
         })
     }
