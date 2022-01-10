@@ -5,6 +5,7 @@ pub enum Error {
     ParseIntError(std::num::ParseIntError),
     Base64Error(base64::DecodeError),
     SerdeJsonError(serde_json::Error),
+    JoinError(tokio::task::JoinError),
     EvmTxParseError,
 }
 
@@ -35,6 +36,12 @@ impl From<base64::DecodeError> for Error {
 impl From<serde_json::Error> for Error {
     fn from(e: serde_json::Error) -> Self {
         Error::SerdeJsonError(e)
+    }
+}
+
+impl From<tokio::task::JoinError> for Error {
+    fn from(e: tokio::task::JoinError) -> Self {
+        Error::JoinError(e)
     }
 }
 

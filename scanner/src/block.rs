@@ -1,4 +1,5 @@
 use chrono::NaiveDateTime;
+use sha2::Digest;
 
 use crate::{utils, Result};
 
@@ -13,21 +14,31 @@ pub struct Validator {
 }
 
 #[derive(Debug)]
+pub struct Transaction {
+    pub txid: String,
+    pub value: serde_json::Value,
+    pub code: i64,
+    pub log: String,
+    pub events: Vec<serde_json::Value>,
+}
+
+#[derive(Debug)]
 pub struct Block {
     pub block_id: String,
     pub height: i64,
     pub timestamp: NaiveDateTime,
     pub app_hash: String,
     pub proposer: String,
-    pub txs: Vec<serde_json::Value>,
-    pub evm_txs: Vec<serde_json::Value>,
+    pub txs: Vec<Transaction>,
+    pub evm_txs: Vec<Transaction>,
     pub validators: Vec<Validator>,
 }
 
 impl Block {
-    pub async fn load_height(url: &str, height: i64) -> Result<Self> {
-        let block = utils::block::BlockRPC::load_height(url, height).await?;
-        let validator_info = utils::validator::ValidatorsRPC::load_height(url, height).await?;
+    pub async fn load_height(url: &'static str, height: i64) -> Result<Self> {
+        let block = tokio::spawn(utils::block::BlockRPC::load_height(url, height)).await??;
+        let validator_info =
+            tokio::spawn(utils::validator::ValidatorsRPC::load_height(url, height)).await??;
 
         let block_id = block.block_id.hash;
         let height = i64::from_str_radix(&block.block.header.height, 10)?;
@@ -41,14 +52,31 @@ impl Block {
 
         for tx in block.block.data.txs {
             let bytes = base64::decode(&tx)?;
+
+            let hasher = sha2::Sha256::digest(&bytes);
+            let txid = hex::encode(hasher);
+            let tx = utils::tx::Transaction::load_height(url, &txid).await?;
+
             match utils::tx::try_tx_catalog(&bytes) {
                 utils::tx::TxCatalog::EvmTx => {
-                    let t = serde_json::from_slice(utils::tx::unwrap(&bytes)?)?;
-                    evm_txs.push(t);
+                    let value = serde_json::from_slice(utils::tx::unwrap(&bytes)?)?;
+                    evm_txs.push(Transaction {
+                        txid,
+                        value,
+                        code: tx.tx_result.code,
+                        log: tx.tx_result.log,
+                        events: tx.tx_result.events,
+                    });
                 }
                 utils::tx::TxCatalog::FindoraTx => {
-                    let t = serde_json::from_slice(&bytes)?;
-                    txs.push(t);
+                    let value = serde_json::from_slice(&bytes)?;
+                    txs.push(Transaction {
+                        txid,
+                        value,
+                        code: tx.tx_result.code,
+                        log: tx.tx_result.log,
+                        events: tx.tx_result.events,
+                    });
                 }
                 utils::tx::TxCatalog::Unknown => {}
             }
@@ -110,8 +138,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_parse() -> Result<()> {
-        let r = Block::load_height("https://prod-mainnet.prod.findora.org:26657", 1550668).await?;
-        println!("{:#?}", r);
+        let _ = Block::load_height("https://prod-mainnet.prod.findora.org:26657", 1550668).await?;
         Ok(())
     }
 }

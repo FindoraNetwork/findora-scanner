@@ -1,4 +1,32 @@
-use crate::{Result, Error};
+use serde::Deserialize;
+
+use crate::{Error, Result};
+
+use super::RPCResponse;
+
+#[derive(Deserialize, Debug)]
+pub struct TxResult {
+    pub code: i64,
+    pub log: String,
+    pub events: Vec<serde_json::Value>,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct Transaction {
+    pub tx_result: TxResult,
+}
+
+impl Transaction {
+    pub async fn load_height(url: &str, hash: &str) -> Result<Self> {
+        let url = format!("{}/tx?hash=0x{}", url, hash);
+
+        let r = reqwest::get(url)
+            .await?
+            .json::<RPCResponse<Transaction>>()
+            .await?;
+        Ok(r.result)
+    }
+}
 
 pub const EVM_TX_TAG: [u8; 4] = [0x65, 0x76, 0x6d, 0x3a];
 
@@ -37,3 +65,16 @@ pub fn try_tx_catalog(tx: &[u8]) -> TxCatalog {
     TxCatalog::FindoraTx
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_parse() -> Result<()> {
+        let _ = Transaction::load_height(
+            "https://prod-mainnet.prod.findora.org:26657",
+            "c19fc22beb61030607367b42d4898a26ede1e6aa6b400330804c95b241f29bd0",
+        );
+        Ok(())
+    }
+}
