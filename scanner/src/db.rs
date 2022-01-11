@@ -1,6 +1,7 @@
 use tokio_postgres::Client;
 
-use crate::{block::Block, Result};
+use crate::Result;
+use module::db::block::Block;
 
 pub async fn save(block: Block, client: &Client) -> Result<()> {
     let _ = client
