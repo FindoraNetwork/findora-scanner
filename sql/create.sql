@@ -11,7 +11,7 @@ CREATE TABLE transaction(
     txid VARCHAR(255) NOT NULL,
     ty INT NOT NULL,
     value JSONB NOT NULL,
-    code INT NOT NULL,
+    code BIGINT NOT NULL,
     log TEXT,
     PRIMARY KEY(txid)
 );

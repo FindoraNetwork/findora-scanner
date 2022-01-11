@@ -37,8 +37,8 @@ pub async fn save(block: Block, client: &Client) -> Result<()> {
     for v in block.validators {
         let _ = client
             .execute(
-                "INSERT INTO validators VALUES ($1, $2, $3))",
-                &[&v.address, &v.pub_key.r#type, &v.pub_key.value],
+                "INSERT INTO validators VALUES ($1, 0, $2)",
+                &[&v.address, &v.pub_key.value],
             )
             .await?;
 
