@@ -2,17 +2,17 @@ use crate::{Error, Result};
 
 use super::RPCResponse;
 
-use module::rpc::tx::Transaction as module_tx;
+use module::rpc::tx::Transaction as ModuleTx;
 
 pub struct Transaction {}
 
 impl Transaction {
-    pub async fn load_height(url: &str, hash: &str) -> Result<module_tx> {
+    pub async fn load_height(url: &str, hash: &str) -> Result<ModuleTx> {
         let url = format!("{}/tx?hash=0x{}", url, hash);
 
         let r = reqwest::get(url)
             .await?
-            .json::<RPCResponse<module_tx>>()
+            .json::<RPCResponse<ModuleTx>>()
             .await?;
         Ok(r.result)
     }

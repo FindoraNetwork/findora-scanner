@@ -2,17 +2,17 @@ use crate::Result;
 
 use super::RPCResponse;
 
-use module::rpc::block::BlockRPC as module_block_rpc;
+use module::rpc::block::BlockRPC as ModuleBlockRPC;
 
 pub struct BlockRPC {}
 
 impl BlockRPC {
-    pub async fn load_height(url: String, height: i64) -> Result<module_block_rpc> {
+    pub async fn load_height(url: String, height: i64) -> Result<ModuleBlockRPC> {
         let url = format!("{}/block?height={}", url, height);
 
         let r = reqwest::get(url)
             .await?
-            .json::<RPCResponse<module_block_rpc>>()
+            .json::<RPCResponse<ModuleBlockRPC>>()
             .await?;
         Ok(r.result)
     }

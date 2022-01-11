@@ -2,17 +2,17 @@ use crate::Result;
 
 use super::RPCResponse;
 
-use module::rpc::validator::ValidatorsRPC as module_validators_rpc;
+use module::rpc::validator::ValidatorsRPC as ModuleValidatorsRPC;
 
 pub struct ValidatorsRPC {}
 
 impl ValidatorsRPC {
-    pub async fn load_height(url: String, height: i64) -> Result<module_validators_rpc> {
+    pub async fn load_height(url: String, height: i64) -> Result<ModuleValidatorsRPC> {
         let url = format!("{}/validators?height={}", url, height);
 
         let r = reqwest::get(url)
             .await?
-            .json::<RPCResponse<module_validators_rpc>>()
+            .json::<RPCResponse<ModuleValidatorsRPC>>()
             .await?;
         Ok(r.result)
     }

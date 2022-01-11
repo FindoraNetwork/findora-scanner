@@ -1,7 +1,7 @@
 use chrono::NaiveDateTime;
 use sha2::Digest;
 
-use module::db::block::Block as module_block;
+use module::db::block::Block as ModuleBlock;
 use module::db::tx::Transaction;
 use module::db::validator::Validator;
 
@@ -11,7 +11,7 @@ use crate::{utils, Result};
 pub struct Block {}
 
 impl Block {
-    pub async fn load_height(url: String, height: i64) -> Result<module_block> {
+    pub async fn load_height(url: String, height: i64) -> Result<ModuleBlock> {
         let block =
             tokio::spawn(utils::block::BlockRPC::load_height(url.clone(), height)).await??;
 
@@ -100,7 +100,7 @@ impl Block {
             validators.push(validator);
         }
 
-        Ok(module_block {
+        Ok(ModuleBlock {
             block_id,
             height,
             timestamp,
