@@ -1,41 +1,17 @@
 use chrono::NaiveDateTime;
 use sha2::Digest;
 
+use module::db::block::Block as ModuleBlock;
+use module::db::tx::Transaction;
+use module::db::validator::Validator;
+
 use crate::{utils, Result};
 
 #[derive(Debug)]
-pub struct Validator {
-    pub address: String,
-    pub power: u64,
-    pub pub_key: utils::validator::PubKey,
-    pub priority: i64,
-    pub signature: Option<String>,
-    pub timestamp: Option<NaiveDateTime>,
-}
-
-#[derive(Debug)]
-pub struct Transaction {
-    pub txid: String,
-    pub value: serde_json::Value,
-    pub code: i64,
-    pub log: String,
-    pub events: Vec<serde_json::Value>,
-}
-
-#[derive(Debug)]
-pub struct Block {
-    pub block_id: String,
-    pub height: i64,
-    pub timestamp: NaiveDateTime,
-    pub app_hash: String,
-    pub proposer: String,
-    pub txs: Vec<Transaction>,
-    pub evm_txs: Vec<Transaction>,
-    pub validators: Vec<Validator>,
-}
+pub struct Block {}
 
 impl Block {
-    pub async fn load_height(url: String, height: i64) -> Result<Self> {
+    pub async fn load_height(url: String, height: i64) -> Result<ModuleBlock> {
         let block =
             tokio::spawn(utils::block::BlockRPC::load_height(url.clone(), height)).await??;
 
@@ -124,7 +100,7 @@ impl Block {
             validators.push(validator);
         }
 
-        Ok(Self {
+        Ok(ModuleBlock {
             block_id,
             height,
             timestamp,

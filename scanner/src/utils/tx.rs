@@ -1,28 +1,18 @@
-use serde::Deserialize;
-
 use crate::{Error, Result};
 
 use super::RPCResponse;
 
-#[derive(Deserialize, Debug)]
-pub struct TxResult {
-    pub code: i64,
-    pub log: String,
-    pub events: Vec<serde_json::Value>,
-}
+use module::rpc::tx::Transaction as ModuleTx;
 
-#[derive(Deserialize, Debug)]
-pub struct Transaction {
-    pub tx_result: TxResult,
-}
+pub struct Transaction {}
 
 impl Transaction {
-    pub async fn load_height(url: &str, hash: &str) -> Result<Self> {
+    pub async fn load_height(url: &str, hash: &str) -> Result<ModuleTx> {
         let url = format!("{}/tx?hash=0x{}", url, hash);
 
         let r = reqwest::get(url)
             .await?
-            .json::<RPCResponse<Transaction>>()
+            .json::<RPCResponse<ModuleTx>>()
             .await?;
         Ok(r.result)
     }

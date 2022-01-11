@@ -1,35 +1,18 @@
-use serde::Deserialize;
-
 use crate::Result;
 
 use super::RPCResponse;
 
-#[derive(Deserialize, Debug)]
-pub struct PubKey {
-    pub r#type: String,
-    pub value: String,
-}
+use module::rpc::validator::ValidatorsRPC as ModuleValidatorsRPC;
 
-#[derive(Deserialize, Debug)]
-pub struct Validator {
-    pub address: String,
-    pub pub_key: PubKey,
-    pub voting_power: String,
-    pub proposer_priority: String,
-}
-
-#[derive(Deserialize, Debug)]
-pub struct ValidatorsRPC {
-    pub validators: Vec<Validator>,
-}
+pub struct ValidatorsRPC {}
 
 impl ValidatorsRPC {
-    pub async fn load_height(url: String, height: i64) -> Result<Self> {
+    pub async fn load_height(url: String, height: i64) -> Result<ModuleValidatorsRPC> {
         let url = format!("{}/validators?height={}", url, height);
 
         let r = reqwest::get(url)
             .await?
-            .json::<RPCResponse<ValidatorsRPC>>()
+            .json::<RPCResponse<ModuleValidatorsRPC>>()
             .await?;
         Ok(r.result)
     }

@@ -1,8 +1,9 @@
 use tokio_postgres::Client;
 
-use crate::{block::Block, Result};
+use crate::Result;
+use module::db::block::Block as ModuleBlock;
 
-pub async fn save(block: Block, client: &Client) -> Result<()> {
+pub async fn save(block: ModuleBlock, client: &Client) -> Result<()> {
     let _ = client
         .execute(
             "INSERT INTO block VALUES ($1, $2, $3, $4, $5)",
