@@ -1,2 +1,2 @@
-mod tx;
-pub use tx::tx;
+pub mod block;
+pub mod tx;
