@@ -22,7 +22,7 @@ impl Block {
         .await??;
 
         let block_id = block.block_id.hash;
-        let height = i64::from_str_radix(&block.block.header.height, 10)?;
+        let height = block.block.header.height.parse::<i64>()?;
         let timestamp =
             NaiveDateTime::parse_from_str(&block.block.header.time, "%Y-%m-%dT%H:%M:%S%.fZ")?;
         let app_hash = block.block.header.app_hash;
@@ -31,7 +31,7 @@ impl Block {
         let mut evm_txs = Vec::new();
         let mut validators = Vec::new();
 
-        for tx in block.block.data.txs.unwrap_or(Vec::new()) {
+        for tx in block.block.data.txs.unwrap_or_default() {
             let bytes = base64::decode(&tx)?;
 
             let hasher = sha2::Sha256::digest(&bytes);
@@ -65,9 +65,9 @@ impl Block {
 
         for vv in validator_info.validators {
             let address = vv.address;
-            let power = u64::from_str_radix(&vv.voting_power, 10)?;
+            let power = vv.voting_power.parse::<u64>()?;
             let pub_key = vv.pub_key;
-            let priority = i64::from_str_radix(&vv.proposer_priority, 10)?;
+            let priority = vv.proposer_priority.parse::<i64>()?;
             let sign_info = block
                 .block
                 .last_commit
