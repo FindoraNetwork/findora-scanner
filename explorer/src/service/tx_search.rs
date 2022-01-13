@@ -19,21 +19,26 @@ pub struct TxSearchRes {
     pub txs: Vec<TxDetail>,
 }
 
-pub async fn tx_search(api: &Api, query: Path<String>) -> Result<TxSearchResponse> {
+pub async fn tx_search(api: &Api, start: Path<i64>, end: Path<i64>) -> Result<TxSearchResponse> {
     let mut conn = api.storage.lock().await.acquire().await?;
 
-    let str = format!("select * from tx_detail where {}", query.0);
+    let str = format!(
+        "select * from tx_detail where timestamp >= {} AND timestamp <= {}",
+        start.0, end.0
+    );
     let row = sqlx::query(str.as_str()).fetch_all(&mut conn).await?;
 
     let mut txs: Vec<TxDetail> = vec![];
     for v in row.iter() {
         let hash: String = v.try_get("hash")?;
+        let timestamp = v.try_get("timestamp")?;
         let height: i64 = v.try_get("height")?;
         let index: i64 = v.try_get("index")?;
         let tx_result: Value = v.try_get("tx_result")?;
         let tx: String = v.try_get("tx")?;
         let tx_detail = TxDetail {
             hash,
+            timestamp,
             height,
             index,
             tx_result,

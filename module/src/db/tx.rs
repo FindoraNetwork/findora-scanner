@@ -14,6 +14,7 @@ pub struct Transaction {
 #[derive(Serialize, Deserialize, Debug, Default, Object)]
 pub struct TxDetail {
     pub hash: String,
+    pub timestamp: i64,
     pub height: i64,
     pub index: i64,
     pub tx_result: Value,

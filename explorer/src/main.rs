@@ -32,13 +32,9 @@ impl Api {
             .map_err(utils::handle_fetch_one_err)
     }
 
-    #[oai(
-        path = "/tx_search/:query",
-        method = "get",
-        tag = "ApiTags::Transaction"
-    )]
-    async fn tx_search(&self, query: Path<String>) -> poem::Result<TxSearchResponse> {
-        service::tx_search::tx_search(self, query)
+    #[oai(path = "/tx_search", method = "get", tag = "ApiTags::Transaction")]
+    async fn tx_search(&self, start: Path<i64>, end: Path<i64>) -> poem::Result<TxSearchResponse> {
+        service::tx_search::tx_search(self, start, end)
             .await
             .map_err(utils::handle_fetch_one_err)
     }

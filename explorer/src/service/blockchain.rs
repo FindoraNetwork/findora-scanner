@@ -48,7 +48,7 @@ pub async fn blockchain(
     }
 
     let res = BlockChainRes {
-        last_height: 0,
+        last_height: 0, // todo: get the latest height.
         block_metas,
     };
 
