@@ -1,9 +1,9 @@
 use crate::Api;
 use anyhow::Result;
-use poem_openapi::{param::Path, payload::Json, ApiResponse};
-use sqlx::Row;
-use sqlx::types::chrono::NaiveDateTime;
 use module::display::block::DisplayBlock;
+use poem_openapi::{param::Path, payload::Json, ApiResponse};
+use sqlx::types::chrono::NaiveDateTime;
+use sqlx::Row;
 
 #[derive(ApiResponse)]
 pub enum GetBlockResponse {
@@ -26,7 +26,7 @@ pub async fn get_block(api: &Api, height: Path<i64>) -> Result<GetBlockResponse>
     let block = DisplayBlock {
         block_id,
         height,
-        time:time.timestamp(),
+        time: time.timestamp(),
         app_hash,
         proposer,
     };

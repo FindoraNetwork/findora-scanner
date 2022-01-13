@@ -4,8 +4,8 @@ use module::db::block_meta::BlockMeta;
 use poem_openapi::Object;
 use poem_openapi::{param::Path, payload::Json, ApiResponse};
 use serde::{Deserialize, Serialize};
-use sqlx::Row;
 use serde_json::Value;
+use sqlx::Row;
 
 #[derive(ApiResponse)]
 pub enum BlockChainResponse {
@@ -19,10 +19,17 @@ pub struct BlockChainRes {
     pub block_metas: Vec<BlockMeta>,
 }
 
-pub async fn blockchain(api: &Api, min_height: Path<i64>, max_height: Path<i64>) -> Result<BlockChainResponse> {
+pub async fn blockchain(
+    api: &Api,
+    min_height: Path<i64>,
+    max_height: Path<i64>,
+) -> Result<BlockChainResponse> {
     let mut conn = api.storage.lock().await.acquire().await?;
 
-    let str = format!("select * from block_meta where height >= {} AND height <= {}", min_height.0, max_height.0);
+    let str = format!(
+        "select * from block_meta where height >= {} AND height <= {}",
+        min_height.0, max_height.0
+    );
     let row = sqlx::query(str.as_str()).fetch_all(&mut conn).await?;
 
     let mut block_metas: Vec<BlockMeta> = vec![];

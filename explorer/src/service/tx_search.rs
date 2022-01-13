@@ -1,12 +1,11 @@
 use crate::Api;
 use anyhow::Result;
-use module::db::tx::{TxDetail};
+use module::db::tx::TxDetail;
+use poem_openapi::Object;
 use poem_openapi::{param::Path, payload::Json, ApiResponse};
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sqlx::Row;
-use serde::{Deserialize, Serialize};
-use poem_openapi::Object;
-
 
 #[derive(ApiResponse)]
 pub enum TxSearchResponse {
@@ -43,7 +42,7 @@ pub async fn tx_search(api: &Api, query: Path<String>) -> Result<TxSearchRespons
         txs.push(tx_detail);
     }
 
-    let res = TxSearchRes{
+    let res = TxSearchRes {
         total_count: row.len() as i64,
         txs,
     };

@@ -1,7 +1,7 @@
+use anyhow::Result;
+use serde::{Deserialize, Serialize};
 use std::fs::File;
 use std::io::Read;
-use serde::{Deserialize, Serialize};
-use anyhow::Result;
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Config {
@@ -20,7 +20,7 @@ pub struct PostgresConfig {
     pub account: String,
     pub password: String,
     pub addr: String,
-    pub database: String
+    pub database: String,
 }
 
 impl Config {

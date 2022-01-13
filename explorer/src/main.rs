@@ -2,15 +2,15 @@ mod service;
 mod utils;
 
 use crate::service::block::GetBlockResponse;
+use crate::service::blockchain::BlockChainResponse;
 use crate::service::tx::GetTxResponse;
+use crate::service::tx_search::TxSearchResponse;
 use anyhow::Result;
 use poem::{listener::TcpListener, Route, Server};
 use poem_openapi::param::Path;
 use poem_openapi::{OpenApi, OpenApiService, Tags};
 use sqlx::{Pool, Postgres};
 use tokio::sync::Mutex;
-use crate::service::blockchain::BlockChainResponse;
-use crate::service::tx_search::TxSearchResponse;
 
 pub struct Api {
     storage: Mutex<Pool<Postgres>>,
@@ -32,7 +32,11 @@ impl Api {
             .map_err(utils::handle_fetch_one_err)
     }
 
-    #[oai(path = "/tx_search/:query", method = "get", tag = "ApiTags::Transaction")]
+    #[oai(
+        path = "/tx_search/:query",
+        method = "get",
+        tag = "ApiTags::Transaction"
+    )]
     async fn tx_search(&self, query: Path<String>) -> poem::Result<TxSearchResponse> {
         service::tx_search::tx_search(self, query)
             .await
@@ -40,7 +44,11 @@ impl Api {
     }
 
     #[oai(path = "/blockchain", method = "get", tag = "ApiTags::Block")]
-    async fn blockchain(&self, min_height: Path<i64>, max_height: Path<i64>) -> poem::Result<BlockChainResponse> {
+    async fn blockchain(
+        &self,
+        min_height: Path<i64>,
+        max_height: Path<i64>,
+    ) -> poem::Result<BlockChainResponse> {
         service::blockchain::blockchain(self, min_height, max_height)
             .await
             .map_err(utils::handle_fetch_one_err)

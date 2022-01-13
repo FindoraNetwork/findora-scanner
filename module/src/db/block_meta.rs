@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
 use poem_openapi::Object;
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 #[derive(Serialize, Deserialize, Debug, Object)]
@@ -44,5 +44,3 @@ pub struct Parts {
     pub total: i64,
     pub hash: String,
 }
-
-

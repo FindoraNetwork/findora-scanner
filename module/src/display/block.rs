@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
 use poem_openapi::Object;
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Object)]
 pub struct DisplayBlock {
