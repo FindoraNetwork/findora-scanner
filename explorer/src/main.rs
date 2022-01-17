@@ -1,10 +1,8 @@
 mod service;
 mod utils;
 
-use crate::service::block::GetBlockResponse;
-use crate::service::blockchain::BlockChainResponse;
-use crate::service::tx::GetTxResponse;
-use crate::service::tx_search::TxSearchResponse;
+use crate::service::block::{GetBlockResponse, GetBlocksResponse};
+use crate::service::tx::{GetTxResponse, GetTxsResponse};
 use anyhow::Result;
 use poem::{listener::TcpListener, Route, Server};
 use poem_openapi::param::Path;
@@ -25,6 +23,33 @@ impl Api {
             .map_err(utils::handle_fetch_one_err)
     }
 
+    #[oai(path = "/txs", method = "get", tag = "ApiTags::Transaction")]
+    async fn get_txs(
+        &self,
+        begin_time: Path<i64>,
+        end_time: Path<i64>,
+        block: Path<String>,
+        typ: Path<i64>,
+        from_address: Path<String>,
+        to_address: Path<String>,
+        page: Path<i64>,
+        page_size: Path<i64>,
+    ) -> poem::Result<GetTxsResponse> {
+        service::tx::get_txs(
+            self,
+            begin_time,
+            end_time,
+            block,
+            typ,
+            from_address,
+            to_address,
+            page,
+            page_size,
+        )
+        .await
+        .map_err(utils::handle_fetch_one_err)
+    }
+
     #[oai(path = "/block/:height", method = "get", tag = "ApiTags::Block")]
     async fn get_block(&self, height: Path<i64>) -> poem::Result<GetBlockResponse> {
         service::block::get_block(self, height)
@@ -32,20 +57,22 @@ impl Api {
             .map_err(utils::handle_fetch_one_err)
     }
 
-    #[oai(path = "/tx_search", method = "get", tag = "ApiTags::Transaction")]
-    async fn tx_search(&self, start: Path<i64>, end: Path<i64>) -> poem::Result<TxSearchResponse> {
-        service::tx_search::tx_search(self, start, end)
+    #[oai(path = "/block/:hash", method = "get", tag = "ApiTags::Block")]
+    async fn get_block_by_hash(&self, hash: Path<String>) -> poem::Result<GetBlockResponse> {
+        service::block::get_block_by_hash(self, hash)
             .await
             .map_err(utils::handle_fetch_one_err)
     }
 
-    #[oai(path = "/blockchain", method = "get", tag = "ApiTags::Block")]
-    async fn blockchain(
+    #[oai(path = "/block", method = "get", tag = "ApiTags::Block")]
+    async fn get_blocks(
         &self,
-        min_height: Path<i64>,
-        max_height: Path<i64>,
-    ) -> poem::Result<BlockChainResponse> {
-        service::blockchain::blockchain(self, min_height, max_height)
+        begin_time: Path<i64>,
+        end_time: Path<i64>,
+        page_size: Path<i64>,
+        page: Path<i64>,
+    ) -> poem::Result<GetBlocksResponse> {
+        service::block::get_blocks(self, begin_time, end_time, page_size, page)
             .await
             .map_err(utils::handle_fetch_one_err)
     }
