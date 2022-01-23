@@ -1,9 +1,9 @@
 use crate::Api;
 use anyhow::Result;
+use module::db::tx::TransactionRef;
 use module::display::address::DisplayAddress;
 use poem_openapi::{param::Path, payload::Json, ApiResponse};
 use sqlx::Row;
-use module::db::tx::TransactionRef;
 
 #[derive(ApiResponse)]
 pub enum GetAddressResponse {
@@ -29,8 +29,8 @@ pub async fn get_address(api: &Api, address: Path<String>) -> Result<GetAddressR
         let asset: String = r.try_get("asset")?;
         let value: i64 = r.try_get("value")?;
         let op: String = r.try_get("op")?;
-        let status:String = r.try_get("status")?;
-        let tx = TransactionRef{
+        let status: String = r.try_get("status")?;
+        let tx = TransactionRef {
             txid,
             block_id,
             height,
