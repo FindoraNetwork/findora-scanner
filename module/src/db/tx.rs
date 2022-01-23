@@ -12,23 +12,14 @@ pub struct Transaction {
 }
 
 #[derive(Serialize, Deserialize, Debug, Default, Object)]
-pub struct TxDetail {
-    pub hash: String,
-    pub timestamp: i64,
+pub struct TransactionRef {
+    pub txid: String,
+    pub block_id: String,
     pub height: i64,
-    pub index: i64,
-    pub tx_result: Value,
-    pub tx: String,
-}
-
-#[derive(Serialize, Deserialize, Debug, Default, Object)]
-pub struct TxMeta {
-    pub code: i64,
-    pub data: String,
-    pub log: String,
-    pub info: String,
-    pub gas_wanted: i64,
-    pub gas_used: i64,
-    pub events: Vec<Value>,
-    pub code_space: String,
+    pub from: String,
+    pub to: String,
+    pub asset: String,
+    pub value: i64,
+    pub op: String,
+    pub status: String,
 }

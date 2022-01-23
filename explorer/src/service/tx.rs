@@ -1,7 +1,6 @@
 use crate::Api;
 use anyhow::Result;
 use module::db::tx::Transaction;
-use poem::error::ParseTypedHeaderError;
 use poem_openapi::{param::Path, payload::Json, ApiResponse};
 use serde_json::Value;
 use sqlx::Row;

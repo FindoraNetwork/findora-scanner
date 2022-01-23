@@ -8,4 +8,6 @@ pub struct DisplayBlock {
     pub time: i64,
     pub app_hash: String,
     pub proposer: String,
+    pub tx_count: usize,
+    pub size: i64,
 }

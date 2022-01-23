@@ -14,3 +14,10 @@ pub struct Block {
     pub evm_txs: Vec<Transaction>,
     pub validators: Vec<Validator>,
 }
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct BlockRef {
+    pub block_id: String,
+    pub height: i64,
+    pub txid: String,
+}
