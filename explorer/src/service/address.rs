@@ -14,35 +14,48 @@ pub enum GetAddressResponse {
 pub async fn get_address(api: &Api, address: Path<String>) -> Result<GetAddressResponse> {
     let mut conn = api.storage.lock().await.acquire().await?;
     let str = format!(
-        "select * from block where transaction_ref where from = {} or to = {} ",
+        "SELECT * FROM transaction_ref WHERE from_address={} or to_address={}",
         address.0, address.0
     );
     let rows = sqlx::query(str.as_str()).fetch_all(&mut conn).await?;
+    if rows.is_empty() {
+        return Ok(GetAddressResponse::Ok(Json(DisplayAddress {
+            total: 0,
+            txs: vec![],
+        })));
+    }
 
     let mut txs: Vec<TransactionRef> = vec![];
     for r in rows {
         let txid: String = r.try_get("txid")?;
         let block_id: String = r.try_get("block_id")?;
         let height: i64 = r.try_get("height")?;
-        let from: String = r.try_get("from")?;
-        let to: String = r.try_get("to")?;
+        let from_address: String = r.try_get("from_address")?;
+        let to_address: String = r.try_get("to_address")?;
         let asset: String = r.try_get("asset")?;
         let value: i64 = r.try_get("value")?;
-        let op: String = r.try_get("op")?;
+        let typ: String = r.try_get("op")?;
         let status: String = r.try_get("status")?;
+        let timestamp = r.try_get("timestamp")?;
+
         let tx = TransactionRef {
             txid,
             block_id,
             height,
-            from,
-            to,
+            from_address,
+            to_address,
             asset,
             value,
-            op,
+            typ,
             status,
+            timestamp,
         };
+
         txs.push(tx)
     }
 
-    Ok(GetAddressResponse::Ok(Json(DisplayAddress { txs })))
+    Ok(GetAddressResponse::Ok(Json(DisplayAddress {
+        total: txs.len(),
+        txs,
+    })))
 }

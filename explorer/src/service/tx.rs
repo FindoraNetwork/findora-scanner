@@ -42,25 +42,51 @@ pub async fn get_tx(api: &Api, tx_id: Path<String>) -> Result<GetTxResponse> {
 
 pub async fn get_txs(
     api: &Api,
-    begin_time: Path<i64>,
-    end_time: Path<i64>,
     block: Path<String>,
-    typ: Path<i64>,
+    typ: Path<String>,
     from_address: Path<String>,
     to_address: Path<String>,
+    begin_time: Path<i64>,
+    end_time: Path<i64>,
     page: Path<i64>,
     page_size: Path<i64>,
 ) -> Result<GetTxsResponse> {
     let mut conn = api.storage.lock().await.acquire().await?;
-    let pgs = if page_size.0 == 0 { 10 } else { page_size.0 };
+
+    let pg_size = if page_size.0 <= 0 { 10 } else { page_size.0 };
     let pg = if page.0 <= 0 { 1 } else { page.0 };
 
-    let str = format!(
-        "select * from display_block where time >= {} and time <= {}",
-        begin_time.0, end_time.0
-    );
-    // todo: page
-    let rows = sqlx::query(str.as_str()).fetch_all(&mut conn).await?;
+    let mut sql_str = String::from("SELECT * FROM transaction_ref ");
+    let mut params: Vec<String> = vec![];
+    if !block.is_empty() {
+        params.push(String::from(format!(" block_id={} ", block.0)));
+    }
+    if !typ.is_empty() {
+        params.push(String::from(format!(" typ={} ", typ.0)));
+    }
+    if !from_address.is_empty() {
+        params.push(String::from(format!(" from_address={} ", from_address.0)));
+    }
+    if !to_address.is_empty() {
+        params.push(String::from(format!(" to_address={} ", to_address.0)));
+    }
+    if begin_time.is_positive() {
+        params.push(String::from(format!(" time>={} ", begin_time.0)));
+    }
+    if end_time.is_positive() {
+        params.push(String::from(format!(" time<={} ", end_time.0)));
+    }
+    if params.len() > 0 {
+        sql_str += &String::from(" WHERE ");
+        sql_str += &params.join(" AND ");
+    }
+    sql_str += &String::from(format!(
+        " ORDER BY timestamp DESC LIMIT {} OFFSET {}",
+        pg_size,
+        (pg - 1) * pg_size
+    ));
+
+    let rows = sqlx::query(sql_str.as_str()).fetch_all(&mut conn).await?;
 
     let mut txs: Vec<Transaction> = vec![];
     for r in rows.iter() {
@@ -77,6 +103,7 @@ pub async fn get_txs(
             log,
             events: vec![],
         };
+
         txs.push(tx);
     }
 

@@ -78,15 +78,28 @@ pub async fn get_blocks(
     page: Path<i64>,
 ) -> Result<GetBlocksResponse> {
     let mut conn = api.storage.lock().await.acquire().await?;
-    let pgs = if page_size.0 == 0 { 10 } else { page_size.0 };
+    let pg_size = if page_size.0 == 0 { 10 } else { page_size.0 };
     let pg = if page.0 <= 0 { 1 } else { page.0 };
 
-    let str = format!(
-        "select * from block where time >= {} and time <= {}",
-        begin_time.0, end_time.0
-    );
-    // todo: page
-    let rows = sqlx::query(str.as_str()).fetch_all(&mut conn).await?;
+    let mut sql_str = String::from("SELECT * FROM block ");
+    let mut params: Vec<String> = vec![];
+    if begin_time.is_positive() {
+        params.push(format!(" timestamp >= {} ", begin_time.0))
+    }
+    if end_time.is_positive() {
+        params.push(format!(" timestamp <= {} ", end_time.0))
+    }
+    if params.len() > 0 {
+        sql_str += &String::from(" WHERE ");
+        sql_str += &params.join(" AND ")
+    }
+    sql_str += &String::from(format!(
+        " ORDER BY timestamp DESC LIMIT {} OFFSET {}",
+        pg_size,
+        (pg - 1) * pg_size
+    ));
+
+    let rows = sqlx::query(sql_str.as_str()).fetch_all(&mut conn).await?;
 
     let mut blocks: Vec<DisplayBlock> = vec![];
     for r in rows.iter() {

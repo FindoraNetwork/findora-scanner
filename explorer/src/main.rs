@@ -1,6 +1,8 @@
 mod service;
 mod utils;
 
+use crate::service::address::GetAddressResponse;
+use crate::service::asset::GetAssetResponse;
 use crate::service::block::{GetBlockResponse, GetBlocksResponse};
 use crate::service::tx::{GetTxResponse, GetTxsResponse};
 use anyhow::Result;
@@ -26,23 +28,23 @@ impl Api {
     #[oai(path = "/txs", method = "get", tag = "ApiTags::Transaction")]
     async fn get_txs(
         &self,
-        begin_time: Path<i64>,
-        end_time: Path<i64>,
         block: Path<String>,
-        typ: Path<i64>,
+        typ: Path<String>,
         from_address: Path<String>,
         to_address: Path<String>,
+        begin_time: Path<i64>,
+        end_time: Path<i64>,
         page: Path<i64>,
         page_size: Path<i64>,
     ) -> poem::Result<GetTxsResponse> {
         service::tx::get_txs(
             self,
-            begin_time,
-            end_time,
             block,
             typ,
             from_address,
             to_address,
+            begin_time,
+            end_time,
             page,
             page_size,
         )
@@ -64,7 +66,7 @@ impl Api {
             .map_err(utils::handle_fetch_one_err)
     }
 
-    #[oai(path = "/block", method = "get", tag = "ApiTags::Block")]
+    #[oai(path = "/blocks", method = "get", tag = "ApiTags::Block")]
     async fn get_blocks(
         &self,
         begin_time: Path<i64>,
@@ -76,6 +78,20 @@ impl Api {
             .await
             .map_err(utils::handle_fetch_one_err)
     }
+
+    #[oai(path = "/address", method = "get", tag = "ApiTags::Address")]
+    async fn get_address(&self, address: Path<String>) -> poem::Result<GetAddressResponse> {
+        service::address::get_address(self, address)
+            .await
+            .map_err(utils::handle_fetch_one_err)
+    }
+
+    #[oai(path = "/asset", method = "get", tag = "ApiTags::Asset")]
+    async fn get_asset(&self, address: Path<String>) -> poem::Result<GetAssetResponse> {
+        service::asset::get_asset(self, address)
+            .await
+            .map_err(utils::handle_fetch_one_err)
+    }
 }
 
 #[derive(Tags)]
@@ -84,6 +100,10 @@ enum ApiTags {
     Transaction,
     /// Operations about Block
     Block,
+    /// Operations about Address
+    Address,
+    /// Operations about Asset
+    Asset,
 }
 
 #[tokio::main]
