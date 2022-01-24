@@ -40,6 +40,7 @@ pub async fn get_tx(api: &Api, tx_id: Path<String>) -> Result<GetTxResponse> {
     Ok(GetTxResponse::Ok(Json(tx)))
 }
 
+#[allow(clippy::too_many_arguments)]
 pub async fn get_txs(
     api: &Api,
     block: Path<String>,
