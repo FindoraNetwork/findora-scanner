@@ -59,32 +59,32 @@ pub async fn get_txs(
     let mut sql_str = String::from("SELECT * FROM transaction_ref ");
     let mut params: Vec<String> = vec![];
     if !block.is_empty() {
-        params.push(String::from(format!(" block_id={} ", block.0)));
+        params.push(format!(" block_id={} ", block.0));
     }
     if !typ.is_empty() {
-        params.push(String::from(format!(" typ={} ", typ.0)));
+        params.push(format!(" typ={} ", typ.0));
     }
     if !from_address.is_empty() {
-        params.push(String::from(format!(" from_address={} ", from_address.0)));
+        params.push(format!(" from_address={} ", from_address.0));
     }
     if !to_address.is_empty() {
-        params.push(String::from(format!(" to_address={} ", to_address.0)));
+        params.push(format!(" to_address={} ", to_address.0));
     }
     if begin_time.is_positive() {
-        params.push(String::from(format!(" time>={} ", begin_time.0)));
+        params.push(format!(" time>={} ", begin_time.0));
     }
     if end_time.is_positive() {
-        params.push(String::from(format!(" time<={} ", end_time.0)));
+        params.push(format!(" time<={} ", end_time.0));
     }
-    if params.len() > 0 {
+    if !params.is_empty() {
         sql_str += &String::from(" WHERE ");
         sql_str += &params.join(" AND ");
     }
-    sql_str += &String::from(format!(
+    sql_str += &format!(
         " ORDER BY timestamp DESC LIMIT {} OFFSET {}",
         pg_size,
         (pg - 1) * pg_size
-    ));
+    );
 
     let rows = sqlx::query(sql_str.as_str()).fetch_all(&mut conn).await?;
 

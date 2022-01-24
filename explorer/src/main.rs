@@ -79,14 +79,14 @@ impl Api {
             .map_err(utils::handle_fetch_one_err)
     }
 
-    #[oai(path = "/address", method = "get", tag = "ApiTags::Address")]
+    #[oai(path = "/address/:address", method = "get", tag = "ApiTags::Address")]
     async fn get_address(&self, address: Path<String>) -> poem::Result<GetAddressResponse> {
         service::address::get_address(self, address)
             .await
             .map_err(utils::handle_fetch_one_err)
     }
 
-    #[oai(path = "/asset", method = "get", tag = "ApiTags::Asset")]
+    #[oai(path = "/asset/:address", method = "get", tag = "ApiTags::Asset")]
     async fn get_asset(&self, address: Path<String>) -> poem::Result<GetAssetResponse> {
         service::asset::get_asset(self, address)
             .await

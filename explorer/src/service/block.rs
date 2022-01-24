@@ -78,7 +78,7 @@ pub async fn get_blocks(
     page: Path<i64>,
 ) -> Result<GetBlocksResponse> {
     let mut conn = api.storage.lock().await.acquire().await?;
-    let pg_size = if page_size.0 == 0 { 10 } else { page_size.0 };
+    let pg_size = if page_size.0 <= 0 { 10 } else { page_size.0 };
     let pg = if page.0 <= 0 { 1 } else { page.0 };
 
     let mut sql_str = String::from("SELECT * FROM block ");
@@ -89,15 +89,15 @@ pub async fn get_blocks(
     if end_time.is_positive() {
         params.push(format!(" timestamp <= {} ", end_time.0))
     }
-    if params.len() > 0 {
+    if !params.is_empty() {
         sql_str += &String::from(" WHERE ");
         sql_str += &params.join(" AND ")
     }
-    sql_str += &String::from(format!(
+    sql_str += &format!(
         " ORDER BY timestamp DESC LIMIT {} OFFSET {}",
         pg_size,
         (pg - 1) * pg_size
-    ));
+    );
 
     let rows = sqlx::query(sql_str.as_str()).fetch_all(&mut conn).await?;
 
