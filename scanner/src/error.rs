@@ -1,6 +1,6 @@
 #[derive(Debug)]
 pub enum Error {
-    ReqwestError(reqwest::Error),
+    RequestError(reqwest::Error),
     ChronoError(chrono::ParseError),
     ParseIntError(std::num::ParseIntError),
     Base64Error(base64::DecodeError),
@@ -19,7 +19,7 @@ impl From<core::num::TryFromIntError> for Error {
 
 impl From<reqwest::Error> for Error {
     fn from(e: reqwest::Error) -> Self {
-        Error::ReqwestError(e)
+        Error::RequestError(e)
     }
 }
 
