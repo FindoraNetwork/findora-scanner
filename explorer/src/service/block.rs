@@ -3,7 +3,6 @@ use anyhow::Result;
 use module::display::block::DisplayBlock;
 use poem::web::Query;
 use poem_openapi::{param::Path, payload::Json, ApiResponse};
-use serde_json::Value;
 use sqlx::types::chrono::NaiveDateTime;
 use sqlx::Row;
 
@@ -30,7 +29,6 @@ pub async fn get_block_by_height(api: &Api, height: Path<i64>) -> Result<GetBloc
     let time: NaiveDateTime = row.try_get("time")?;
     let app_hash: String = row.try_get("app_hash")?;
     let proposer: String = row.try_get("proposer")?;
-    //let txs: Value = row.try_get("txs")?;
     let size: i64 = row.try_get("size")?;
     let block = DisplayBlock {
         block_id,
