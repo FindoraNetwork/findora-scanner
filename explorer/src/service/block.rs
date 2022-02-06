@@ -83,10 +83,16 @@ pub async fn get_blocks(api: &Api, param: Query<GetBlocksParam>) -> Result<GetBl
         params.push(format!(" height <= {} ", end_height));
     }
     if let Some(begin_time) = param.0.begin_time {
-        params.push(format!(" time >= '{}' ", NaiveDateTime::from_timestamp(begin_time, 0)));
+        params.push(format!(
+            " time >= '{}' ",
+            NaiveDateTime::from_timestamp(begin_time, 0)
+        ));
     }
     if let Some(end_time) = param.0.end_time {
-        params.push(format!(" time <= '{}' ", NaiveDateTime::from_timestamp(end_time, 0)));
+        params.push(format!(
+            " time <= '{}' ",
+            NaiveDateTime::from_timestamp(end_time, 0)
+        ));
     }
     let page = param.0.page.unwrap_or(1);
     let page_size = param.0.page_size.unwrap_or(10);

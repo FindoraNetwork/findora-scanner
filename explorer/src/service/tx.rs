@@ -4,8 +4,8 @@ use module::db::tx::Transaction;
 use poem::web::Query;
 use poem_openapi::{param::Path, payload::Json, ApiResponse};
 use serde_json::Value;
-use sqlx::Row;
 use sqlx::types::chrono::NaiveDateTime;
+use sqlx::Row;
 #[derive(ApiResponse)]
 pub enum GetTxResponse {
     #[oai(status = 200)]
@@ -46,7 +46,9 @@ pub async fn get_tx(api: &Api, tx_id: Path<String>) -> Result<GetTxResponse> {
 #[allow(clippy::too_many_arguments)]
 pub async fn get_txs(api: &Api, param: Query<GetTxsParam>) -> Result<GetTxsResponse> {
     let mut conn = api.storage.lock().await.acquire().await?;
-    let mut sql_str = String::from("SELECT * FROM transaction AS t LEFT JOIN block AS b ON t.block_id=b.block_id");
+    let mut sql_str = String::from(
+        "SELECT * FROM transaction AS t LEFT JOIN block AS b ON t.block_id=b.block_id",
+    );
 
     let mut params: Vec<String> = vec![];
     if let Some(block_id) = param.0.block_id {
@@ -62,10 +64,16 @@ pub async fn get_txs(api: &Api, param: Query<GetTxsParam>) -> Result<GetTxsRespo
         params.push(format!(" ty={} ", ty));
     }
     if let Some(begin_time) = param.0.begin_time {
-        params.push(format!(" time>='{}' ", NaiveDateTime::from_timestamp(begin_time, 0)));
+        params.push(format!(
+            " time>='{}' ",
+            NaiveDateTime::from_timestamp(begin_time, 0)
+        ));
     }
     if let Some(end_time) = param.0.end_time {
-        params.push(format!(" time<='{}' ", NaiveDateTime::from_timestamp(end_time, 0)));
+        params.push(format!(
+            " time<='{}' ",
+            NaiveDateTime::from_timestamp(end_time, 0)
+        ));
     }
     let page = param.0.page.unwrap_or(1);
     let page_size = param.0.page_size.unwrap_or(10);
