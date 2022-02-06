@@ -5,6 +5,8 @@ use serde_json::Value;
 #[derive(Serialize, Deserialize, Debug, Default, Object)]
 pub struct Transaction {
     pub txid: String,
+    pub block_id: String,
+    pub ty: i32,
     pub value: Value,
     pub code: i64,
     pub log: String,

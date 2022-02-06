@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 pub struct Block {
     pub block_id: String,
     pub height: i64,
+    pub size: i64,
     pub timestamp: NaiveDateTime,
     pub app_hash: String,
     pub proposer: String,

@@ -7,7 +7,12 @@ pub struct Asset {
     pub name: String,
     pub publisher: String,
     pub memo: String,
-    pub transferable: i8,
+    pub transferable: bool,
     pub amount: i64,
     pub decimals: i8,
+}
+#[derive(Serialize, Deserialize, Debug, Object)]
+pub struct Student {
+    pub name: String,
+    pub age: i64,
 }

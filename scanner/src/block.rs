@@ -43,6 +43,8 @@ impl Block {
                     let value = serde_json::from_slice(utils::tx::unwrap(&bytes)?)?;
                     evm_txs.push(Transaction {
                         txid,
+                        block_id: block_id.clone(),
+                        ty: 1,
                         value,
                         code: tx.tx_result.code,
                         log: tx.tx_result.log,
@@ -53,6 +55,8 @@ impl Block {
                     let value = serde_json::from_slice(&bytes)?;
                     txs.push(Transaction {
                         txid,
+                        block_id: block_id.clone(),
+                        ty: 0,
                         value,
                         code: tx.tx_result.code,
                         log: tx.tx_result.log,
@@ -103,6 +107,7 @@ impl Block {
         Ok(ModuleBlock {
             block_id,
             height,
+            size: 0,
             timestamp,
             app_hash,
             proposer,

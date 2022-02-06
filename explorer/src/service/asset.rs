@@ -20,7 +20,7 @@ pub async fn get_asset(api: &Api, address: Path<String>) -> Result<GetAssetRespo
             name: "".to_string(),
             publisher: "".to_string(),
             memo: "".to_string(),
-            transferable: 0,
+            transferable: true,
             amount: 0,
             decimals: 0,
         })));
@@ -30,7 +30,7 @@ pub async fn get_asset(api: &Api, address: Path<String>) -> Result<GetAssetRespo
     let address: String = row.try_get("address")?;
     let publisher: String = row.try_get("publisher")?;
     let memo: String = row.try_get("memo")?;
-    let transferable: i8 = row.try_get("transferable")?;
+    let transferable: bool = row.try_get("transferable")?;
     let amount: i64 = row.try_get("amount")?;
     let decimals: i8 = row.try_get("decimals")?;
 

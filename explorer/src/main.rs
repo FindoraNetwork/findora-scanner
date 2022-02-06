@@ -6,14 +6,38 @@ use crate::service::asset::GetAssetResponse;
 use crate::service::block::{GetBlockResponse, GetBlocksResponse};
 use crate::service::tx::{GetTxResponse, GetTxsResponse};
 use anyhow::Result;
+use poem::web::Query;
 use poem::{listener::TcpListener, Route, Server};
 use poem_openapi::param::Path;
 use poem_openapi::{OpenApi, OpenApiService, Tags};
+use serde::Deserialize;
 use sqlx::{Pool, Postgres};
 use tokio::sync::Mutex;
 
 pub struct Api {
     storage: Mutex<Pool<Postgres>>,
+}
+
+#[derive(Deserialize)]
+pub struct GetTxsParam {
+    block_id: Option<String>,
+    from_address: Option<String>,
+    to_address: Option<String>,
+    ty: Option<i64>,
+    begin_time: Option<i64>,
+    end_time: Option<i64>,
+    page: Option<i64>,
+    page_size: Option<i64>,
+}
+
+#[derive(Deserialize)]
+pub struct GetBlocksParam {
+    begin_height: Option<i64>,
+    end_height: Option<i64>,
+    begin_time: Option<i64>,
+    end_time: Option<i64>,
+    page: Option<i64>,
+    page_size: Option<i64>,
 }
 
 #[OpenApi]
@@ -27,40 +51,20 @@ impl Api {
 
     #[allow(clippy::too_many_arguments)]
     #[oai(path = "/txs", method = "get", tag = "ApiTags::Transaction")]
-    async fn get_txs(
-        &self,
-        block: Path<String>,
-        typ: Path<String>,
-        from_address: Path<String>,
-        to_address: Path<String>,
-        begin_time: Path<i64>,
-        end_time: Path<i64>,
-        page: Path<i64>,
-        page_size: Path<i64>,
-    ) -> poem::Result<GetTxsResponse> {
-        service::tx::get_txs(
-            self,
-            block,
-            typ,
-            from_address,
-            to_address,
-            begin_time,
-            end_time,
-            page,
-            page_size,
-        )
-        .await
-        .map_err(utils::handle_fetch_one_err)
-    }
-
-    #[oai(path = "/block/:height", method = "get", tag = "ApiTags::Block")]
-    async fn get_block(&self, height: Path<i64>) -> poem::Result<GetBlockResponse> {
-        service::block::get_block(self, height)
+    async fn get_txs(&self, param: Query<GetTxsParam>) -> poem::Result<GetTxsResponse> {
+        service::tx::get_txs(self, param)
             .await
             .map_err(utils::handle_fetch_one_err)
     }
 
-    #[oai(path = "/block/:hash", method = "get", tag = "ApiTags::Block")]
+    #[oai(path = "/block/height/:height", method = "get", tag = "ApiTags::Block")]
+    async fn get_block_by_height(&self, height: Path<i64>) -> poem::Result<GetBlockResponse> {
+        service::block::get_block_by_height(self, height)
+            .await
+            .map_err(utils::handle_fetch_one_err)
+    }
+
+    #[oai(path = "/block/hash/:hash", method = "get", tag = "ApiTags::Block")]
     async fn get_block_by_hash(&self, hash: Path<String>) -> poem::Result<GetBlockResponse> {
         service::block::get_block_by_hash(self, hash)
             .await
@@ -68,14 +72,8 @@ impl Api {
     }
 
     #[oai(path = "/blocks", method = "get", tag = "ApiTags::Block")]
-    async fn get_blocks(
-        &self,
-        begin_time: Path<i64>,
-        end_time: Path<i64>,
-        page_size: Path<i64>,
-        page: Path<i64>,
-    ) -> poem::Result<GetBlocksResponse> {
-        service::block::get_blocks(self, begin_time, end_time, page_size, page)
+    async fn get_blocks(&self, param: Query<GetBlocksParam>) -> poem::Result<GetBlocksResponse> {
+        service::block::get_blocks(self, param)
             .await
             .map_err(utils::handle_fetch_one_err)
     }
@@ -120,7 +118,7 @@ async fn main() -> Result<()> {
         config.postgres.addr,
         config.postgres.database
     );
-
+    //let postgres_config=format!("host={} user={} password={}",config.postgres.addr, config.postgres.account, config.postgres.password);
     // std::env::set_var("DATABASE_URL", postgres_config);
     let pool = sqlx::PgPool::connect(&postgres_config).await.unwrap();
 
