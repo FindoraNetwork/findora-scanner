@@ -12,7 +12,7 @@ pub enum GetAssetResponse {
 
 pub async fn get_asset(api: &Api, address: Path<String>) -> Result<GetAssetResponse> {
     let mut conn = api.storage.lock().await.acquire().await?;
-    let str = format!("SELECT * FROM asset WHERE address={}", address.0);
+    let str = format!("SELECT * FROM asset WHERE address='{}' ", address.0);
     let row = sqlx::query(str.as_str()).fetch_one(&mut conn).await?;
     if row.is_empty() {
         return Ok(GetAssetResponse::Ok(Json(Asset {

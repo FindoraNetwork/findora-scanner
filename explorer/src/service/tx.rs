@@ -43,11 +43,10 @@ pub async fn get_tx(api: &Api, tx_id: Path<String>) -> Result<GetTxResponse> {
     Ok(GetTxResponse::Ok(Json(tx)))
 }
 
-#[allow(clippy::too_many_arguments)]
 pub async fn get_txs(api: &Api, param: Query<GetTxsParam>) -> Result<GetTxsResponse> {
     let mut conn = api.storage.lock().await.acquire().await?;
     let mut sql_str = String::from(
-        "SELECT * FROM transaction AS t LEFT JOIN block AS b ON t.block_id=b.block_id",
+        "SELECT * FROM transaction AS t LEFT JOIN block AS b ON t.block_id=b.block_id ",
     );
 
     let mut params: Vec<String> = vec![];
@@ -55,10 +54,10 @@ pub async fn get_txs(api: &Api, param: Query<GetTxsParam>) -> Result<GetTxsRespo
         params.push(format!(" block_id='{}' ", block_id));
     }
     if let Some(from_address) = param.0.from_address {
-        params.push(format!(" from_address='{}' ", from_address));
+        params.push(format!(" (value @? '$.body.operations[*].TransferAsset.body.transfer.inputs[*].public_key ? (@ == \"{}\" )') ", from_address));
     }
     if let Some(to_address) = param.0.to_address {
-        params.push(format!(" to_address='{}' ", to_address));
+        params.push(format!(" (value @? '$.body.operations[*].TransferAsset.body.transfer.outputs[*].public_key ? (@ == \"{}\")') ", to_address));
     }
     if let Some(ty) = param.0.ty {
         params.push(format!(" ty={} ", ty));

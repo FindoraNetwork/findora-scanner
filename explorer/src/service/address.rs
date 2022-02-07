@@ -14,7 +14,9 @@ pub enum GetAddressResponse {
 pub async fn get_address(api: &Api, address: Path<String>) -> Result<GetAddressResponse> {
     let mut conn = api.storage.lock().await.acquire().await?;
     let str = format!(
-        "SELECT * FROM transaction_ref WHERE from_address={} or to_address={}",
+        "SELECT * FROM transaction WHERE \
+        (value @? '$.body.operations[*].TransferAsset.body.transfer.outputs[*].public_key ? (@ == \"{}\")') \
+        or (value @? '$.body.operations[*].TransferAsset.body.transfer.inputs[*].public_key ? (@ == \"{}\")')",
         address.0, address.0
     );
     let rows = sqlx::query(str.as_str()).fetch_all(&mut conn).await?;

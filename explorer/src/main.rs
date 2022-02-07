@@ -49,7 +49,6 @@ impl Api {
             .map_err(utils::handle_fetch_one_err)
     }
 
-    #[allow(clippy::too_many_arguments)]
     #[oai(path = "/txs", method = "get", tag = "ApiTags::Transaction")]
     async fn get_txs(&self, param: Query<GetTxsParam>) -> poem::Result<GetTxsResponse> {
         service::tx::get_txs(self, param)
