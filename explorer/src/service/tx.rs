@@ -21,8 +21,13 @@ pub enum GetTxsResponse {
 pub async fn get_tx(api: &Api, tx_id: Path<String>) -> Result<GetTxResponse> {
     let mut conn = api.storage.lock().await.acquire().await?;
     let str = format!("SELECT * FROM transaction WHERE txid = '{}'", tx_id.0);
-    let row = sqlx::query(str.as_str()).fetch_one(&mut conn).await?;
-
+    let res = sqlx::query(str.as_str()).fetch_one(&mut conn).await;
+    let row = match res {
+        Ok(row) => row,
+        _ => {
+            return Ok(GetTxResponse::Ok(Json(Transaction::default())));
+        }
+    };
     let tx_id: String = row.try_get("txid")?;
     let block_id: String = row.try_get("block_id")?;
     let ty: i32 = row.try_get("ty")?;
@@ -83,9 +88,15 @@ pub async fn get_txs(api: &Api, param: Query<GetTxsParam>) -> Result<GetTxsRespo
     }
     sql_str += &format!(" LIMIT {} OFFSET {}", page_size, (page - 1) * page_size);
 
-    let rows = sqlx::query(sql_str.as_str()).fetch_all(&mut conn).await?;
-
+    let res = sqlx::query(sql_str.as_str()).fetch_all(&mut conn).await;
     let mut txs: Vec<Transaction> = vec![];
+    let rows = match res {
+        Ok(rows) => rows,
+        _ => {
+            return Ok(GetTxsResponse::Ok(Json(txs)));
+        }
+    };
+
     for row in rows.iter() {
         let tx_id: String = row.try_get("txid")?;
         let block_id: String = row.try_get("block_id")?;

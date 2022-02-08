@@ -19,13 +19,13 @@ pub async fn get_address(api: &Api, address: Path<String>) -> Result<GetAddressR
         or (value @? '$.body.operations[*].TransferAsset.body.transfer.inputs[*].public_key ? (@ == \"{}\")')",
         address.0, address.0
     );
-    let rows = sqlx::query(str.as_str()).fetch_all(&mut conn).await?;
-    if rows.is_empty() {
-        return Ok(GetAddressResponse::Ok(Json(DisplayAddress {
-            total: 0,
-            txs: vec![],
-        })));
-    }
+    let res = sqlx::query(str.as_str()).fetch_all(&mut conn).await;
+    let rows = match res {
+        Ok(rows) => rows,
+        _ => {
+            return Ok(GetAddressResponse::Ok(Json(DisplayAddress::default())));
+        }
+    };
 
     let mut txs: Vec<TransactionRef> = vec![];
     for r in rows {

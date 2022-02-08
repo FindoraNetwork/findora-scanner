@@ -22,7 +22,13 @@ pub async fn get_block_by_height(api: &Api, height: Path<i64>) -> Result<GetBloc
     let mut conn = api.storage.lock().await.acquire().await?;
 
     let str = format!("SELECT * FROM block WHERE height = {}", height.0);
-    let row = sqlx::query(str.as_str()).fetch_one(&mut conn).await?;
+    let res = sqlx::query(str.as_str()).fetch_one(&mut conn).await;
+    let row = match res {
+        Ok(row) => row,
+        _ => {
+            return Ok(GetBlockResponse::Ok(Json(DisplayBlock::default())));
+        }
+    };
 
     let block_id: String = row.try_get("block_id")?;
     let height: i64 = row.try_get("height")?;
@@ -47,7 +53,13 @@ pub async fn get_block_by_hash(api: &Api, hash: Path<String>) -> Result<GetBlock
     let mut conn = api.storage.lock().await.acquire().await?;
 
     let str = format!("SELECT * FROM block WHERE block_id = '{}'", hash.0);
-    let row = sqlx::query(str.as_str()).fetch_one(&mut conn).await?;
+    let res = sqlx::query(str.as_str()).fetch_one(&mut conn).await;
+    let row = match res {
+        Ok(row) => row,
+        _ => {
+            return Ok(GetBlockResponse::Ok(Json(DisplayBlock::default())));
+        }
+    };
 
     let block_id: String = row.try_get("block_id")?;
     let height: i64 = row.try_get("height")?;
@@ -103,10 +115,15 @@ pub async fn get_blocks(api: &Api, param: Query<GetBlocksParam>) -> Result<GetBl
         page_size,
         (page - 1) * page_size
     );
-    println!("{}", sql_str);
-    let rows = sqlx::query(sql_str.as_str()).fetch_all(&mut conn).await?;
-
     let mut blocks: Vec<DisplayBlock> = vec![];
+    let res = sqlx::query(sql_str.as_str()).fetch_all(&mut conn).await;
+    let rows = match res {
+        Ok(rows) => rows,
+        _ => {
+            return Ok(GetBlocksResponse::Ok(Json(blocks)));
+        }
+    };
+
     for row in rows.iter() {
         let block_id: String = row.try_get("block_id")?;
         let height: i64 = row.try_get("height")?;

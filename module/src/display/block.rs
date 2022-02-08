@@ -1,7 +1,7 @@
 use poem_openapi::Object;
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Debug, Object)]
+#[derive(Serialize, Deserialize, Default, Debug, Object)]
 pub struct DisplayBlock {
     pub block_id: String,
     pub height: i64,
