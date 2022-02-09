@@ -72,10 +72,15 @@ impl Block {
             let power = vv.voting_power.parse::<u64>()?;
             let pub_key = vv.pub_key;
             let priority = vv.proposer_priority.parse::<i64>()?;
+            if block.block.last_commit.signatures.is_none() {
+                break;
+            }
             let sign_info = block
                 .block
                 .last_commit
                 .signatures
+                .as_ref()
+                .unwrap()
                 .iter()
                 .find(|v| Some(&address) == v.validator_address.as_ref());
 
