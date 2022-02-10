@@ -12,7 +12,7 @@ pub enum GetAssetResponse {
 
 pub async fn get_asset(api: &Api, address: Path<String>) -> Result<GetAssetResponse> {
     let mut conn = api.storage.lock().await.acquire().await?;
-    let str = format!("SELECT * FROM asset WHERE address='{}' ", address.0);
+    let str = format!("SELECT * FROM transaction WHERE address='{}' ", address.0);
     let res = sqlx::query(str.as_str()).fetch_one(&mut conn).await;
     let row = match res {
         Ok(row) => row,
@@ -21,22 +21,20 @@ pub async fn get_asset(api: &Api, address: Path<String>) -> Result<GetAssetRespo
         }
     };
 
-    let name: String = row.try_get("name")?;
-    let address: String = row.try_get("address")?;
-    let publisher: String = row.try_get("publisher")?;
+    let code: String = row.try_get("code")?;
     let memo: String = row.try_get("memo")?;
+    let issuer: String = row.try_get("issuer")?;
+    let max_uints: i64 = row.try_get("max_ints")?;
     let transferable: bool = row.try_get("transferable")?;
-    let amount: i64 = row.try_get("amount")?;
-    let decimals: i8 = row.try_get("decimals")?;
+    let updatable: bool = row.try_get("updatable")?;
 
     let asset = Asset {
-        name,
-        address,
-        publisher,
+        code,
         memo,
+        issuer,
+        max_uints,
         transferable,
-        amount,
-        decimals,
+        updatable,
     };
 
     Ok(GetAssetResponse::Ok(Json(asset)))

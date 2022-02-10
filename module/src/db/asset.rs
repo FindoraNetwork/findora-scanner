@@ -3,11 +3,10 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Default, Object)]
 pub struct Asset {
-    pub address: String,
-    pub name: String,
-    pub publisher: String,
+    pub code: String,
     pub memo: String,
+    pub issuer: String,
+    pub max_uints: i64,
     pub transferable: bool,
-    pub amount: i64,
-    pub decimals: i8,
+    pub updatable: bool,
 }

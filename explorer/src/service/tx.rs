@@ -1,11 +1,14 @@
-use crate::{Api, GetTxsParam};
+use crate::service::util::{public_key_from_bech32, public_key_to_base64};
+use crate::Api;
 use anyhow::Result;
 use module::db::tx::Transaction;
-use poem::web::Query;
-use poem_openapi::{param::Path, payload::Json, ApiResponse};
+use poem_openapi::param::Query;
+use poem_openapi::{param::Path, payload::Json, ApiResponse, Object};
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sqlx::types::chrono::NaiveDateTime;
 use sqlx::Row;
+
 #[derive(ApiResponse)]
 pub enum GetTxResponse {
     #[oai(status = 200)]
@@ -15,7 +18,15 @@ pub enum GetTxResponse {
 #[derive(ApiResponse)]
 pub enum GetTxsResponse {
     #[oai(status = 200)]
-    Ok(Json<Vec<Transaction>>),
+    Ok(Json<TxsResult>),
+    #[oai(status = 400)]
+    Err(Json<String>),
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, Object)]
+pub struct TxsResult {
+    counts: usize,
+    txs: Vec<Transaction>,
 }
 
 pub async fn get_tx(api: &Api, tx_id: Path<String>) -> Result<GetTxResponse> {
@@ -48,52 +59,75 @@ pub async fn get_tx(api: &Api, tx_id: Path<String>) -> Result<GetTxResponse> {
     Ok(GetTxResponse::Ok(Json(tx)))
 }
 
-pub async fn get_txs(api: &Api, param: Query<GetTxsParam>) -> Result<GetTxsResponse> {
+#[allow(clippy::too_many_arguments)]
+pub async fn get_txs(
+    api: &Api,
+    block_id: Query<Option<String>>,
+    from: Query<Option<String>>,
+    to: Query<Option<String>>,
+    ty: Query<Option<i64>>,
+    start_time: Query<Option<i64>>,
+    end_time: Query<Option<i64>>,
+    page: Query<Option<i64>>,
+    page_size: Query<Option<i64>>,
+) -> Result<GetTxsResponse> {
     let mut conn = api.storage.lock().await.acquire().await?;
     let mut sql_str = String::from(
         "SELECT * FROM transaction AS t LEFT JOIN block AS b ON t.block_id=b.block_id ",
     );
 
     let mut params: Vec<String> = vec![];
-    if let Some(block_id) = param.0.block_id {
+    if let Some(block_id) = block_id.0 {
         params.push(format!(" block_id='{}' ", block_id));
     }
-    if let Some(from_address) = param.0.from_address {
-        params.push(format!(" (value @? '$.body.operations[*].TransferAsset.body.transfer.inputs[*].public_key ? (@ == \"{}\" )') ", from_address));
+    if let Some(from_address) = from.0 {
+        let pk = public_key_from_bech32(from_address.as_str());
+        if pk.is_err() {
+            return Ok(GetTxsResponse::Err(Json(String::from("invalid address"))));
+        }
+        params.push(format!(
+            " (value @? '$.body.operations[*].TransferAsset.body.transfer.inputs[*].public_key ? (@ == \"{}\" )') ",
+            public_key_to_base64(&pk.unwrap())));
     }
-    if let Some(to_address) = param.0.to_address {
-        params.push(format!(" (value @? '$.body.operations[*].TransferAsset.body.transfer.outputs[*].public_key ? (@ == \"{}\")') ", to_address));
+    if let Some(to_address) = to.0 {
+        let pk = public_key_from_bech32(to_address.as_str());
+        if pk.is_err() {
+            return Ok(GetTxsResponse::Err(Json(String::from("invalid address"))));
+        }
+        params.push(format!(
+            " (value @? '$.body.operations[*].TransferAsset.body.transfer.outputs[*].public_key ? (@ == \"{}\")') ",
+            public_key_to_base64(&pk.unwrap())));
     }
-    if let Some(ty) = param.0.ty {
+    if let Some(ty) = ty.0 {
         params.push(format!(" ty={} ", ty));
     }
-    if let Some(begin_time) = param.0.begin_time {
+    if let Some(start_time) = start_time.0 {
         params.push(format!(
             " time>='{}' ",
-            NaiveDateTime::from_timestamp(begin_time, 0)
+            NaiveDateTime::from_timestamp(start_time, 0)
         ));
     }
-    if let Some(end_time) = param.0.end_time {
+    if let Some(end_time) = end_time.0 {
         params.push(format!(
             " time<='{}' ",
             NaiveDateTime::from_timestamp(end_time, 0)
         ));
     }
-    let page = param.0.page.unwrap_or(1);
-    let page_size = param.0.page_size.unwrap_or(10);
+    let page = page.0.unwrap_or(1);
+    let page_size = page_size.0.unwrap_or(10);
 
     if !params.is_empty() {
         sql_str += &String::from(" WHERE ");
         sql_str += &params.join(" AND ");
     }
-    sql_str += &format!(" LIMIT {} OFFSET {}", page_size, (page - 1) * page_size);
+    sql_str += &format!(" ORDER BY time DESC LIMIT {} OFFSET {}", page_size, (page - 1) * page_size);
 
     let res = sqlx::query(sql_str.as_str()).fetch_all(&mut conn).await;
     let mut txs: Vec<Transaction> = vec![];
     let rows = match res {
         Ok(rows) => rows,
         _ => {
-            return Ok(GetTxsResponse::Ok(Json(txs)));
+            return Ok(GetTxsResponse::Ok(Json(TxsResult::default())));
         }
     };
 
@@ -118,5 +152,8 @@ pub async fn get_txs(api: &Api, param: Query<GetTxsParam>) -> Result<GetTxsRespo
         txs.push(tx);
     }
 
-    Ok(GetTxsResponse::Ok(Json(txs)))
+    Ok(GetTxsResponse::Ok(Json(TxsResult {
+        counts: txs.len(),
+        txs,
+    })))
 }

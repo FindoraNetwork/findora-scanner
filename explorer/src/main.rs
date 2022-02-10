@@ -6,38 +6,14 @@ use crate::service::asset::GetAssetResponse;
 use crate::service::block::{GetBlockResponse, GetBlocksResponse};
 use crate::service::tx::{GetTxResponse, GetTxsResponse};
 use anyhow::Result;
-use poem::web::Query;
 use poem::{listener::TcpListener, Route, Server};
-use poem_openapi::param::Path;
+use poem_openapi::param::{Path, Query};
 use poem_openapi::{OpenApi, OpenApiService, Tags};
-use serde::Deserialize;
 use sqlx::{Pool, Postgres};
 use tokio::sync::Mutex;
 
 pub struct Api {
     storage: Mutex<Pool<Postgres>>,
-}
-
-#[derive(Deserialize)]
-pub struct GetTxsParam {
-    block_id: Option<String>,
-    from_address: Option<String>,
-    to_address: Option<String>,
-    ty: Option<i64>,
-    begin_time: Option<i64>,
-    end_time: Option<i64>,
-    page: Option<i64>,
-    page_size: Option<i64>,
-}
-
-#[derive(Deserialize)]
-pub struct GetBlocksParam {
-    begin_height: Option<i64>,
-    end_height: Option<i64>,
-    begin_time: Option<i64>,
-    end_time: Option<i64>,
-    page: Option<i64>,
-    page_size: Option<i64>,
 }
 
 #[OpenApi]
@@ -49,11 +25,24 @@ impl Api {
             .map_err(utils::handle_fetch_one_err)
     }
 
+    #[allow(clippy::too_many_arguments)]
     #[oai(path = "/txs", method = "get", tag = "ApiTags::Transaction")]
-    async fn get_txs(&self, param: Query<GetTxsParam>) -> poem::Result<GetTxsResponse> {
-        service::tx::get_txs(self, param)
-            .await
-            .map_err(utils::handle_fetch_one_err)
+    async fn get_txs(
+        &self,
+        block_id: Query<Option<String>>,
+        from: Query<Option<String>>,
+        to: Query<Option<String>>,
+        ty: Query<Option<i64>>,
+        start_time: Query<Option<i64>>,
+        end_time: Query<Option<i64>>,
+        page: Query<Option<i64>>,
+        page_size: Query<Option<i64>>,
+    ) -> poem::Result<GetTxsResponse> {
+        service::tx::get_txs(
+            self, block_id, from, to, ty, start_time, end_time, page, page_size,
+        )
+        .await
+        .map_err(utils::handle_fetch_one_err)
     }
 
     #[oai(path = "/block/height/:height", method = "get", tag = "ApiTags::Block")]
@@ -71,10 +60,26 @@ impl Api {
     }
 
     #[oai(path = "/blocks", method = "get", tag = "ApiTags::Block")]
-    async fn get_blocks(&self, param: Query<GetBlocksParam>) -> poem::Result<GetBlocksResponse> {
-        service::block::get_blocks(self, param)
-            .await
-            .map_err(utils::handle_fetch_one_err)
+    async fn get_blocks(
+        &self,
+        start_height: Query<Option<i64>>,
+        end_height: Query<Option<i64>>,
+        start_time: Query<Option<i64>>,
+        end_time: Query<Option<i64>>,
+        page: Query<Option<i64>>,
+        page_size: Query<Option<i64>>,
+    ) -> poem::Result<GetBlocksResponse> {
+        service::block::get_blocks(
+            self,
+            start_height,
+            end_height,
+            start_time,
+            end_time,
+            page,
+            page_size,
+        )
+        .await
+        .map_err(utils::handle_fetch_one_err)
     }
 
     #[oai(path = "/address/:address", method = "get", tag = "ApiTags::Address")]
@@ -84,9 +89,9 @@ impl Api {
             .map_err(utils::handle_fetch_one_err)
     }
 
-    #[oai(path = "/asset/:address", method = "get", tag = "ApiTags::Asset")]
-    async fn get_asset(&self, address: Path<String>) -> poem::Result<GetAssetResponse> {
-        service::asset::get_asset(self, address)
+    #[oai(path = "/asset/:code", method = "get", tag = "ApiTags::Asset")]
+    async fn get_asset(&self, code: Path<String>) -> poem::Result<GetAssetResponse> {
+        service::asset::get_asset(self, code)
             .await
             .map_err(utils::handle_fetch_one_err)
     }

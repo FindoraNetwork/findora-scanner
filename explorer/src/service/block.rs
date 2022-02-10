@@ -1,8 +1,9 @@
-use crate::{Api, GetBlocksParam};
+use crate::Api;
 use anyhow::Result;
 use module::display::block::DisplayBlock;
-use poem::web::Query;
-use poem_openapi::{param::Path, payload::Json, ApiResponse};
+use poem_openapi::param::Query;
+use poem_openapi::{param::Path, payload::Json, ApiResponse, Object};
+use serde::{Deserialize, Serialize};
 use sqlx::types::chrono::NaiveDateTime;
 use sqlx::Row;
 
@@ -15,7 +16,13 @@ pub enum GetBlockResponse {
 #[derive(ApiResponse)]
 pub enum GetBlocksResponse {
     #[oai(status = 200)]
-    Ok(Json<Vec<DisplayBlock>>),
+    Ok(Json<BlocksRes>),
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, Object)]
+pub struct BlocksRes {
+    counts: usize,
+    blocks: Vec<DisplayBlock>,
 }
 
 pub async fn get_block_by_height(api: &Api, height: Path<i64>) -> Result<GetBlockResponse> {
@@ -81,31 +88,39 @@ pub async fn get_block_by_hash(api: &Api, hash: Path<String>) -> Result<GetBlock
     Ok(GetBlockResponse::Ok(Json(block)))
 }
 
-pub async fn get_blocks(api: &Api, param: Query<GetBlocksParam>) -> Result<GetBlocksResponse> {
+pub async fn get_blocks(
+    api: &Api,
+    start_height: Query<Option<i64>>,
+    end_height: Query<Option<i64>>,
+    start_time: Query<Option<i64>>,
+    end_time: Query<Option<i64>>,
+    page: Query<Option<i64>>,
+    page_size: Query<Option<i64>>,
+) -> Result<GetBlocksResponse> {
     let mut conn = api.storage.lock().await.acquire().await?;
     let mut sql_str = String::from("SELECT * FROM block ");
     let mut params: Vec<String> = vec![];
 
-    if let Some(begin_height) = param.0.begin_height {
-        params.push(format!(" height >= {} ", begin_height));
+    if let Some(start_height) = start_height.0 {
+        params.push(format!(" height >= {} ", start_height));
     }
-    if let Some(end_height) = param.0.end_height {
+    if let Some(end_height) = end_height.0 {
         params.push(format!(" height <= {} ", end_height));
     }
-    if let Some(begin_time) = param.0.begin_time {
+    if let Some(start_time) = start_time.0 {
         params.push(format!(
             " time >= '{}' ",
-            NaiveDateTime::from_timestamp(begin_time, 0)
+            NaiveDateTime::from_timestamp(start_time, 0)
         ));
     }
-    if let Some(end_time) = param.0.end_time {
+    if let Some(end_time) = end_time.0 {
         params.push(format!(
             " time <= '{}' ",
             NaiveDateTime::from_timestamp(end_time, 0)
         ));
     }
-    let page = param.0.page.unwrap_or(1);
-    let page_size = param.0.page_size.unwrap_or(10);
+    let page = page.0.unwrap_or(1);
+    let page_size = page_size.0.unwrap_or(10);
     if !params.is_empty() {
         sql_str += &String::from(" WHERE ");
         sql_str += &params.join(" AND ")
@@ -120,7 +135,7 @@ pub async fn get_blocks(api: &Api, param: Query<GetBlocksParam>) -> Result<GetBl
     let rows = match res {
         Ok(rows) => rows,
         _ => {
-            return Ok(GetBlocksResponse::Ok(Json(blocks)));
+            return Ok(GetBlocksResponse::Ok(Json(BlocksRes::default())));
         }
     };
 
@@ -144,5 +159,8 @@ pub async fn get_blocks(api: &Api, param: Query<GetBlocksParam>) -> Result<GetBl
         blocks.push(block);
     }
 
-    Ok(GetBlocksResponse::Ok(Json(blocks)))
+    Ok(GetBlocksResponse::Ok(Json(BlocksRes {
+        counts: blocks.len(),
+        blocks,
+    })))
 }
