@@ -1,9 +1,8 @@
 use crate::Api;
 use anyhow::Result;
-use poem_openapi::types::ToJSON;
 use poem_openapi::{param::Path, payload::Json, ApiResponse, Object};
 use serde::{Deserialize, Serialize};
-use serde_json::{from_value, Value};
+use serde_json::{from_value, json, Value};
 use sqlx::Row;
 
 #[derive(ApiResponse)]
@@ -99,7 +98,7 @@ pub async fn get_asset(api: &Api, address: Path<String>) -> Result<GetAssetRespo
             .get("DefineAsset")
             .unwrap();
 
-        let da: DefineAsset = from_value(v.to_json()).unwrap();
+        let da: DefineAsset = from_value(json!(v)).unwrap();
         if da.body.asset.code.val.eq(code.as_slice()) {
             asset.code = base64::encode(&da.body.asset.code.val);
             asset.memo = da.body.asset.memo;
