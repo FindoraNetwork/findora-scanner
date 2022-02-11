@@ -120,7 +120,11 @@ pub async fn get_txs(
         sql_str += &String::from(" WHERE ");
         sql_str += &params.join(" AND ");
     }
-    sql_str += &format!(" ORDER BY time DESC LIMIT {} OFFSET {}", page_size, (page - 1) * page_size);
+    sql_str += &format!(
+        " ORDER BY time DESC LIMIT {} OFFSET {}",
+        page_size,
+        (page - 1) * page_size
+    );
 
     let res = sqlx::query(sql_str.as_str()).fetch_all(&mut conn).await;
     let mut txs: Vec<Transaction> = vec![];
