@@ -8,10 +8,17 @@ use sqlx::Row;
 #[derive(ApiResponse)]
 pub enum GetAssetResponse {
     #[oai(status = 200)]
-    Ok(Json<DisplayAsset>),
+    Ok(Json<AssetRes>),
 
     #[oai(status = 400)]
-    Err(Json<String>),
+    Err(Json<AssetRes>),
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, Object)]
+pub struct AssetRes {
+    pub code: i32,
+    pub message: String,
+    pub data: Option<DisplayAsset>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Default)]
@@ -70,9 +77,11 @@ pub async fn get_asset(api: &Api, address: Path<String>) -> Result<GetAssetRespo
     let code = match code_res {
         Ok(code) => code,
         _ => {
-            return Ok(GetAssetResponse::Err(Json(String::from(
-                "invalid base64 asset code",
-            ))));
+            return Ok(GetAssetResponse::Err(Json(AssetRes {
+                code: 400,
+                message: "invalid base64 asset code".to_string(),
+                data: None,
+            })));
         }
     };
 
@@ -81,7 +90,11 @@ pub async fn get_asset(api: &Api, address: Path<String>) -> Result<GetAssetRespo
     let rows = match res {
         Ok(rows) => rows,
         _ => {
-            return Ok(GetAssetResponse::Ok(Json(DisplayAsset::default())));
+            return Ok(GetAssetResponse::Ok(Json(AssetRes {
+                code: 200,
+                message: "".to_string(),
+                data: Some(DisplayAsset::default()),
+            })));
         }
     };
 
@@ -110,5 +123,9 @@ pub async fn get_asset(api: &Api, address: Path<String>) -> Result<GetAssetRespo
         }
     }
 
-    Ok(GetAssetResponse::Ok(Json(asset)))
+    Ok(GetAssetResponse::Ok(Json(AssetRes {
+        code: 200,
+        message: "".to_string(),
+        data: Some(asset),
+    })))
 }

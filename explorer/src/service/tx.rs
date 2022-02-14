@@ -12,19 +12,31 @@ use sqlx::Row;
 #[derive(ApiResponse)]
 pub enum GetTxResponse {
     #[oai(status = 200)]
-    Ok(Json<Transaction>),
+    Ok(Json<TxRes>),
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, Object)]
+pub struct TxRes {
+    pub code: i32,
+    pub message: String,
+    pub data: Option<Transaction>,
 }
 
 #[derive(ApiResponse)]
 pub enum GetTxsResponse {
     #[oai(status = 200)]
-    Ok(Json<TxsResult>),
-    #[oai(status = 400)]
-    Err(Json<String>),
+    Ok(Json<TxsRes>),
 }
 
 #[derive(Serialize, Deserialize, Debug, Default, Object)]
-pub struct TxsResult {
+pub struct TxsRes {
+    pub code: i32,
+    pub message: String,
+    pub data: Option<TxsData>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, Object)]
+pub struct TxsData {
     counts: usize,
     txs: Vec<Transaction>,
 }
@@ -36,7 +48,11 @@ pub async fn get_tx(api: &Api, tx_id: Path<String>) -> Result<GetTxResponse> {
     let row = match res {
         Ok(row) => row,
         _ => {
-            return Ok(GetTxResponse::Ok(Json(Transaction::default())));
+            return Ok(GetTxResponse::Ok(Json(TxRes {
+                code: 200,
+                message: "".to_string(),
+                data: Some(Transaction::default()),
+            })));
         }
     };
     let tx_id: String = row.try_get("txid")?;
@@ -56,7 +72,11 @@ pub async fn get_tx(api: &Api, tx_id: Path<String>) -> Result<GetTxResponse> {
         events: vec![],
     };
 
-    Ok(GetTxResponse::Ok(Json(tx)))
+    Ok(GetTxResponse::Ok(Json(TxRes {
+        code: 200,
+        message: "".to_string(),
+        data: Some(tx),
+    })))
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -83,7 +103,11 @@ pub async fn get_txs(
     if let Some(from_address) = from.0 {
         let pk = public_key_from_bech32(from_address.as_str());
         if pk.is_err() {
-            return Ok(GetTxsResponse::Err(Json(String::from("invalid address"))));
+            return Ok(GetTxsResponse::Ok(Json(TxsRes {
+                code: 400,
+                message: "invalid public key".to_string(),
+                data: None,
+            })));
         }
         params.push(format!(
             " (value @? '$.body.operations[*].TransferAsset.body.transfer.inputs[*].public_key ? (@ == \"{}\" )') ",
@@ -92,7 +116,11 @@ pub async fn get_txs(
     if let Some(to_address) = to.0 {
         let pk = public_key_from_bech32(to_address.as_str());
         if pk.is_err() {
-            return Ok(GetTxsResponse::Err(Json(String::from("invalid address"))));
+            return Ok(GetTxsResponse::Ok(Json(TxsRes {
+                code: 400,
+                message: "invalid public key".to_string(),
+                data: None,
+            })));
         }
         params.push(format!(
             " (value @? '$.body.operations[*].TransferAsset.body.transfer.outputs[*].public_key ? (@ == \"{}\")') ",
@@ -131,7 +159,11 @@ pub async fn get_txs(
     let rows = match res {
         Ok(rows) => rows,
         _ => {
-            return Ok(GetTxsResponse::Ok(Json(TxsResult::default())));
+            return Ok(GetTxsResponse::Ok(Json(TxsRes {
+                code: 200,
+                message: "".to_string(),
+                data: Some(TxsData::default()),
+            })));
         }
     };
 
@@ -155,9 +187,10 @@ pub async fn get_txs(
 
         txs.push(tx);
     }
-
-    Ok(GetTxsResponse::Ok(Json(TxsResult {
-        counts: txs.len(),
-        txs,
+    let l = txs.len();
+    Ok(GetTxsResponse::Ok(Json(TxsRes {
+        code: 200,
+        message: "".to_string(),
+        data: Some(TxsData { counts: l, txs }),
     })))
 }

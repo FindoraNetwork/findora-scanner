@@ -10,7 +10,14 @@ use sqlx::Row;
 #[derive(ApiResponse)]
 pub enum GetBlockResponse {
     #[oai(status = 200)]
-    Ok(Json<DisplayBlock>),
+    Ok(Json<BlockRes>),
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, Object)]
+pub struct BlockRes {
+    pub code: i32,
+    pub message: String,
+    pub data: Option<DisplayBlock>,
 }
 
 #[derive(ApiResponse)]
@@ -21,6 +28,13 @@ pub enum GetBlocksResponse {
 
 #[derive(Serialize, Deserialize, Debug, Default, Object)]
 pub struct BlocksRes {
+    pub code: i32,
+    pub message: String,
+    pub data: Option<BlocksData>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, Object)]
+pub struct BlocksData {
     counts: usize,
     blocks: Vec<DisplayBlock>,
 }
@@ -33,7 +47,11 @@ pub async fn get_block_by_height(api: &Api, height: Path<i64>) -> Result<GetBloc
     let row = match res {
         Ok(row) => row,
         _ => {
-            return Ok(GetBlockResponse::Ok(Json(DisplayBlock::default())));
+            return Ok(GetBlockResponse::Ok(Json(BlockRes {
+                code: 200,
+                message: "".to_string(),
+                data: Some(DisplayBlock::default()),
+            })));
         }
     };
 
@@ -53,7 +71,11 @@ pub async fn get_block_by_height(api: &Api, height: Path<i64>) -> Result<GetBloc
         proposer,
     };
 
-    Ok(GetBlockResponse::Ok(Json(block)))
+    Ok(GetBlockResponse::Ok(Json(BlockRes {
+        code: 0,
+        message: "".to_string(),
+        data: Some(block),
+    })))
 }
 
 pub async fn get_block_by_hash(api: &Api, hash: Path<String>) -> Result<GetBlockResponse> {
@@ -64,7 +86,11 @@ pub async fn get_block_by_hash(api: &Api, hash: Path<String>) -> Result<GetBlock
     let row = match res {
         Ok(row) => row,
         _ => {
-            return Ok(GetBlockResponse::Ok(Json(DisplayBlock::default())));
+            return Ok(GetBlockResponse::Ok(Json(BlockRes {
+                code: 200,
+                message: "".to_string(),
+                data: Some(DisplayBlock::default()),
+            })));
         }
     };
 
@@ -85,7 +111,11 @@ pub async fn get_block_by_hash(api: &Api, hash: Path<String>) -> Result<GetBlock
         proposer,
     };
 
-    Ok(GetBlockResponse::Ok(Json(block)))
+    Ok(GetBlockResponse::Ok(Json(BlockRes {
+        code: 200,
+        message: "".to_string(),
+        data: Some(block),
+    })))
 }
 
 pub async fn get_blocks(
@@ -135,7 +165,11 @@ pub async fn get_blocks(
     let rows = match res {
         Ok(rows) => rows,
         _ => {
-            return Ok(GetBlocksResponse::Ok(Json(BlocksRes::default())));
+            return Ok(GetBlocksResponse::Ok(Json(BlocksRes {
+                code: 200,
+                message: "".to_string(),
+                data: Some(BlocksData::default()),
+            })));
         }
     };
 
@@ -158,9 +192,10 @@ pub async fn get_blocks(
         };
         blocks.push(block);
     }
-
+    let l = blocks.len();
     Ok(GetBlocksResponse::Ok(Json(BlocksRes {
-        counts: blocks.len(),
-        blocks,
+        code: 200,
+        message: "".to_string(),
+        data: Some(BlocksData { counts: l, blocks }),
     })))
 }

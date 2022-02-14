@@ -12,11 +12,18 @@ pub enum GetAddressResponse {
     #[oai(status = 200)]
     Ok(Json<AddressRes>),
     #[oai(status = 400)]
-    Err(Json<String>),
+    Err(Json<AddressRes>),
 }
 
 #[derive(Serialize, Deserialize, Debug, Default, Object)]
 pub struct AddressRes {
+    pub code: i32,
+    pub message: String,
+    pub data: Option<AddressData>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, Object)]
+pub struct AddressData {
     pub txs: Vec<Transaction>,
     pub counts: usize,
 }
@@ -25,9 +32,11 @@ pub async fn get_address(api: &Api, address: Path<String>) -> Result<GetAddressR
     let mut conn = api.storage.lock().await.acquire().await?;
     let pk = public_key_from_bech32(address.0.as_str());
     if pk.is_err() {
-        return Ok(GetAddressResponse::Err(Json(String::from(
-            "invalid address",
-        ))));
+        return Ok(GetAddressResponse::Err(Json(AddressRes {
+            code: 400,
+            message: "invalid address".to_string(),
+            data: None,
+        })));
     }
     let pk_b64 = public_key_to_base64(&pk.unwrap());
 
@@ -38,14 +47,19 @@ pub async fn get_address(api: &Api, address: Path<String>) -> Result<GetAddressR
         pk_b64, pk_b64
     );
     let res = sqlx::query(str.as_str()).fetch_all(&mut conn).await;
+
+    let mut txs: Vec<Transaction> = vec![];
     let rows = match res {
         Ok(rows) => rows,
         _ => {
-            return Ok(GetAddressResponse::Ok(Json(AddressRes::default())));
+            return Ok(GetAddressResponse::Ok(Json(AddressRes {
+                code: 200,
+                message: "".to_string(),
+                data: Some(AddressData::default()),
+            })));
         }
     };
 
-    let mut txs: Vec<Transaction> = vec![];
     for row in rows {
         let tx_id: String = row.try_get("txid")?;
         let block_id: String = row.try_get("block_id")?;
@@ -66,9 +80,10 @@ pub async fn get_address(api: &Api, address: Path<String>) -> Result<GetAddressR
 
         txs.push(tx)
     }
-
+    let l = txs.len();
     Ok(GetAddressResponse::Ok(Json(AddressRes {
-        counts: txs.len(),
-        txs,
+        code: 200,
+        message: "".to_string(),
+        data: Some(AddressData { txs, counts: l }),
     })))
 }
