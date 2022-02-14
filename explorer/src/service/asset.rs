@@ -9,9 +9,6 @@ use sqlx::Row;
 pub enum GetAssetResponse {
     #[oai(status = 200)]
     Ok(Json<AssetRes>),
-
-    #[oai(status = 400)]
-    Err(Json<AssetRes>),
 }
 
 #[derive(Serialize, Deserialize, Debug, Default, Object)]
@@ -77,7 +74,7 @@ pub async fn get_asset(api: &Api, address: Path<String>) -> Result<GetAssetRespo
     let code = match code_res {
         Ok(code) => code,
         _ => {
-            return Ok(GetAssetResponse::Err(Json(AssetRes {
+            return Ok(GetAssetResponse::Ok(Json(AssetRes {
                 code: 400,
                 message: "invalid base64 asset code".to_string(),
                 data: None,

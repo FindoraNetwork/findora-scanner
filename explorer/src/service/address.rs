@@ -11,8 +11,6 @@ use sqlx::Row;
 pub enum GetAddressResponse {
     #[oai(status = 200)]
     Ok(Json<AddressRes>),
-    #[oai(status = 400)]
-    Err(Json<AddressRes>),
 }
 
 #[derive(Serialize, Deserialize, Debug, Default, Object)]
@@ -32,7 +30,7 @@ pub async fn get_address(api: &Api, address: Path<String>) -> Result<GetAddressR
     let mut conn = api.storage.lock().await.acquire().await?;
     let pk = public_key_from_bech32(address.0.as_str());
     if pk.is_err() {
-        return Ok(GetAddressResponse::Err(Json(AddressRes {
+        return Ok(GetAddressResponse::Ok(Json(AddressRes {
             code: 400,
             message: "invalid address".to_string(),
             data: None,
