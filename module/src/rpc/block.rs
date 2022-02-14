@@ -22,7 +22,7 @@ pub struct Signature {
 
 #[derive(Deserialize, Debug)]
 pub struct LastCommit {
-    pub signatures: Vec<Signature>,
+    pub signatures: Option<Vec<Signature>>,
 }
 
 #[derive(Deserialize, Debug)]

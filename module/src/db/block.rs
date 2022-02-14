@@ -7,10 +7,18 @@ use serde::{Deserialize, Serialize};
 pub struct Block {
     pub block_id: String,
     pub height: i64,
+    pub size: i64,
     pub timestamp: NaiveDateTime,
     pub app_hash: String,
     pub proposer: String,
     pub txs: Vec<Transaction>,
     pub evm_txs: Vec<Transaction>,
     pub validators: Vec<Validator>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct BlockRef {
+    pub block_id: String,
+    pub height: i64,
+    pub txid: String,
 }
