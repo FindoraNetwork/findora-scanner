@@ -11,13 +11,9 @@ pub struct Args {
     #[clap(short, long)]
     server: String,
 
-    /// Begin block height.
-    #[clap(short, long, default_value_t = 0)]
-    begin: i64,
-
     /// Target block height.
     #[clap(short, long)]
-    height: i64,
+    height: Option<i64>,
 
     /// Postgres.
     ///
@@ -28,13 +24,6 @@ pub struct Args {
 
 impl Args {
     pub async fn execute(&self) -> Result<()> {
-        let target = self.height + 1;
-        let mut begin = self.begin;
-
-        if begin == 0 {
-            begin = target - 1;
-        }
-
         let (client, connection) = tokio_postgres::connect(&self.postgres, NoTls).await?;
 
         // The connection object performs the actual communication with the database,
@@ -45,11 +34,22 @@ impl Args {
             }
         });
 
-        for idx in begin..target {
-            println!("Got header {}", idx);
-            let r = block::Block::load_height(self.server.clone(), idx).await?;
-            db::save(r, &client).await?;
+        let mut target = 1;
+        if self.height.is_some() {
+            target = self.height.unwrap();
+        } else {
+            let res = client.query("SELECT * FROM last_height", &[]).await;
+            if let Ok(rows) = res {
+                if !rows.is_empty() {
+                    let h: i64 = rows[0].get(1);
+                    target += h;
+                }
+            }
         }
+
+        println!("Got header {}", target);
+        let r = block::Block::load_height(self.server.clone(), target).await?;
+        db::save(r, &client).await?;
 
         Ok(())
     }

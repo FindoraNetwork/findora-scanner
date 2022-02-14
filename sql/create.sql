@@ -35,3 +35,9 @@ CREATE TABLE block_generation(
     PRIMARY KEY(height, address)
 );
 
+CREATE TABLE last_height(
+    tip VARCHAR(255) NOT NULL,
+    height BIGINT NOT NULL,
+    PRIMARY KEY(tip)
+);
+

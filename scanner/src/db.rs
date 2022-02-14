@@ -61,5 +61,12 @@ pub async fn save(block: ModuleBlock, client: &Client) -> Result<()> {
             .await?;
     }
 
+    client
+        .execute(
+            "INSERT INTO last_height VALUES($1, $2) ON CONFLICT(tip) DO UPDATE SET height=$2",
+            &[&"tip".to_string(), &block.height],
+        )
+        .await?;
+
     Ok(())
 }
