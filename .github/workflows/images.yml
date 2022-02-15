@@ -1,0 +1,114 @@
+name: Building Images
+
+on:
+  push:
+    tags:
+      - "((scanner)|(explorer))-[0-9]+.[0-9]+.[0-9]+"
+
+jobs:
+  call-workflow-check:
+    uses: ./.github/workflows/check.yml
+
+  build-fundation-image:
+    name: Build Fundation Image
+    needs: call-workflow-check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v2
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v1
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          push: false
+          platforms: linux/amd64
+          tags: localhost/findora-scanner:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  build-scanner-image:
+    name: Build and Publish Scanner Image
+    needs: build-fundation-image
+    if: startsWith(github.event.ref, 'refs/tags/scanner')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v2
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v1
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Login Github Container Registry
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract Metadata for Docker
+        id: meta
+        uses: docker/metadata-action@v3
+        with:
+          images: ghcr.io/FindoraNetwork/findora-scanner
+          tags: |
+            type=raw,value={{tag}}
+            type=raw,value=latest
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v2
+        with:
+          context: ./scanner/.
+          push: true
+          platforms: linux/amd64
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+  build-explorer-image:
+    name: Build and Publish Explorer Image
+    needs: build-fundation-image
+    if: startsWith(github.event.ref, 'refs/tags/explorer')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v2
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v1
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Login Github Container Registry
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract Metadata for Docker
+        id: meta
+        uses: docker/metadata-action@v3
+        with:
+          images: ghcr.io/FindoraNetwork/findora-scanner
+          tags: |
+            type=raw,value={{tag}}
+            type=raw,value=latest
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v2
+        with:
+          context: ./explorer/.
+          push: true
+          platforms: linux/amd64
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
