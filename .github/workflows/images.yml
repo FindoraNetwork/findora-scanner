@@ -2,8 +2,6 @@ name: Building Images
 
 on:
   push:
-    branches:
-      - main
     tags:
       - "scanner-[0-9]+.[0-9]+.[0-9]+"
       - "explorer-[0-9]+.[0-9]+.[0-9]+"
