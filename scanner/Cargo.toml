@@ -17,3 +17,9 @@ clap = { version = "3.0.5", features = ["derive"] }
 sha2 = "0.10.1"
 hex = "0.4.3"
 module = { path = "../module" }
+
+[profile.release]
+opt-level = 's'
+lto = true
+codegen-units = 1
+panic = 'abort'
