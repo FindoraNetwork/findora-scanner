@@ -24,7 +24,7 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
 
-      - name: Build and push Docker image
+      - name: Build Docker image
         uses: docker/build-push-action@v2
         with:
           context: .
@@ -33,6 +33,13 @@ jobs:
           tags: localhost/findora-scanner:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          outputs: type=docker,dest=/tmp/localhost-findora-scanner-fundation.tar
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: localhost-findora-scanner-fundation
+          path: /tmp/localhost-findora-scanner-fundation.tar
 
   build-scanner-image:
     name: Build and Publish Scanner Image
@@ -64,6 +71,17 @@ jobs:
           tags: |
             type=raw,value={{tag}}
             type=raw,value=latest
+
+      - name: Download artifact
+        uses: actions/download-artifact@v2
+        with:
+          name: localhost-findora-scanner-fundation
+          path: /tmp
+
+      - name: Load Fundation Image
+        run: | 
+          docker load --input /tmp/localhost-findora-scanner-fundation.tar
+          docker image ls -a
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v2
@@ -104,6 +122,17 @@ jobs:
           tags: |
             type=raw,value={{tag}}
             type=raw,value=latest
+
+      - name: Download artifact
+        uses: actions/download-artifact@v2
+        with:
+          name: localhost-findora-scanner-fundation
+          path: /tmp
+
+      - name: Load Fundation Image
+        run: | 
+          docker load --input /tmp/localhost-findora-scanner-fundation.tar
+          docker image ls -a
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v2
