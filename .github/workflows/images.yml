@@ -2,6 +2,8 @@ name: Building Images
 
 on:
   push:
+    branches:
+      - main
     tags:
       - "scanner-[0-9]+.[0-9]+.[0-9]+"
       - "explorer-[0-9]+.[0-9]+.[0-9]+"
@@ -37,7 +39,8 @@ jobs:
         with:
           images: ghcr.io/FindoraNetwork/findora-scanner
           tags: |
-            type=edge,branch=main
+            type=raw,value={{branch}}-{{sha}}-{{date 'x'}}
+            type=raw,value=latest
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v2
@@ -53,7 +56,7 @@ jobs:
   build-scanner-image:
     name: Build and Publish Scanner Image
     needs: build-fundation-image
-    if: startsWith(github.event.ref, 'refs/tags/scanner')
+    
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repo
@@ -72,13 +75,25 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # it is a tag push using git tag as the image tag
       - name: Extract Metadata for Docker
+        if: "startsWith(github.event.ref, 'refs/tags/scanner')"
         id: meta
         uses: docker/metadata-action@v3
         with:
           images: ghcr.io/FindoraNetwork/findora-scanner
           tags: |
             type=raw,value={{tag}}
+
+      # it is a main branch push using time serious as image tag
+      - name: Extract Metadata for Docker
+        if: "!startsWith(github.event.ref, 'refs/tags/scanner')"
+        id: meta
+        uses: docker/metadata-action@v3
+        with:
+          images: ghcr.io/FindoraNetwork/findora-scanner
+          tags: |
+            type=raw,value=scanner-{{branch}}-{{sha}}-{{date 'x'}}
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v2
@@ -92,7 +107,6 @@ jobs:
   build-explorer-image:
     name: Build and Publish Explorer Image
     needs: build-fundation-image
-    if: startsWith(github.event.ref, 'refs/tags/explorer')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repo
@@ -111,13 +125,25 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # it is a tag push using git tag as the image tag
       - name: Extract Metadata for Docker
+        if: "startsWith(github.event.ref, 'refs/tags/explorer')"
         id: meta
         uses: docker/metadata-action@v3
         with:
           images: ghcr.io/FindoraNetwork/findora-scanner
           tags: |
             type=raw,value={{tag}}
+
+      # it is a main branch push using time serious as image tag
+      - name: Extract Metadata for Docker
+        if: "!startsWith(github.event.ref, 'refs/tags/explorer')"
+        id: meta
+        uses: docker/metadata-action@v3
+        with:
+          images: ghcr.io/FindoraNetwork/findora-scanner
+          tags: |
+            type=raw,value=explorer-{{branch}}-{{sha}}-{{date 'x'}}
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v2
