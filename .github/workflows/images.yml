@@ -39,7 +39,7 @@ jobs:
         with:
           images: ghcr.io/FindoraNetwork/findora-scanner
           tags: |
-            type=raw,value={{branch}}-{{sha}}-{{date 'x'}}
+            type=raw,value=fundation-{{date 'x'}}
             type=raw,value=latest
 
       - name: Build and push Docker image
