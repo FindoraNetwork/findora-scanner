@@ -3,6 +3,8 @@ name: Main Branch Checking
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
 
 env:
   CARGO_TERM_COLOR: always
@@ -20,6 +22,17 @@ jobs:
         toolchain: stable
         components: rustfmt, clippy 
         override: true
+
+    - name: Using cache to speed up
+      uses: actions/cache@v2
+      with:
+        path: |
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+          target/
+        key: ${{ runner.os }}-stable-cargo-${{ hashFiles('**/Cargo.lock') }}
 
     - name: Check Formatting
       run: cargo fmt --all -- --check 
