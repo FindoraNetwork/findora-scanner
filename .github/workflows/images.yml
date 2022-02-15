@@ -30,7 +30,7 @@ jobs:
           context: .
           push: false
           platforms: linux/amd64
-          tags: localhost/findora-scanner:latest
+          tags: findora-scanner:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
           outputs: type=docker,dest=/tmp/localhost-findora-scanner-fundation.tar
