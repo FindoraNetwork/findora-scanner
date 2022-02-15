@@ -1,6 +1,6 @@
-FROM findora-scanner:latest AS store
+FROM ghcr.io/FindoraNetwork/findora-scanner:latest AS fundation
 FROM docker.io/busybox:latest
 
-COPY --from=store /scanner /scanner
+COPY --from=fundation /scanner /scanner
 
 ENTRYPOINT ["/scanner"]
