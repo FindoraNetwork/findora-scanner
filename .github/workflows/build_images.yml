@@ -1,16 +1,17 @@
 name: Building Images
 
 on:
-  workflow_run:
-    workflows: ["Main Branch Checking"]
-    types: [completed]
   push:
     branches: [main]
       # tags:
       #   - "*-[0-9]+.[0-9]+.[0-9]+"
 jobs:
+  call-workflow-check:
+    uses: ./.github/workflows/check.yml
+
   build-fundation-image:
     name: Build Fundation Image
+    needs: call-workflow-check
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repo
