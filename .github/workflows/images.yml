@@ -1,10 +1,11 @@
 name: Building Images
 
 on:
-  push:
+  pull_request:
     branches: [main]
+  # push:
       # tags:
-      #   - "*-[0-9]+.[0-9]+.[0-9]+"
+      #   - "((scanner)|(explorer))-[0-9]+.[0-9]+.[0-9]+"
 jobs:
   call-workflow-check:
     uses: ./.github/workflows/check.yml
