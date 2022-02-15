@@ -75,25 +75,14 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # it is a tag push using git tag as the image tag
       - name: Extract Metadata for Docker
-        if: "startsWith(github.event.ref, 'refs/tags/scanner')"
         id: meta
         uses: docker/metadata-action@v3
         with:
           images: ghcr.io/FindoraNetwork/findora-scanner
           tags: |
-            type=raw,value={{tag}}
-
-      # it is a main branch push using time serious as image tag
-      - name: Extract Metadata for Docker
-        if: "!startsWith(github.event.ref, 'refs/tags/scanner')"
-        id: meta
-        uses: docker/metadata-action@v3
-        with:
-          images: ghcr.io/FindoraNetwork/findora-scanner
-          tags: |
-            type=raw,value=scanner-{{branch}}-{{sha}}-{{date 'x'}}
+            type=raw,value={{tag}},enable=${{ startsWith(github.event.ref, 'refs/tags/scanner') }}
+            type=raw,value=scanner-{{branch}}-{{sha}}-{{date 'x'}},enable=${{ !startsWith(github.event.ref, 'refs/tags/scanner') }}
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v2
@@ -125,25 +114,14 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # it is a tag push using git tag as the image tag
       - name: Extract Metadata for Docker
-        if: "startsWith(github.event.ref, 'refs/tags/explorer')"
         id: meta
         uses: docker/metadata-action@v3
         with:
           images: ghcr.io/FindoraNetwork/findora-scanner
           tags: |
-            type=raw,value={{tag}}
-
-      # it is a main branch push using time serious as image tag
-      - name: Extract Metadata for Docker
-        if: "!startsWith(github.event.ref, 'refs/tags/explorer')"
-        id: meta
-        uses: docker/metadata-action@v3
-        with:
-          images: ghcr.io/FindoraNetwork/findora-scanner
-          tags: |
-            type=raw,value=explorer-{{branch}}-{{sha}}-{{date 'x'}}
+            type=raw,value={{tag}},enable=${{ startsWith(github.event.ref, 'refs/tags/explorer') }}
+            type=raw,value=explorer-{{branch}}-{{sha}}-{{date 'x'}},enable=${{ !startsWith(github.event.ref, 'refs/tags/explorer') }}
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v2
