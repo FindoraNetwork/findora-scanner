@@ -112,9 +112,8 @@ enum ApiTags {
 #[tokio::main]
 async fn main() -> Result<()> {
     env_logger::init();
-    let current_path = std::env::current_exe()?;
-    let config_path = current_path.parent().unwrap().join("config.toml");
-    let config = module::config::explorer_config::Config::new(config_path.to_str().unwrap())?;
+    let config_path = std::env::var("CONFIG_FILE_PATH").unwrap();
+    let config = module::config::explorer_config::Config::new(&config_path)?;
     let postgres_config = format!(
         "postgres://{}:{}@{}/{}",
         config.postgres.account,
