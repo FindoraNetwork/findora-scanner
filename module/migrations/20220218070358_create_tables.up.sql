@@ -8,7 +8,7 @@ CREATE TABLE block (
     PRIMARY KEY(height)
 );
 
-CREATE TABLE transaction(
+CREATE TABLE transaction (
     txid VARCHAR(255) NOT NULL,
     block_id VARCHAR(255) NOT NULL,
     ty INT NOT NULL,
@@ -18,14 +18,14 @@ CREATE TABLE transaction(
     PRIMARY KEY(txid)
 );
 
-CREATE TABLE validators(
+CREATE TABLE validators (
     address VARCHAR(255) NOT NULL,
     pubkey_type INT NOT NULL,
     pubkey VARCHAR(255) NOT NULL,
     PRIMARY KEY(address)
 );
 
-CREATE TABLE block_generation(
+CREATE TABLE block_generation (
     height BIGINT NOT NULL,
     address VARCHAR(255) NOT NULL,
     power BIGINT NOT NULL,
@@ -35,9 +35,8 @@ CREATE TABLE block_generation(
     PRIMARY KEY(height, address)
 );
 
-CREATE TABLE last_height(
+CREATE TABLE last_height (
     tip VARCHAR(255) NOT NULL,
     height BIGINT NOT NULL,
     PRIMARY KEY(tip)
 );
-
