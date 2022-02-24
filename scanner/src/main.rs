@@ -22,5 +22,6 @@ async fn main() -> Result<()> {
     match commands::Scanner::parse() {
         Scanner::Load(load) => load.execute().await,
         Scanner::Scan(batch_scan) => batch_scan.execute().await,
+        Scanner::Subscribe(subscribe) => subscribe.run().await,
     }
 }

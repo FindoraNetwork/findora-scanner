@@ -1,79 +1,127 @@
-use crate::db;
-use crate::{rpc::TendermintRPC, tx, Error};
+use crate::{db, rpc::TendermintRPC, tx, Error};
 use chrono::NaiveDateTime;
-use crossbeam::sync::WaitGroup;
+use crossbeam::channel::bounded;
 use module::schema::{Block as ModuleBlock, Transaction, Validator};
-use parking_lot::Mutex;
 use reqwest::Url;
 use sha2::Digest;
 use sqlx::PgPool;
+use std::sync::atomic::{AtomicI64, Ordering};
 use std::{sync::Arc, time::Duration};
 
 pub struct RangeScanner {
-    inner: Arc<RangeScannerInner>,
+    caller: Arc<RPCCaller>,
     pool: PgPool,
 }
 
-struct RangeScannerInner {
+pub struct RPCCaller {
     retries: usize,
+    concurrency: usize,
     rpc: TendermintRPC,
 }
 
 impl RangeScanner {
-    pub fn new(timeout: Duration, tendermint_rpc: Url, retries: usize, pool: PgPool) -> Self {
+    pub fn new(
+        timeout: Duration,
+        tendermint_rpc: Url,
+        retries: usize,
+        concurrency: usize,
+        pool: PgPool,
+    ) -> Self {
         let rpc = TendermintRPC::new(timeout, tendermint_rpc);
         RangeScanner {
-            inner: Arc::new(RangeScannerInner { retries, rpc }),
+            caller: Arc::new(RPCCaller {
+                retries,
+                concurrency,
+                rpc,
+            }),
             pool,
         }
     }
 
-    ///scan block in [start..end), end is excluded.
-    pub async fn range_scan(&self, start: i64, end: i64) -> Result<Vec<i64>, Error> {
-        //Store the pull result of at the height.
-        let succeed_height: Arc<Mutex<Vec<i64>>> = Arc::new(Mutex::new(vec![]));
+    ///scan block in [start..end].
+    pub async fn range_scan(&self, start: i64, end: i64) -> Result<(), Error> {
+        let concurrency = self.caller.concurrency; //how many spawned.
 
-        let wg = WaitGroup::new();
-        for h in start..end {
-            let _wg = wg.clone();
-            let succeed_height = succeed_height.clone();
-            let inner = self.inner.clone();
-            let h = h as i64;
-            let pool = self.pool.clone();
-            tokio::spawn(async move {
-                match inner.load_height_retried(h).await {
-                    Ok(block) => {
-                        tokio::spawn(async move {
-                            match db::save(block, &pool).await {
-                                Ok(_) => {
-                                    succeed_height.lock().push(h);
-                                }
-                                Err(e) => error!("Database error: {:?}", e),
-                            }
-                            drop(_wg);
-                        });
+        let (sender, rev) = bounded(concurrency);
+
+        //Store the max height.
+        let last_height = Arc::new(AtomicI64::new(0));
+
+        let inner_p = self.caller.clone();
+        let pool_p = self.pool.clone();
+        let last_height_p = last_height.clone();
+
+        //start producer.
+        let handle_producer = tokio::task::spawn_blocking(move || {
+            for h in start..end {
+                let fut = task(inner_p.clone(), h, pool_p.clone(), last_height_p.clone());
+                //build a future that have not been executed.
+                sender.send(Some(fut)).unwrap();
+            }
+
+            //make them exit.
+            for _ in 0..concurrency {
+                sender.send(None).unwrap();
+            }
+        });
+
+        //spawn consumers.
+        let spawned_handles: Vec<_> = (0..concurrency)
+            .map(move |_| {
+                let rev_cloned = rev.clone();
+                tokio::spawn(async move {
+                    while let Ok(Some(fut)) = rev_cloned.recv() {
+                        //handle error within.
+                        let _: () = fut.await;
                     }
-                    Err(e) => {
-                        if let Error::NotFound = e {
-                            info!("Block not found at height {}.", h);
-                        }
-                        drop(_wg);
-                    }
-                };
-            });
+                })
+            })
+            .collect();
+
+        for h in spawned_handles {
+            h.await?;
         }
-        tokio::task::spawn_blocking(move || wg.wait()).await?;
-        let mut res = std::mem::take(&mut *succeed_height.lock());
-        if res.is_empty() {
-            return Err("No block is got.".into());
-        }
-        res.sort_unstable();
-        db::save_last_height(*res.last().unwrap(), &self.pool).await?;
-        Ok(res)
+        handle_producer.await?;
+        Ok(())
     }
 }
 
-impl RangeScannerInner {
+async fn task(caller: Arc<RPCCaller>, h: i64, pool: PgPool, last_height: Arc<AtomicI64>) {
+    match caller.load_height_retried(h).await {
+        Ok(block) => match db::save(block, &pool).await {
+            Ok(_) => {
+                let h_old = last_height.load(Ordering::Acquire);
+                if h > h_old {
+                    last_height.store(h, Ordering::Release);
+                    //write the last height to database.
+                    if let Err(e) = db::save_last_height(h, &pool).await {
+                        error!("Database error: {:?}", e);
+                    }
+                }
+                debug!("Height at {} succeed.", h);
+            }
+            Err(e) => error!("Database error: {:?}", e),
+        },
+        Err(e) => {
+            if let Error::NotFound = e {
+                info!("Block not found at height {}.", h);
+            } else {
+                error!("Load height error: {:?}", e);
+            }
+        }
+    };
+}
+
+impl RPCCaller {
+    pub fn new(retries: usize, concurrency: usize, timeout: Duration, tendermint_rpc: Url) -> Self {
+        let rpc = TendermintRPC::new(timeout, tendermint_rpc);
+        RPCCaller {
+            retries,
+            concurrency,
+            rpc,
+        }
+    }
+
     async fn load_height(&self, height: i64) -> Result<ModuleBlock, Error> {
         let block = self.rpc.load_block(height).await?;
         let validator_info = self.rpc.load_validators(height).await?;

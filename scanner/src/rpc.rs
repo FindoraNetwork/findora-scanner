@@ -52,9 +52,11 @@ impl TendermintRPC {
         if !status.is_success() {
             return Err(resp.text().await?.into());
         }
-        if let Ok(r) = resp.json::<RPCPesponse<T>>().await {
+        let bytes = resp.bytes().await?;
+        if let Ok(r) = serde_json::from_slice::<'_, RPCPesponse<T>>(&bytes) {
             Ok(r.result)
         } else {
+            debug!("{}", String::from_utf8_lossy(&bytes));
             Err(Error::NotFound)
         }
     }
