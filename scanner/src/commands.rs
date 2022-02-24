@@ -75,13 +75,13 @@ pub struct RangeScan {
     ///End height, included.
     #[clap(long)]
     end: u64,
-    ///Rpc timeout with seconds, default is 10.
+    ///Rpc timeout with seconds, default is 32 seconds.
     #[clap(long)]
     timeout: Option<u64>,
     ///Times to retry to pull a block, default is 3.
     #[clap(long)]
     retries: Option<usize>,
-    ///How many concurrency would be used to call rpc, default is 64.
+    ///How many concurrency would be used to call rpc, default is 8.
     #[clap(long)]
     concurrency: Option<usize>,
 }
@@ -110,7 +110,7 @@ impl RangeScan {
     }
 }
 
-/// pull a block.
+/// Pull a block periodically.
 #[derive(Parser)]
 #[clap(about, version, author)]
 pub struct Subscribe {
