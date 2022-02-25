@@ -249,19 +249,3 @@ impl RPCCaller {
         unreachable!()
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[tokio::test]
-    async fn test_parse() -> Result<(), Error> {
-        //[TODO]
-        // let _ = Block::load_height(
-        //     String::from("https://prod-mainnet.prod.findora.org:26657"),
-        //     1550667,
-        // )
-        // .await?;
-        Ok(())
-    }
-}
