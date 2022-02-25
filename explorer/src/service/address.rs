@@ -1,7 +1,7 @@
 use crate::service::util::{public_key_from_bech32, public_key_to_base64};
 use crate::Api;
 use anyhow::Result;
-use module::db::tx::Transaction;
+use module::schema::Transaction;
 use poem_openapi::{param::Path, payload::Json, ApiResponse, Object};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;

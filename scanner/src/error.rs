@@ -1,14 +1,16 @@
 #[derive(Debug)]
 pub enum Error {
+    CustomError(String),
     RequestError(reqwest::Error),
     ChronoError(chrono::ParseError),
     ParseIntError(std::num::ParseIntError),
     Base64Error(base64::DecodeError),
     SerdeJsonError(serde_json::Error),
     JoinError(tokio::task::JoinError),
-    DBError(tokio_postgres::Error),
+    DBError(sqlx::Error),
     TryIntoError(core::num::TryFromIntError),
     EvmTxParseError,
+    NotFound,
 }
 
 impl From<core::num::TryFromIntError> for Error {
@@ -53,9 +55,21 @@ impl From<tokio::task::JoinError> for Error {
     }
 }
 
-impl From<tokio_postgres::Error> for Error {
-    fn from(e: tokio_postgres::Error) -> Self {
+impl From<sqlx::Error> for Error {
+    fn from(e: sqlx::Error) -> Self {
         Error::DBError(e)
+    }
+}
+
+impl From<String> for Error {
+    fn from(e: String) -> Self {
+        Error::CustomError(e)
+    }
+}
+
+impl<'a> From<&'a str> for Error {
+    fn from(e: &'a str) -> Self {
+        Error::CustomError(e.to_owned())
     }
 }
 
