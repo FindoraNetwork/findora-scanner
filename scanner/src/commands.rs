@@ -156,6 +156,8 @@ impl Subscribe {
 
         let caller = RPCCaller::new(retries, 1, timeout, rpc);
         loop {
+
+
             if load_and_save_block(&caller, cursor, &pool).await.is_ok() {
                 info!("Load block at height {} succeed.", cursor);
                 cursor += 1;

@@ -40,3 +40,9 @@ CREATE TABLE last_height (
     height BIGINT NOT NULL,
     PRIMARY KEY(tip)
 );
+
+CREATE TABLE delegations (
+    height BIGINT NOT NULL PRIMARY KEY,
+    info JSONB
+)
+
