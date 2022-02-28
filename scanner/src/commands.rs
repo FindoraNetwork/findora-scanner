@@ -156,9 +156,12 @@ impl Subscribe {
 
         let caller = RPCCaller::new(retries, 1, timeout, rpc);
         loop {
+            if let Ok(h) = db::load_last_height(&pool).await {
+                cursor = h + 1;
+            }
+
             if load_and_save_block(&caller, cursor, &pool).await.is_ok() {
                 info!("Load block at height {} succeed.", cursor);
-                cursor += 1;
             };
             tokio::time::sleep(interval).await;
         }

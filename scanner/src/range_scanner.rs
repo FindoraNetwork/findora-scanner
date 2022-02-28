@@ -40,6 +40,7 @@ impl RangeScanner {
 
     ///scan block in [start..end].
     pub async fn range_scan(&self, start: i64, end: i64) -> Result<(), Error> {
+        info!("Scanning from {} to {} ...", start, end);
         let concurrency = self.caller.concurrency; //how many spawned.
 
         let (sender, rev) = bounded(concurrency);
@@ -82,6 +83,7 @@ impl RangeScanner {
             h.await?;
         }
         handle_producer.await?;
+        info!("Scanning from {} to {} complete.", start, end);
         Ok(())
     }
 }

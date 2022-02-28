@@ -18,7 +18,10 @@ use commands::Scanner;
 #[tokio::main]
 async fn main() -> Result<()> {
     dotenv::dotenv().ok();
-    env_logger::init();
+    env_logger::builder()
+        .target(env_logger::Target::Stdout)
+        .init();
+
     match commands::Scanner::parse() {
         Scanner::Load(load) => load.execute().await,
         Scanner::Scan(batch_scan) => batch_scan.execute().await,
