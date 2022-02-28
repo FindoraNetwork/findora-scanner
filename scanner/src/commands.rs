@@ -152,16 +152,32 @@ impl Subscribe {
             1
         };
 
-        info!("Subscribing start from {}", cursor);
+        let range_scanner =
+            RangeScanner::new(timeout, rpc, retries, DEFAULT_CONCURRENCY, pool.clone());
 
-        let caller = RPCCaller::new(retries, 1, timeout, rpc);
+        let bacth_size = 128;
+
+        info!("Subscribing start from {}, try fast sync ...", cursor);
+        loop {
+            let succeed_cnt = range_scanner
+                .range_scan(cursor, cursor + bacth_size)
+                .await?;
+            if succeed_cnt == bacth_size {
+                cursor += bacth_size;
+            } else {
+                break;
+            }
+        }
+        info!("Fast sync complete.");
+        let caller = range_scanner.caller().clone();
         loop {
             if let Ok(h) = db::load_last_height(&pool).await {
                 cursor = h + 1;
             }
-
-            if load_and_save_block(&caller, cursor, &pool).await.is_ok() {
-                info!("Load block at height {} succeed.", cursor);
+            match load_and_save_block(&caller, cursor, &pool).await {
+                Ok(_) => (),
+                Err(Error::NotFound) => (),
+                Err(e) => return Err(e),
             };
             tokio::time::sleep(interval).await;
         }
@@ -183,5 +199,6 @@ async fn load_and_save_block(caller: &RPCCaller, target: i64, pool: &PgPool) -> 
     let block = caller.load_height_retried(target).await?;
     db::save(block, pool).await?;
     db::save_last_height(target, pool).await?;
+    info!("Load block at height {} succeed.", target);
     Ok(())
 }

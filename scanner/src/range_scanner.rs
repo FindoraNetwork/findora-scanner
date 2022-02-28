@@ -39,23 +39,32 @@ impl RangeScanner {
     }
 
     ///scan block in [start..end].
-    pub async fn range_scan(&self, start: i64, end: i64) -> Result<(), Error> {
-        info!("Scanning from {} to {} ...", start, end);
+    pub async fn range_scan(&self, start: i64, end: i64) -> Result<i64, Error> {
+        info!("Scanning [{},{}) ...", start, end);
         let concurrency = self.caller.concurrency; //how many spawned.
 
         let (sender, rev) = bounded(concurrency);
 
         //Store the max height.
         let last_height = Arc::new(AtomicI64::new(0));
+        //counter of successful tasks.
+        let succeed_cnt = Arc::new(AtomicI64::new(0));
 
         let inner_p = self.caller.clone();
         let pool_p = self.pool.clone();
         let last_height_p = last_height.clone();
 
         //start producer.
+        let succeed_cnt_cloned = succeed_cnt.clone();
         let handle_producer = tokio::task::spawn_blocking(move || {
             for h in start..end {
-                let fut = task(inner_p.clone(), h, pool_p.clone(), last_height_p.clone());
+                let fut = task(
+                    inner_p.clone(),
+                    h,
+                    pool_p.clone(),
+                    last_height_p.clone(),
+                    succeed_cnt_cloned.clone(),
+                );
                 //build a future that have not been executed.
                 sender.send(Some(fut)).unwrap();
             }
@@ -83,12 +92,22 @@ impl RangeScanner {
             h.await?;
         }
         handle_producer.await?;
-        info!("Scanning from {} to {} complete.", start, end);
-        Ok(())
+        info!("Scanning [{},{}) complete.", start, end);
+        Ok(succeed_cnt.load(Ordering::Acquire))
+    }
+
+    pub fn caller(&self) -> &Arc<RPCCaller> {
+        &self.caller
     }
 }
 
-async fn task(caller: Arc<RPCCaller>, h: i64, pool: PgPool, last_height: Arc<AtomicI64>) {
+async fn task(
+    caller: Arc<RPCCaller>,
+    h: i64,
+    pool: PgPool,
+    last_height: Arc<AtomicI64>,
+    succeed_cnt: Arc<AtomicI64>,
+) {
     match caller.load_height_retried(h).await {
         Ok(block) => match db::save(block, &pool).await {
             Ok(_) => {
@@ -100,6 +119,7 @@ async fn task(caller: Arc<RPCCaller>, h: i64, pool: PgPool, last_height: Arc<Ato
                         error!("Database error: {:?}", e);
                     }
                 }
+                succeed_cnt.fetch_add(1, Ordering::Release);
                 debug!("Height at {} succeed.", h);
             }
             Err(e) => error!("Database error: {:?}", e),
