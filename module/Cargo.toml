@@ -12,3 +12,4 @@ toml = "0.5.8"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 poem-openapi = {version = "1.2.30"}
+zei = { git = "https://github.com/FindoraNetwork/zei", tag = "v0.1.4x" }

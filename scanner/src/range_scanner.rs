@@ -1,6 +1,7 @@
 use crate::{db, rpc::TendermintRPC, tx, Error};
 use chrono::NaiveDateTime;
 use crossbeam::channel::bounded;
+use module::rpc::delegations::DelegationInfo;
 use module::schema::{Block as ModuleBlock, Transaction, Validator};
 use reqwest::Url;
 use sha2::Digest;
@@ -10,13 +11,13 @@ use std::{sync::Arc, time::Duration};
 
 pub struct RangeScanner {
     caller: Arc<RPCCaller>,
-    pool: PgPool,
 }
 
 pub struct RPCCaller {
     retries: usize,
     concurrency: usize,
     rpc: TendermintRPC,
+    pool: PgPool,
 }
 
 impl RangeScanner {
@@ -33,8 +34,8 @@ impl RangeScanner {
                 retries,
                 concurrency,
                 rpc,
+                pool,
             }),
-            pool,
         }
     }
 
@@ -48,13 +49,12 @@ impl RangeScanner {
         let last_height = Arc::new(AtomicI64::new(0));
 
         let inner_p = self.caller.clone();
-        let pool_p = self.pool.clone();
         let last_height_p = last_height.clone();
 
         //start producer.
         let handle_producer = tokio::task::spawn_blocking(move || {
             for h in start..end {
-                let fut = task(inner_p.clone(), h, pool_p.clone(), last_height_p.clone());
+                let fut = task(inner_p.clone(), h, last_height_p.clone());
                 //build a future that have not been executed.
                 sender.send(Some(fut)).unwrap();
             }
@@ -86,15 +86,15 @@ impl RangeScanner {
     }
 }
 
-async fn task(caller: Arc<RPCCaller>, h: i64, pool: PgPool, last_height: Arc<AtomicI64>) {
+async fn task(caller: Arc<RPCCaller>, h: i64, last_height: Arc<AtomicI64>) {
     match caller.load_height_retried(h).await {
-        Ok(block) => match db::save(block, &pool).await {
+        Ok(block) => match db::save(block, &caller.pool).await {
             Ok(_) => {
                 let h_old = last_height.load(Ordering::Acquire);
                 if h > h_old {
                     last_height.store(h, Ordering::Release);
                     //write the last height to database.
-                    if let Err(e) = db::save_last_height(h, &pool).await {
+                    if let Err(e) = db::save_last_height(h, &caller.pool).await {
                         error!("Database error: {:?}", e);
                     }
                 }
@@ -113,13 +113,24 @@ async fn task(caller: Arc<RPCCaller>, h: i64, pool: PgPool, last_height: Arc<Ato
 }
 
 impl RPCCaller {
-    pub fn new(retries: usize, concurrency: usize, timeout: Duration, tendermint_rpc: Url) -> Self {
+    pub fn new(
+        retries: usize,
+        concurrency: usize,
+        timeout: Duration,
+        tendermint_rpc: Url,
+        pool: PgPool,
+    ) -> Self {
         let rpc = TendermintRPC::new(timeout, tendermint_rpc);
         RPCCaller {
             retries,
             concurrency,
             rpc,
+            pool,
         }
+    }
+
+    pub async fn load_staking(&self) -> Result<DelegationInfo, Error> {
+        self.rpc.load_staking().await
     }
 
     async fn load_height(&self, height: i64) -> Result<ModuleBlock, Error> {
@@ -247,5 +258,12 @@ impl RPCCaller {
             };
         }
         unreachable!()
+    }
+
+    pub async fn load_and_save_block(&self, target: i64) -> Result<(), Error> {
+        let block = self.load_height_retried(target).await?;
+        db::save(block, &self.pool).await?;
+        db::save_last_height(target, &self.pool).await?;
+        Ok(())
     }
 }

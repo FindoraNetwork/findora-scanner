@@ -5,8 +5,8 @@ use crate::{Error, Result};
 use serde::de::DeserializeOwned;
 
 use module::rpc::{
-    block::BlockRPC as ModuleBlockRPC, tx::Transaction as ModuleTx,
-    validator::ValidatorsRPC as ModuleValidatorsRPC, RPCPesponse,
+    block::BlockRPC as ModuleBlockRPC, delegations::DelegationInfo, tx::Transaction as ModuleTx,
+    validator::ValidatorsRPC as ModuleValidatorsRPC, JsonRpcResponse, TdRpcResult,
 };
 
 use reqwest::{Client, ClientBuilder, Url};
@@ -46,6 +46,32 @@ impl TendermintRPC {
         Ok(r)
     }
 
+    pub async fn load_staking(&self) -> Result<DelegationInfo> {
+        let mut url = self.rpc.join("abci_query").unwrap();
+        let mut queries = url.query_pairs_mut();
+        queries.append_pair("path", "\"/delegations\"");
+        queries.append_pair("data", "");
+        drop(queries);
+
+        let resp = self.client.get(url).send().await?;
+        let status = resp.status();
+        if !status.is_success() {
+            return Err(resp.text().await?.into());
+        }
+
+        let result: JsonRpcResponse<TdRpcResult> = resp.json().await?;
+        let response = result.result.response;
+        if response.code != 0 {
+            return Err(response.info.into());
+        }
+
+        //let data = response.info.replace("\\\"", "\"");
+
+        let staking: DelegationInfo = serde_json::from_str(&response.info)?;
+
+        Ok(staking)
+    }
+
     async fn client_get<T: DeserializeOwned>(&self, url: Url) -> Result<T> {
         let resp = self.client.get(url).send().await?;
         let status = resp.status();
@@ -53,7 +79,7 @@ impl TendermintRPC {
             return Err(resp.text().await?.into());
         }
         let bytes = resp.bytes().await?;
-        if let Ok(r) = serde_json::from_slice::<'_, RPCPesponse<T>>(&bytes) {
+        if let Ok(r) = serde_json::from_slice::<'_, JsonRpcResponse<T>>(&bytes) {
             Ok(r.result)
         } else {
             debug!("{}", String::from_utf8_lossy(&bytes));

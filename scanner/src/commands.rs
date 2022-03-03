@@ -55,8 +55,13 @@ impl Load {
 
         info!("Got header {}", target);
 
-        let caller = RPCCaller::new(retries, 1, timeout, rpc);
-        load_and_save_block(&caller, target, &pool).await?;
+        let caller = RPCCaller::new(retries, 1, timeout, rpc, pool);
+
+        let staking = caller.load_staking().await?;
+
+        println!("{:?}", &staking);
+
+        caller.load_and_save_block(target).await?;
         info!("Load block at height {} succeed.", target);
         Ok(())
     }
@@ -129,6 +134,9 @@ pub struct Subscribe {
     #[clap(long)]
     ///block generation interval, with seconds.
     interval: Option<u64>,
+    ///How many concurrency would be used when scanning, default is 8.
+    #[clap(long)]
+    concurrency: Option<usize>,
 }
 
 impl Subscribe {
@@ -154,11 +162,9 @@ impl Subscribe {
 
         info!("Subscribing start from {}", cursor);
 
-        let caller = RPCCaller::new(retries, 1, timeout, rpc);
+        let caller = RPCCaller::new(retries, 1, timeout, rpc, pool);
         loop {
-
-
-            if load_and_save_block(&caller, cursor, &pool).await.is_ok() {
+            if caller.load_and_save_block(cursor).await.is_ok() {
                 info!("Load block at height {} succeed.", cursor);
                 cursor += 1;
             };
@@ -176,11 +182,4 @@ async fn prepare(rpc: &str) -> Result<(Url, PgPool)> {
     let rpc: Url = rpc.parse().map_err(|e| Error::from(format!("{}", e)))?;
 
     Ok((rpc, pool))
-}
-
-async fn load_and_save_block(caller: &RPCCaller, target: i64, pool: &PgPool) -> Result<()> {
-    let block = caller.load_height_retried(target).await?;
-    db::save(block, pool).await?;
-    db::save_last_height(target, pool).await?;
-    Ok(())
 }
