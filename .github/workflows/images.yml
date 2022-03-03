@@ -15,6 +15,7 @@ jobs:
   build-fundation-image:
     name: Build Fundation Image
     needs: call-workflow-check
+    concurrency: ci-building-image
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repo

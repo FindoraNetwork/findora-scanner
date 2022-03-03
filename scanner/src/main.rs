@@ -1,5 +1,3 @@
-pub mod range_scanner;
-
 #[macro_use]
 extern crate log;
 
@@ -10,6 +8,7 @@ pub mod commands;
 pub mod db;
 pub mod rpc;
 pub mod tx;
+pub mod scanner;
 
 use clap::Parser;
 

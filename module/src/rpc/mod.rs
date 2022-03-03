@@ -25,4 +25,5 @@ pub struct TdRpcResponse {
     pub code:u32,
     pub log:String,
     pub info:String,
+    pub height:String,
 }
