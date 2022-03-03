@@ -1,6 +1,5 @@
-use crate::{db, range_scanner::RPCCaller};
+use crate::{db, rpc::RPCCaller, scanner::RangeScanner};
 use clap::Parser;
-use range_scanner::RangeScanner;
 use reqwest::Url;
 use sqlx::PgPool;
 use std::time::Duration;
@@ -11,7 +10,7 @@ pub enum Scanner {
     Load(Load),
     Subscribe(Subscribe),
 }
-use crate::{range_scanner, Error, Result};
+use crate::{Error, Result};
 
 const DEFAULT_TIMEOUT_SECS: u64 = 32;
 const DEFAULT_RETIES: usize = 3;
@@ -34,6 +33,9 @@ pub struct Load {
     ///Times to retry to pull a block.
     #[clap(long)]
     retries: Option<usize>,
+    ///whether to load staking.
+    #[clap(long, parse(from_flag))]
+    staking: bool,
 }
 
 impl Load {
@@ -55,8 +57,17 @@ impl Load {
 
         info!("Got header {}", target);
 
-        let caller = RPCCaller::new(retries, 1, timeout, rpc);
-        load_and_save_block(&caller, target, &pool).await?;
+        let caller = RPCCaller::new(retries, 1, timeout, rpc, pool);
+
+        caller.load_and_save_block(target).await?;
+
+        if self.staking {
+            match caller.load_and_save_staking().await {
+                Ok(h) => info!("Staking at {} loaded.", h),
+                Err(e) => warn!("Failed to load staking: {:?}", e),
+            }
+        }
+
         info!("Load block at height {} succeed.", target);
         Ok(())
     }
@@ -129,6 +140,12 @@ pub struct Subscribe {
     #[clap(long)]
     ///block generation interval, with seconds.
     interval: Option<u64>,
+    ///How many concurrency would be used when scanning, default is 8.
+    #[clap(long)]
+    concurrency: Option<usize>,
+    ///Load staking while subscribing.
+    #[clap(long, parse(from_flag))]
+    staking: bool,
 }
 
 impl Subscribe {
@@ -152,10 +169,13 @@ impl Subscribe {
             1
         };
 
-        let range_scanner =
-            RangeScanner::new(timeout, rpc, retries, DEFAULT_CONCURRENCY, pool.clone());
+        let concurrency = self.concurrency.unwrap_or(DEFAULT_CONCURRENCY);
 
-        let bacth_size = 128;
+        assert!(concurrency >= 1);
+
+        let range_scanner = RangeScanner::new(timeout, rpc, retries, concurrency, pool.clone());
+
+        let bacth_size = 4 * concurrency as i64;
 
         info!("Subscribing start from {}, try fast sync ...", cursor);
         loop {
@@ -174,8 +194,16 @@ impl Subscribe {
             if let Ok(h) = db::load_last_height(&pool).await {
                 cursor = h + 1;
             }
-            match load_and_save_block(&caller, cursor, &pool).await {
-                Ok(_) => (),
+            match caller.load_and_save_block(cursor).await {
+                Ok(_) => {
+                    info!("Block at {} loaded.", cursor);
+                    if self.staking {
+                        match caller.load_and_save_staking().await {
+                            Ok(h) => info!("Staking at {} loaded.", h),
+                            Err(e) => warn!("Failed to load staking: {:?}", e),
+                        }
+                    }
+                }
                 Err(Error::NotFound) => (),
                 Err(e) => return Err(e),
             };
@@ -193,12 +221,4 @@ async fn prepare(rpc: &str) -> Result<(Url, PgPool)> {
     let rpc: Url = rpc.parse().map_err(|e| Error::from(format!("{}", e)))?;
 
     Ok((rpc, pool))
-}
-
-async fn load_and_save_block(caller: &RPCCaller, target: i64, pool: &PgPool) -> Result<()> {
-    let block = caller.load_height_retried(target).await?;
-    db::save(block, pool).await?;
-    db::save_last_height(target, pool).await?;
-    info!("Load block at height {} succeed.", target);
-    Ok(())
 }

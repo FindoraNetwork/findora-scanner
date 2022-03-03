@@ -1,5 +1,5 @@
 use crate::Result;
-use module::schema::Block as ModuleBlock;
+use module::schema::{Block as ModuleBlock, DelegationInfo};
 
 use sqlx::{PgPool, Row};
 
@@ -160,4 +160,16 @@ pub async fn load_last_height(pool: &PgPool) -> Result<i64> {
         .await?;
 
     Ok(lh.height)
+}
+
+pub async fn save_delegations(h: i64, info: &DelegationInfo, pool: &PgPool) -> Result<()> {
+    let info = serde_json::to_value(info).unwrap();
+    sqlx::query(
+        "INSERT INTO delegations VALUES($1, $2) ON CONFLICT(height) DO UPDATE SET info=$2;",
+    )
+    .bind(&h)
+    .bind(&info)
+    .execute(pool)
+    .await?;
+    Ok(())
 }
