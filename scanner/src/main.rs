@@ -7,8 +7,8 @@ pub use error::*;
 pub mod commands;
 pub mod db;
 pub mod rpc;
-pub mod tx;
 pub mod scanner;
+pub mod tx;
 
 use clap::Parser;
 

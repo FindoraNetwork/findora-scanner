@@ -1,7 +1,7 @@
 pub mod block;
+pub mod delegations;
 pub mod tx;
 pub mod validator;
-pub mod delegations;
 
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
@@ -14,16 +14,15 @@ pub struct JsonRpcResponse<T: DeserializeOwned> {
     pub result: T,
 }
 
-
 #[derive(Deserialize, Serialize)]
 pub struct TdRpcResult {
-    pub response:TdRpcResponse,
+    pub response: TdRpcResponse,
 }
 
 #[derive(Deserialize, Serialize)]
 pub struct TdRpcResponse {
-    pub code:u32,
-    pub log:String,
-    pub info:String,
-    pub height:String,
+    pub code: u32,
+    pub log: String,
+    pub info: String,
+    pub height: String,
 }
