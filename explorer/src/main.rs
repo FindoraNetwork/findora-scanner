@@ -19,7 +19,11 @@ pub struct Api {
 #[OpenApi]
 impl Api {
     #[oai(path = "/tx/:tx_id", method = "get", tag = "ApiTags::Transaction")]
-    async fn get_tx(&self, tx_id: Path<String>) -> poem::Result<GetTxResponse> {
+    async fn get_tx(
+        &self,
+        /// transaction hash, like 'c19fc22beb61030607367b42d4898a26ede1e6aa6b400330804c95b241f29bd0'.
+        tx_id: Path<String>,
+    ) -> poem::Result<GetTxResponse> {
         service::tx::get_tx(self, tx_id)
             .await
             .map_err(utils::handle_fetch_one_err)
@@ -29,13 +33,21 @@ impl Api {
     #[oai(path = "/txs", method = "get", tag = "ApiTags::Transaction")]
     async fn get_txs(
         &self,
+        /// block hash, like '4B7C22FA8FC6913E091DC324830181BBA1F01EBFF53049F958EA5AA65327BFE0'.
         block_id: Query<Option<String>>,
+        /// from address, like 'fra1p4vy5n9mlkdys7xczegj398xtyvw2nawz00nnfh4yr7fpjh297cqsxfv7v'.
         from: Query<Option<String>>,
+        /// to address.
         to: Query<Option<String>>,
+        /// transaction type. 0 is for Findora tx, 1 is for evm tx.
         ty: Query<Option<i64>>,
+        /// time of transaction starts in seconds.
         start_time: Query<Option<i64>>,
+        /// time of transaction ends in seconds.
         end_time: Query<Option<i64>>,
+        /// page number, staring at 1, default 1.
         page: Query<Option<i64>>,
+        /// page size, default 10.
         page_size: Query<Option<i64>>,
     ) -> poem::Result<GetTxsResponse> {
         service::tx::get_txs(
@@ -46,14 +58,22 @@ impl Api {
     }
 
     #[oai(path = "/block/height/:height", method = "get", tag = "ApiTags::Block")]
-    async fn get_block_by_height(&self, height: Path<i64>) -> poem::Result<GetBlockResponse> {
+    async fn get_block_by_height(
+        &self,
+        /// block height.
+        height: Path<i64>,
+    ) -> poem::Result<GetBlockResponse> {
         service::block::get_block_by_height(self, height)
             .await
             .map_err(utils::handle_fetch_one_err)
     }
 
     #[oai(path = "/block/hash/:hash", method = "get", tag = "ApiTags::Block")]
-    async fn get_block_by_hash(&self, hash: Path<String>) -> poem::Result<GetBlockResponse> {
+    async fn get_block_by_hash(
+        &self,
+        /// block hash.
+        hash: Path<String>,
+    ) -> poem::Result<GetBlockResponse> {
         service::block::get_block_by_hash(self, hash)
             .await
             .map_err(utils::handle_fetch_one_err)
@@ -62,11 +82,17 @@ impl Api {
     #[oai(path = "/blocks", method = "get", tag = "ApiTags::Block")]
     async fn get_blocks(
         &self,
+        /// height of block starts.
         start_height: Query<Option<i64>>,
+        /// height of block ends.
         end_height: Query<Option<i64>>,
+        /// time of block starts in seconds.
         start_time: Query<Option<i64>>,
+        /// time of block ends in seconds.
         end_time: Query<Option<i64>>,
+        /// page number, starting at 1, default 1.
         page: Query<Option<i64>>,
+        /// page size, default 10.
         page_size: Query<Option<i64>>,
     ) -> poem::Result<GetBlocksResponse> {
         service::block::get_blocks(
@@ -83,14 +109,22 @@ impl Api {
     }
 
     #[oai(path = "/address/:address", method = "get", tag = "ApiTags::Address")]
-    async fn get_address(&self, address: Path<String>) -> poem::Result<GetAddressResponse> {
+    async fn get_address(
+        &self,
+        /// account address, like 'fra1p4vy5n9mlkdys7xczegj398xtyvw2nawz00nnfh4yr7fpjh297cqsxfv7v'.
+        address: Path<String>,
+    ) -> poem::Result<GetAddressResponse> {
         service::address::get_address(self, address)
             .await
             .map_err(utils::handle_fetch_one_err)
     }
 
     #[oai(path = "/asset/:code", method = "get", tag = "ApiTags::Asset")]
-    async fn get_asset(&self, code: Path<String>) -> poem::Result<GetAssetResponse> {
+    async fn get_asset(
+        &self,
+        /// an asset address, like 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA='.
+        code: Path<String>,
+    ) -> poem::Result<GetAssetResponse> {
         service::asset::get_asset(self, code)
             .await
             .map_err(utils::handle_fetch_one_err)
