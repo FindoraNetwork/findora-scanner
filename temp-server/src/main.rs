@@ -7,7 +7,7 @@ use std::fs::File;
 use std::io::Read;
 
 pub struct Api {}
-pub static MAIN_NET_ADDR: &'static str = "https://prod-mainnet.prod.findora.org:8667";
+pub static MAIN_NET_ADDR: &str = "https://prod-mainnet.prod.findora.org:8667";
 
 #[derive(Serialize, Deserialize, Debug, Default, Object)]
 pub struct GetTotalSupplyResp {
