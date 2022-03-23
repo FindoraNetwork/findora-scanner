@@ -3,6 +3,7 @@ members = [
     "scanner",
     "explorer",
     "module",
+    "temp-server",
 ]
 
 [profile.release]
