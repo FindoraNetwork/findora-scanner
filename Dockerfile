@@ -28,4 +28,4 @@ FROM docker.io/busybox:latest
 COPY --from=builder /etc/ssl/certs /etc/ssl/certs
 COPY --from=builder /findora-scanner-binaries/explorer /explorer
 COPY --from=builder /findora-scanner-binaries/scanner /scanner
-COPY --from=builder /findora-scanner-binaries/scanner /temp-server
+COPY --from=builder /findora-scanner-binaries/temp-server /temp-server
