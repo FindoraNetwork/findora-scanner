@@ -1,3 +1,4 @@
 [server]
     addr = "0.0.0.0"
+    url = "https://prod-testnet.prod.findora.org:8667/"
     port = 8779
