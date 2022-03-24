@@ -3,11 +3,11 @@ use poem::{listener::TcpListener, Route, Server};
 use poem_openapi::{payload::Json, ApiResponse, Object, OpenApi, OpenApiService, Tags};
 use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
-use std::fs::File;
-use std::io::Read;
+use std::{fs::File, io::Read};
 
-pub struct Api {}
-pub static MAIN_NET_ADDR: &str = "https://prod-mainnet.prod.findora.org:8667";
+pub struct Api {
+    pub config: Config,
+}
 
 #[derive(Serialize, Deserialize, Debug, Default, Object)]
 pub struct GetTotalSupplyResp {
@@ -31,15 +31,16 @@ pub struct CirculatingSupply {
     pub global_delegation_amount: f64,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct Config {
     pub server: ServerConfig,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct ServerConfig {
     pub addr: String,
     pub port: u64,
+    pub url: String,
 }
 
 impl Config {
@@ -72,14 +73,17 @@ impl Api {
             poem::Error::from_string(e.to_string(), StatusCode::INTERNAL_SERVER_ERROR)
         };
 
-        let gcsr = reqwest::get(format!("{}/{}", MAIN_NET_ADDR, "circulating_supply"))
-            .await
-            .map_err(err_handle)?
-            .json::<GetCirculatingSupplyResp>()
-            .await
-            .map_err(err_handle)?;
+        let gcsr = reqwest::get(format!(
+            "{}{}",
+            self.config.server.url, "circulating_supply"
+        ))
+        .await
+        .map_err(err_handle)?
+        .json::<GetCirculatingSupplyResp>()
+        .await
+        .map_err(err_handle)?;
 
-        let gtsr = reqwest::get(format!("{}/{}", MAIN_NET_ADDR, "get_total_supply"))
+        let gtsr = reqwest::get(format!("{}{}", self.config.server.url, "get_total_supply"))
             .await
             .map_err(err_handle)?
             .json::<GetTotalSupplyResp>()
@@ -107,7 +111,9 @@ async fn main() -> Result<()> {
     let config_path = std::env::var("CONFIG_FILE_PATH").unwrap();
     let config = Config::new(&config_path)?;
 
-    let api = Api {};
+    let api = Api {
+        config: config.clone(),
+    };
 
     let server_config = format!("http://{}:{}", config.server.addr, config.server.port);
 
