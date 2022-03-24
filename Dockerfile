@@ -25,6 +25,7 @@ RUN strip --strip-all /findora-scanner-binaries/temp-server
  
 FROM docker.io/busybox:latest
 
+COPY --from=builder /etc/ssl/certs /etc/ssl/certs
 COPY --from=builder /findora-scanner-binaries/explorer /explorer
 COPY --from=builder /findora-scanner-binaries/scanner /scanner
 COPY --from=builder /findora-scanner-binaries/scanner /temp-server
