@@ -27,7 +27,6 @@ pub struct GetCirculatingSupplyResp {
 pub struct CirculatingSupply {
     pub global_circulating_supply: f64,
     pub global_return_rate: f64,
-    pub global_adjusted_circulating_supply: f64,
     pub global_delegation_amount: f64,
 }
 
@@ -93,7 +92,6 @@ impl Api {
         Ok(CirculatingSupplyResp::Ok(Json(CirculatingSupply {
             global_circulating_supply: gtsr.global_circulating_supply,
             global_return_rate: gcsr.global_return_rate,
-            global_adjusted_circulating_supply: gtsr.global_adjusted_circulating_supply,
             global_delegation_amount: gcsr.global_delegation_amount,
         })))
     }
