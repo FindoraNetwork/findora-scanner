@@ -64,6 +64,7 @@ pub async fn get_address(api: &Api, address: Path<String>) -> Result<GetAddressR
         let ty: i32 = row.try_get("ty")?;
         let value: Value = row.try_get("value")?;
         let code: i64 = row.try_get("code")?;
+        let t: i64 = row.try_get("time")?;
         let log: String = row.try_get("log")?;
 
         let tx = Transaction {
@@ -72,6 +73,7 @@ pub async fn get_address(api: &Api, address: Path<String>) -> Result<GetAddressR
             ty,
             value,
             code,
+            time: t,
             log,
             events: vec![],
         };

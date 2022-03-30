@@ -4,6 +4,7 @@ mod utils;
 use crate::service::address::GetAddressResponse;
 use crate::service::asset::GetAssetResponse;
 use crate::service::block::{GetBlockResponse, GetBlocksResponse};
+use crate::service::chain::ChainStatisticsResponse;
 use crate::service::tx::{GetTxResponse, GetTxsResponse};
 use anyhow::Result;
 use poem::{listener::TcpListener, Route, Server};
@@ -82,9 +83,9 @@ impl Api {
     #[oai(path = "/blocks", method = "get", tag = "ApiTags::Block")]
     async fn get_blocks(
         &self,
-        /// height of block starts.
+        /// height of block start.
         start_height: Query<Option<i64>>,
-        /// height of block ends.
+        /// height of block end.
         end_height: Query<Option<i64>>,
         /// time of block starts in seconds.
         start_time: Query<Option<i64>>,
@@ -129,6 +130,17 @@ impl Api {
             .await
             .map_err(utils::handle_fetch_one_err)
     }
+
+    #[oai(
+        path = "/chain/statistics",
+        method = "get",
+        tag = "ApiTags::BlockChain"
+    )]
+    async fn user_statistics(&self) -> poem::Result<ChainStatisticsResponse> {
+        service::chain::statistics(self)
+            .await
+            .map_err(utils::handle_fetch_one_err)
+    }
 }
 
 #[derive(Tags)]
@@ -141,6 +153,8 @@ enum ApiTags {
     Address,
     /// Operations about Asset
     Asset,
+    /// Operations about Chain
+    BlockChain,
 }
 
 #[tokio::main]

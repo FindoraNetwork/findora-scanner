@@ -59,6 +59,7 @@ pub async fn get_tx(api: &Api, tx_id: Path<String>) -> Result<GetTxResponse> {
     let block_id: String = row.try_get("block_id")?;
     let ty: i32 = row.try_get("ty")?;
     let value: Value = row.try_get("value")?;
+    let time: i64 = row.try_get("time")?;
     let code: i64 = row.try_get("code")?;
     let log: String = row.try_get("log")?;
 
@@ -68,6 +69,7 @@ pub async fn get_tx(api: &Api, tx_id: Path<String>) -> Result<GetTxResponse> {
         ty,
         value,
         code,
+        time,
         log,
         events: vec![],
     };
@@ -172,6 +174,7 @@ pub async fn get_txs(
         let block_id: String = row.try_get("block_id")?;
         let ty: i32 = row.try_get("ty")?;
         let value: Value = row.try_get("value")?;
+        let time: i64 = row.try_get("time")?;
         let code: i64 = row.try_get("code")?;
         let log: String = row.try_get("log")?;
 
@@ -181,6 +184,7 @@ pub async fn get_txs(
             ty,
             value,
             code,
+            time,
             log,
             events: vec![],
         };
