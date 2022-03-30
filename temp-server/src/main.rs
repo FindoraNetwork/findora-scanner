@@ -60,6 +60,12 @@ pub enum CirculatingSupplyResp {
     Ok(Json<CirculatingSupply>),
 }
 
+#[derive(ApiResponse)]
+pub enum TotalCirculatingSupplyResp {
+    #[oai(status = 200)]
+    Ok(Json<f64>),
+}
+
 #[OpenApi]
 impl Api {
     #[oai(
@@ -94,6 +100,28 @@ impl Api {
             global_return_rate: gcsr.global_return_rate,
             global_delegation_amount: gcsr.global_delegation_amount,
         })))
+    }
+
+    #[oai(
+        path = "/circulating_supply/total_circulating_supply",
+        method = "get",
+        tag = "ApiTags::MainNetPatch"
+    )]
+    async fn total_circulating_supply(&self) -> poem::Result<TotalCirculatingSupplyResp> {
+        let err_handle = |e: reqwest::Error| -> poem::Error {
+            poem::Error::from_string(e.to_string(), StatusCode::INTERNAL_SERVER_ERROR)
+        };
+
+        let gtsr = reqwest::get(format!("{}{}", self.config.server.url, "get_total_supply"))
+            .await
+            .map_err(err_handle)?
+            .json::<GetTotalSupplyResp>()
+            .await
+            .map_err(err_handle)?;
+
+        Ok(TotalCirculatingSupplyResp::Ok(Json(
+            gtsr.global_circulating_supply,
+        )))
     }
 }
 
