@@ -62,8 +62,11 @@ pub struct DisplayAsset {
     pub code: String,
     pub memo: String,
     pub issuer: String,
+    pub chain_name: String,
     pub max_units: i64,
     pub decimals: i64,
+    pub price: f64,
+    pub market_value: f64,
     pub transferable: bool,
     pub updatable: bool,
 }
@@ -113,10 +116,13 @@ pub async fn get_asset(api: &Api, address: Path<String>) -> Result<GetAssetRespo
             asset.code = base64::encode(&da.body.asset.code.val);
             asset.memo = da.body.asset.memo;
             asset.issuer = da.body.asset.issuer.key;
+            asset.chain_name = String::from("Findora");
             asset.decimals = da.body.asset.asset_rules.decimals;
             asset.max_units = da.body.asset.asset_rules.max_units.parse().unwrap();
             asset.transferable = da.body.asset.asset_rules.transferable;
             asset.updatable = da.body.asset.asset_rules.updatable;
+            asset.price = 0f64;
+            asset.market_value *= asset.price;
         }
     }
 

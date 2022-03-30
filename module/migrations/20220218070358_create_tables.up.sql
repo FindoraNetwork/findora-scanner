@@ -12,6 +12,7 @@ CREATE TABLE transaction (
     txid VARCHAR(255) NOT NULL,
     block_id VARCHAR(255) NOT NULL,
     ty INT NOT NULL,
+    time BIGINT NOT NULL,
     value JSONB NOT NULL,
     code BIGINT NOT NULL,
     log TEXT,
@@ -44,5 +45,8 @@ CREATE TABLE last_height (
 CREATE TABLE delegations (
     height BIGINT NOT NULL PRIMARY KEY,
     info JSONB
-)
+);
 
+CREATE TABLE active_address (
+    address VARCHAR(255) NOT NULL PRIMARY KEY
+);
