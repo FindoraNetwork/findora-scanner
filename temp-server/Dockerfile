@@ -3,7 +3,7 @@ FROM docker.io/busybox:latest
 
 COPY --from=fundation /etc/ssl/certs /etc/ssl/certs
 
-RUN mkdir scanner
-COPY --from=fundation /scanner /scanner/scanner
+RUN mkdir temp-server
+COPY --from=fundation /temp-server /temp-server/temp-server
 
-ENTRYPOINT ["/scanner/scanner"]
+ENTRYPOINT ["/temp-server/temp-server"]
