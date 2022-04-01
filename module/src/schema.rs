@@ -48,7 +48,7 @@ pub struct LastHeight {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct DelegationInfo {
-    global_delegation_records_map: HashMap<String, DelegationLite>,
+    global_delegation_records_map: HashMap<XfrPublicKey, DelegationLite>,
     validator_addr_map: HashMap<String, XfrPublicKey>,
 }
 
