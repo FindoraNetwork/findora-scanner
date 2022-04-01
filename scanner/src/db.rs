@@ -34,7 +34,7 @@ pub async fn save(block: ModuleBlock, pool: &PgPool) -> Result<()> {
 
     for tx in block.evm_txs {
         sqlx::query(
-                "INSERT INTO transaction VALUES ($1, $2, 1, $3, $4, $5, &6) ON CONFLICT(txid) DO UPDATE SET ty=1, block_id=$2, time=$3, value=$4, code=$5, log=$6")
+                "INSERT INTO transaction VALUES ($1, $2, 1, $3, $4, $5, $6) ON CONFLICT(txid) DO UPDATE SET ty=1, block_id=$2, time=$3, value=$4, code=$5, log=$6")
                 .bind(&tx.txid)
                 .bind(&tx.block_id)
                 .bind(&tx.time)
