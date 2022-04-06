@@ -56,7 +56,7 @@ impl Api {
     }
 
     #[oai(
-        path = "/circulating_supply/global_delegation_amount",
+        path = "/circulating_supply/staked_fra",
         method = "get",
         tag = "ApiTags::MainNetPatch"
     )]
