@@ -111,9 +111,11 @@ pub async fn get_txs(
                 data: None,
             })));
         }
+        let pk = pk.unwrap();
         params.push(format!(
-            " (value @? '$.body.operations[*].TransferAsset.body.transfer.inputs[*].public_key ? (@ == \"{}\" )') ",
-            public_key_to_base64(&pk.unwrap())));
+            " (value @? '$.body.operations[*].TransferAsset.body.transfer.inputs[*].public_key ? (@==\"{}\")') \
+            OR (value @? '$.body.operations[*].*.note.body.output.public_key ? (@==\"{}\")') ",
+            public_key_to_base64(&pk), public_key_to_base64(&pk)));
     }
     if let Some(to_address) = to.0 {
         let pk = public_key_from_bech32(to_address.as_str());
@@ -124,9 +126,11 @@ pub async fn get_txs(
                 data: None,
             })));
         }
+        let pk = pk.unwrap();
         params.push(format!(
-            " (value @? '$.body.operations[*].TransferAsset.body.transfer.outputs[*].public_key ? (@ == \"{}\")') ",
-            public_key_to_base64(&pk.unwrap())));
+            " (value @? '$.body.operations[*].TransferAsset.body.transfer.inputs[*].public_key ? (@==\"{}\")') \
+            OR (value @? '$.body.operations[*].*.note.body.output.public_key ? (@==\"{}\")') ",
+            public_key_to_base64(&pk), public_key_to_base64(&pk)));
     }
     if let Some(ty) = ty.0 {
         params.push(format!(" ty={} ", ty));
