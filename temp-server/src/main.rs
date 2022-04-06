@@ -97,7 +97,6 @@ enum ApiTags {
 async fn main() -> anyhow::Result<()> {
     env_logger::init();
 
-    std::env::set_var("CONFIG_FILE_PATH", "/root/rs/malefooo/findora-scanner/temp-server/src/config.toml");
     let config_path = std::env::var("CONFIG_FILE_PATH").unwrap();
     let config = Config::new(&config_path)?;
 
