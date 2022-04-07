@@ -2,7 +2,7 @@ use crate::rpc::validator::PubKey;
 use chrono::NaiveDateTime;
 use poem_openapi::Object;
 use serde::{
-    de::{self, Deserializer, SeqAccess, Visitor},
+    de::{self, Deserializer, MapAccess, SeqAccess, Visitor},
     Deserialize, Serialize,
 };
 use serde_json::Value;
@@ -109,12 +109,45 @@ impl<'de> Deserialize<'de> for Rate {
     where
         D: Deserializer<'de>,
     {
-        pub struct RateVisitor;
+        struct RateVisitor;
+
+        enum Field {
+            Value,
+        }
+
+        impl<'de> Deserialize<'de> for Field {
+            fn deserialize<D>(deserializer: D) -> Result<Field, D::Error>
+            where
+                D: Deserializer<'de>,
+            {
+                struct FieldVisitor;
+
+                impl<'de> Visitor<'de> for FieldVisitor {
+                    type Value = Field;
+
+                    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                        formatter.write_str("`Value`")
+                    }
+
+                    fn visit_str<E>(self, value: &str) -> Result<Field, E>
+                    where
+                        E: de::Error,
+                    {
+                        match value {
+                            "value" => Ok(Field::Value),
+                            _ => Err(de::Error::unknown_field(value, &["value"])),
+                        }
+                    }
+                }
+
+                deserializer.deserialize_identifier(FieldVisitor)
+            }
+        }
 
         impl<'de> Visitor<'de> for RateVisitor {
             type Value = Rate;
             fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-                formatter.write_str("str like [<numerator>, <denominator>].")
+                formatter.write_str("str like [<numerator>, <denominator>] or {value: f64}.")
             }
 
             fn visit_seq<S>(self, mut seq: S) -> Result<Self::Value, S::Error>
@@ -141,6 +174,25 @@ impl<'de> Deserialize<'de> for Rate {
 
                 Ok(Rate { value: n / d })
             }
+
+            fn visit_map<V>(self, mut map: V) -> Result<Self::Value, V::Error>
+            where
+                V: MapAccess<'de>,
+            {
+                let mut value = None;
+                while let Some(key) = map.next_key()? {
+                    match key {
+                        Field::Value => {
+                            if value.is_some() {
+                                return Err(de::Error::duplicate_field("value"));
+                            }
+                            value = Some(map.next_value()?);
+                        }
+                    }
+                }
+                let value: f64 = value.ok_or_else(|| de::Error::missing_field("value"))?;
+                Ok(Rate { value })
+            }
         }
 
         deserializer.deserialize_struct("Rate", &["value"], RateVisitor {})
@@ -163,5 +215,8 @@ mod tests {
         let data = format!("[{},{}]", u128::MAX, 0);
         let rate: Result<Rate, _> = serde_json::from_str(&data);
         assert!(rate.is_err());
+
+        let data = format!("{{ \"value\": 1.0 }}");
+        let _rate: Rate = serde_json::from_str(&data).unwrap();
     }
 }
