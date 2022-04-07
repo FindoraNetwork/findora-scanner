@@ -4,7 +4,7 @@ mod utils;
 use crate::service::address::GetAddressResponse;
 use crate::service::asset::GetAssetResponse;
 use crate::service::block::{GetBlockResponse, GetBlocksResponse};
-use crate::service::chain::ChainStatisticsResponse;
+use crate::service::chain::{ChainStatisticsResponse, StakingResponse};
 use crate::service::tx::{GetTxResponse, GetTxsResponse};
 use anyhow::Result;
 use poem::{listener::TcpListener, Route, Server};
@@ -168,8 +168,15 @@ impl Api {
         method = "get",
         tag = "ApiTags::BlockChain"
     )]
-    async fn user_statistics(&self) -> poem::Result<ChainStatisticsResponse> {
+    async fn statistics(&self) -> poem::Result<ChainStatisticsResponse> {
         service::chain::statistics(self)
+            .await
+            .map_err(utils::handle_fetch_one_err)
+    }
+
+    #[oai(path = "/chain/staking", method = "get", tag = "ApiTags::BlockChain")]
+    async fn staking(&self) -> poem::Result<StakingResponse> {
+        service::chain::staking_info(self)
             .await
             .map_err(utils::handle_fetch_one_err)
     }

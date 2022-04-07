@@ -264,6 +264,10 @@ pub async fn get_triple_masking_txs(
     if !params.is_empty() {
         sql_str += &String::from(" WHERE ");
         sql_str += &params.join(" AND ");
+    } else {
+        sql_str += &String::from(
+            " WHERE value @? '$.body.operations[*].*.note.body.output.public_key ? (@!=\"\")' ",
+        );
     }
     sql_str += &format!(
         " ORDER BY time DESC LIMIT {} OFFSET {}",
