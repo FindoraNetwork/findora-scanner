@@ -58,6 +58,38 @@ impl Api {
         .map_err(utils::handle_fetch_one_err)
     }
 
+    #[allow(clippy::too_many_arguments)]
+    #[oai(
+        path = "/txs/triple_masking",
+        method = "get",
+        tag = "ApiTags::Transaction"
+    )]
+    async fn get_triple_masking_txs(
+        &self,
+        /// block hash, like '4B7C22FA8FC6913E091DC324830181BBA1F01EBFF53049F958EA5AA65327BFE0'.
+        block_id: Query<Option<String>>,
+        /// output public key, like 'b2fdE7jKfQg_XL2CT7jdw84XkTdpX3uiRgpgW-h6k6o='.
+        pub_key: Query<Option<String>>,
+        /// 0: both, default.
+        /// 1: AbarToBar.
+        /// 2: BarToAbar.
+        bar: Query<Option<i64>>,
+        /// time of transaction starts in seconds.
+        start_time: Query<Option<i64>>,
+        /// time of transaction ends in seconds.
+        end_time: Query<Option<i64>>,
+        /// page number, staring at 1, default 1.
+        page: Query<Option<i64>>,
+        /// page size, default 10.
+        page_size: Query<Option<i64>>,
+    ) -> poem::Result<GetTxsResponse> {
+        service::tx::get_triple_masking_txs(
+            self, block_id, pub_key, bar, start_time, end_time, page, page_size,
+        )
+        .await
+        .map_err(utils::handle_fetch_one_err)
+    }
+
     #[oai(path = "/block/height/:height", method = "get", tag = "ApiTags::Block")]
     async fn get_block_by_height(
         &self,

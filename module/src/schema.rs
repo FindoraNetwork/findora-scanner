@@ -30,7 +30,7 @@ pub struct Transaction {
     pub ty: i32,
     pub value: Value,
     pub code: i64,
-    pub time: i64,
+    pub timestamp: i64,
     pub log: String,
     pub events: Vec<Value>,
 }
@@ -52,9 +52,9 @@ pub struct LastHeight {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct DelegationInfo {
-    global_delegation_records_map: HashMap<XfrPublicKey, DelegationLite>,
-    validator_addr_map: HashMap<String, XfrPublicKey>,
-    return_rate: Rate,
+    pub global_delegation_records_map: HashMap<XfrPublicKey, DelegationLite>,
+    pub validator_addr_map: HashMap<String, XfrPublicKey>,
+    pub return_rate: Rate,
 }
 
 #[derive(Serialize, Deserialize, Debug)]

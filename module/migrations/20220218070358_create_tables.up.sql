@@ -12,7 +12,7 @@ CREATE TABLE transaction (
     txid VARCHAR(255) NOT NULL,
     block_id VARCHAR(255) NOT NULL,
     ty INT NOT NULL,
-    time BIGINT NOT NULL,
+    timestamp BIGINT NOT NULL,
     value JSONB NOT NULL,
     code BIGINT NOT NULL,
     log TEXT,
