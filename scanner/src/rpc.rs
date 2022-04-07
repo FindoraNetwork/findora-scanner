@@ -151,7 +151,7 @@ impl RPCCaller {
                         ty: 1,
                         value,
                         code: tx.tx_result.code,
-                        time: timestamp.timestamp(),
+                        timestamp: timestamp.timestamp(),
                         log: tx.tx_result.log,
                         events: tx.tx_result.events,
                     });
@@ -164,7 +164,7 @@ impl RPCCaller {
                         ty: 0,
                         value,
                         code: tx.tx_result.code,
-                        time: timestamp.timestamp(),
+                        timestamp: timestamp.timestamp(),
                         log: tx.tx_result.log,
                         events: tx.tx_result.events,
                     });
