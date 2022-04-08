@@ -196,7 +196,7 @@ mod tests {
         let rate: Result<Rate, _> = serde_json::from_str(&data);
         assert!(rate.is_err());
 
-        let data = format!("{{ \"value\": 1.0 }}");
+        let data = "{\"value\": 1.0}".to_string();
         let _rate: Rate = serde_json::from_str(&data).unwrap();
     }
 }
