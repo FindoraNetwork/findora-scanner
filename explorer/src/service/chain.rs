@@ -167,7 +167,7 @@ pub async fn staking_info(api: &Api) -> Result<StakingResponse> {
     let data = StakingData {
         block_reward: reward,
         pledge_rate: delegation_info.return_rate.value,
-        annual_interest_rate: total_pledge as f64 / 21_420_000_000.0,
+        annual_interest_rate: total_pledge as f64 / 21_420_000_000_000_000.0,
         active_validators,
     };
 
