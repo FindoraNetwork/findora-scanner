@@ -9,6 +9,9 @@ use serde_json::Value;
 use sqlx::types::chrono::NaiveDateTime;
 use sqlx::Row;
 
+const ABAR_TO_BAR: i64 = 1;
+const BAR_TO_ABAR: i64 = 2;
+
 #[derive(ApiResponse)]
 pub enum GetTxResponse {
     #[oai(status = 200)]
@@ -223,29 +226,32 @@ pub async fn get_triple_masking_txs(
     if let Some(block_id) = block_id.0 {
         params.push(format!(" block_id='{}' ", block_id));
     }
-    if let Some(pk) = pub_key.0 {
-        if let Some(bar) = bar.0 {
-            if bar == 1 {
-                // abar->bar
-                params.push(format!(" (value @? '$.body.operations[*].AbarToBar.note.body.input.public_key ? (@==\"{}\")') ", pk));
-            } else if bar == 2 {
-                // bar->abar
-                params.push(format!(" (value @? '$.body.operations[*].BarToAbar.note.body.input.public_key ? (@==\"{}\")') ", pk));
-            } else {
-                // all
-                params.push(format!(
-                    " (value @? '$.body.operations[*].*.note.body.input.public_key ? (@==\"{}\")') ",
-                    pk
-                ));
-            }
+    if let Some(bar) = bar.0 {
+        let bar_filter = if bar == ABAR_TO_BAR {
+            "AbarToBar"
+        } else if bar == BAR_TO_ABAR {
+            "BarToAbar"
         } else {
-            // all
+            "*"
+        };
+        if let Some(pk) = pub_key.0 {
             params.push(format!(
-                " (value @? '$.body.operations[*].*.note.body.input.public_key ? (@==\"{}\")') ",
-                pk
+                " (value @? '$.body.operations[*].{}.note.body.output.public_key ? (@==\"{}\")') ",
+                bar_filter, pk
+            ));
+        } else {
+            params.push(format!(
+                " (value @? '$.body.operations[*].{}.note.body.output.public_key ? (@!=\"\")') ",
+                bar_filter
             ));
         }
+    } else if let Some(pk) = pub_key.0 {
+        params.push(format!(
+            " (value @? '$.body.operations[*].*.note.body.output.public_key ? (@==\"{}\")') ",
+            pk
+        ));
     }
+
     if let Some(start_time) = start_time.0 {
         params.push(format!(
             " time>='{}' ",
