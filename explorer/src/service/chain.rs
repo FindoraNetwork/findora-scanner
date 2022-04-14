@@ -68,8 +68,8 @@ pub async fn statistics(api: &Api) -> Result<ChainStatisticsResponse> {
             RowNotFound => {}
             _ => {
                 return Ok(ChainStatisticsResponse::Ok(Json(ChainStatisticsRes {
-                    code: 500,
-                    message: "internal error, query total txs.".to_string(),
+                    code: 50001,
+                    message: "internal error.".to_string(),
                     data: Some(res_data),
                 })));
             }
@@ -85,8 +85,8 @@ pub async fn statistics(api: &Api) -> Result<ChainStatisticsResponse> {
             RowNotFound => {}
             _ => {
                 return Ok(ChainStatisticsResponse::Ok(Json(ChainStatisticsRes {
-                    code: 500,
-                    message: "internal error, query active address.".to_string(),
+                    code: 50001,
+                    message: "internal error.".to_string(),
                     data: Some(res_data),
                 })));
             }
@@ -105,8 +105,8 @@ pub async fn statistics(api: &Api) -> Result<ChainStatisticsResponse> {
             RowNotFound => {}
             _ => {
                 return Ok(ChainStatisticsResponse::Ok(Json(ChainStatisticsRes {
-                    code: 500,
-                    message: "internal error, query daily txs.".to_string(),
+                    code: 50001,
+                    message: "internal error.".to_string(),
                     data: Some(res_data),
                 })));
             }
@@ -141,8 +141,8 @@ pub async fn staking_info(api: &Api) -> Result<StakingResponse> {
             }
             _ => {
                 return Ok(StakingResponse::Ok(Json(StakingRes {
-                    code: 500,
-                    message: "internal error, query delegations.".to_string(),
+                    code: 50001,
+                    message: "internal error.".to_string(),
                     data: None,
                 })));
             }
