@@ -42,3 +42,17 @@ pub struct BlockRPC {
     pub block_id: BlockId,
     pub block: Block,
 }
+
+#[derive(Deserialize, Debug)]
+pub struct BlockSizeRPC {
+    pub last_height: String,
+    pub block_metas: Option<Vec<BlockMeta>>,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct BlockMeta {
+    pub block_id: BlockId,
+    pub block_size: String,
+    pub header: BlockHeader,
+    pub num_txs: String,
+}
