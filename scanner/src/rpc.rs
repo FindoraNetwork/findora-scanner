@@ -15,6 +15,7 @@ use crate::{db, tx};
 
 use module::schema::{Block as ModuleBlock, DelegationInfo, Transaction, Validator};
 
+use module::rpc::block::BlockSizeRPC;
 use reqwest::{Client, ClientBuilder, Url};
 
 pub struct TendermintRPC {
@@ -33,6 +34,14 @@ impl TendermintRPC {
         url.set_query(Some(&format!("height={}", height)));
         debug!("{}", url.as_str());
         let r: ModuleBlockRPC = self.client_get(url).await?;
+        Ok(r)
+    }
+
+    pub async fn get_block_size(&self, height: i64) -> Result<BlockSizeRPC> {
+        let mut url = self.rpc.join("blockchain").unwrap();
+        url.set_query(Some(&format!("minHeight={}&maxHeight={}", height, height)));
+        debug!("{}", url.as_str());
+        let r: BlockSizeRPC = self.client_get(url).await?;
         Ok(r)
     }
 
@@ -123,6 +132,11 @@ impl RPCCaller {
 
     pub async fn load_height(&self, height: i64) -> Result<ModuleBlock> {
         let block = self.rpc.load_block(height).await?;
+        let block_size_rpc = self.rpc.get_block_size(height).await?;
+        let block_size = block_size_rpc.block_metas.unwrap().as_slice()[0]
+            .block_size
+            .parse::<i64>()
+            .unwrap();
         let validator_info = self.rpc.load_validators(height).await?;
 
         let block_id = block.block_id.hash;
@@ -218,7 +232,7 @@ impl RPCCaller {
         Ok(ModuleBlock {
             block_id,
             height,
-            size: 0,
+            size: block_size,
             timestamp,
             app_hash,
             proposer,
