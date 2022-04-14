@@ -1,13 +1,19 @@
-use crate::Result;
 use module::schema::{Block as ModuleBlock, DelegationInfo};
+use sqlx::Error;
 
 use sqlx::{PgPool, Row};
 
 #[cfg(feature = "static-check")]
 use module::schema::LastHeight;
 
+pub async fn connect() -> Result<PgPool, Error> {
+    let conn_str = std::env::var("DATABASE_URL")
+        .expect("Env var `DATABASE_URL` is required for the findora scanner.");
+    PgPool::connect(&conn_str).await.map_err(Error::from)
+}
+
 #[cfg(not(feature = "static-check"))]
-pub async fn save(block: ModuleBlock, pool: &PgPool) -> Result<()> {
+pub async fn save(block: ModuleBlock, pool: &PgPool) -> Result<(), Error> {
     sqlx::query(
             "INSERT INTO block VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT(height) DO UPDATE SET block_id=$1, size=$3, time=$4, app_hash=$5, proposer=$6")
             .bind(&block.block_id)
@@ -53,7 +59,7 @@ pub async fn save(block: ModuleBlock, pool: &PgPool) -> Result<()> {
         .execute(pool)
             .await?;
 
-        let power: i64 = v.power.try_into()?;
+        let power = v.power as i64;
 
         let _ = sqlx::query(
                 "INSERT INTO block_generation VALUES($1, $2, $3, $4, $5, $6) ON CONFLICT(height, address) DO UPDATE SET power=$3, priority=$4, signature=$5, time=$6")
@@ -70,7 +76,7 @@ pub async fn save(block: ModuleBlock, pool: &PgPool) -> Result<()> {
 }
 
 #[cfg(feature = "static-check")]
-pub async fn save(block: ModuleBlock, pool: &PgPool) -> Result<()> {
+pub async fn save(block: ModuleBlock, pool: &PgPool) -> Result<(), Error> {
     sqlx::query!(
             "INSERT INTO block VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT(height) DO UPDATE SET block_id=$1, size=$3, time=$4, app_hash=$5, proposer=$6",
                 &block.block_id,
@@ -125,7 +131,7 @@ pub async fn save(block: ModuleBlock, pool: &PgPool) -> Result<()> {
 }
 
 #[cfg(not(feature = "static-check"))]
-pub async fn save_last_height(height: i64, pool: &PgPool) -> Result<()> {
+pub async fn save_last_height(height: i64, pool: &PgPool) -> Result<(), Error> {
     sqlx::query("INSERT INTO last_height VALUES($1, $2) ON CONFLICT(tip) DO UPDATE SET height=$2")
         .bind("tip")
         .bind(&height)
@@ -135,7 +141,7 @@ pub async fn save_last_height(height: i64, pool: &PgPool) -> Result<()> {
 }
 
 #[cfg(feature = "static-check")]
-pub async fn save_last_height(height: i64, pool: &PgPool) -> Result<()> {
+pub async fn save_last_height(height: i64, pool: &PgPool) -> Result<(), Error> {
     sqlx::query!(
         "INSERT INTO last_height VALUES($1, $2) ON CONFLICT(tip) DO UPDATE SET height=$2",
         "tip",
@@ -147,15 +153,15 @@ pub async fn save_last_height(height: i64, pool: &PgPool) -> Result<()> {
 }
 
 #[cfg(not(feature = "static-check"))]
-pub async fn load_last_height(pool: &PgPool) -> Result<i64> {
+pub async fn load_last_height(pool: &PgPool) -> Result<i64, Error> {
     let row = sqlx::query("SELECT * FROM last_height")
         .fetch_one(pool)
         .await?;
-    Ok(row.try_get("height")?)
+    row.try_get("height")
 }
 
 #[cfg(feature = "static-check")]
-pub async fn load_last_height(pool: &PgPool) -> Result<i64> {
+pub async fn load_last_height(pool: &PgPool) -> Result<i64, Error> {
     let lh = sqlx::query_as!(LastHeight, "SELECT * FROM last_height")
         .fetch_one(pool)
         .await?;
@@ -163,7 +169,7 @@ pub async fn load_last_height(pool: &PgPool) -> Result<i64> {
     Ok(lh.height)
 }
 
-pub async fn save_delegations(h: i64, info: &DelegationInfo, pool: &PgPool) -> Result<()> {
+pub async fn save_delegations(h: i64, info: &DelegationInfo, pool: &PgPool) -> Result<(), Error> {
     let info = serde_json::to_value(info).unwrap();
     sqlx::query(
         "INSERT INTO delegations VALUES($1, $2) ON CONFLICT(height) DO UPDATE SET info=$2;",
