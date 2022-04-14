@@ -5,7 +5,7 @@ use sqlx::PgPool;
 use std::time::Duration;
 
 #[derive(Parser)]
-pub enum Scanner {
+pub enum ScannerCmd {
     Scan(RangeScan),
     Load(Load),
     Subscribe(Subscribe),
@@ -214,10 +214,7 @@ impl Subscribe {
 }
 
 async fn prepare(rpc: &str) -> Result<(Url, PgPool)> {
-    let conn_str = std::env::var("DATABASE_URL")
-        .expect("Env var `DATABASE_URL` is required for the findora scanner.");
-
-    let pool = sqlx::PgPool::connect(&conn_str).await?;
+    let pool = db::connect().await?;
     let rpc: Url = rpc.parse().map_err(|e| Error::from(format!("{}", e)))?;
 
     Ok((rpc, pool))
