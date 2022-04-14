@@ -109,7 +109,7 @@ pub async fn get_txs(
         let pk = public_key_from_bech32(from_address.as_str());
         if pk.is_err() {
             return Ok(GetTxsResponse::Ok(Json(TxsRes {
-                code: 400,
+                code: 40001,
                 message: "invalid public key".to_string(),
                 data: None,
             })));
@@ -123,7 +123,7 @@ pub async fn get_txs(
         let pk = public_key_from_bech32(to_address.as_str());
         if pk.is_err() {
             return Ok(GetTxsResponse::Ok(Json(TxsRes {
-                code: 400,
+                code: 40001,
                 message: "invalid public key".to_string(),
                 data: None,
             })));
@@ -174,7 +174,7 @@ pub async fn get_txs(
         }
     };
 
-    for row in rows.iter() {
+    for row in rows {
         let tx_id: String = row.try_get("txid")?;
         let block_id: String = row.try_get("block_id")?;
         let ty: i32 = row.try_get("ty")?;
@@ -294,7 +294,7 @@ pub async fn get_triple_masking_txs(
         }
     };
 
-    for row in rows.iter() {
+    for row in rows {
         let tx_id: String = row.try_get("txid")?;
         let block_id: String = row.try_get("block_id")?;
         let ty: i32 = row.try_get("ty")?;

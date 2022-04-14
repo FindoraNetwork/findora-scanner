@@ -3,8 +3,8 @@ use anyhow::Result;
 use poem_openapi::{param::Path, payload::Json, ApiResponse, Object};
 use serde::{Deserialize, Serialize};
 use serde_json::{from_value, json, Value};
+use sqlx::Error::RowNotFound;
 use sqlx::Row;
-
 #[derive(ApiResponse)]
 pub enum GetAssetResponse {
     #[oai(status = 200)]
@@ -78,7 +78,7 @@ pub async fn get_asset(api: &Api, address: Path<String>) -> Result<GetAssetRespo
         Ok(code) => code,
         _ => {
             return Ok(GetAssetResponse::Ok(Json(AssetRes {
-                code: 400,
+                code: 40001,
                 message: "invalid base64 asset code".to_string(),
                 data: None,
             })));
@@ -89,12 +89,19 @@ pub async fn get_asset(api: &Api, address: Path<String>) -> Result<GetAssetRespo
     let res = sqlx::query(str.as_str()).fetch_all(&mut conn).await;
     let rows = match res {
         Ok(rows) => rows,
-        _ => {
-            return Ok(GetAssetResponse::Ok(Json(AssetRes {
-                code: 200,
-                message: "".to_string(),
-                data: Some(DisplayAsset::default()),
-            })));
+        Err(e) => {
+            return match e {
+                RowNotFound => Ok(GetAssetResponse::Ok(Json(AssetRes {
+                    code: 200,
+                    message: "".to_string(),
+                    data: Some(DisplayAsset::default()),
+                }))),
+                _ => Ok(GetAssetResponse::Ok(Json(AssetRes {
+                    code: 50001,
+                    message: "internal error".to_string(),
+                    data: None,
+                }))),
+            }
         }
     };
 

@@ -5,6 +5,7 @@ use poem_openapi::param::Query;
 use poem_openapi::{param::Path, payload::Json, ApiResponse, Object};
 use serde::{Deserialize, Serialize};
 use sqlx::types::chrono::NaiveDateTime;
+use sqlx::Error::RowNotFound;
 use sqlx::Row;
 
 #[derive(ApiResponse)]
@@ -46,12 +47,19 @@ pub async fn get_block_by_height(api: &Api, height: Path<i64>) -> Result<GetBloc
     let res = sqlx::query(str.as_str()).fetch_one(&mut conn).await;
     let row = match res {
         Ok(row) => row,
-        _ => {
-            return Ok(GetBlockResponse::Ok(Json(BlockRes {
-                code: 200,
-                message: "".to_string(),
-                data: Some(DisplayBlock::default()),
-            })));
+        Err(e) => {
+            return match e {
+                RowNotFound => Ok(GetBlockResponse::Ok(Json(BlockRes {
+                    code: 200,
+                    message: "".to_string(),
+                    data: Some(DisplayBlock::default()),
+                }))),
+                _ => Ok(GetBlockResponse::Ok(Json(BlockRes {
+                    code: 50001,
+                    message: "internal error".to_string(),
+                    data: None,
+                }))),
+            }
         }
     };
 
@@ -61,18 +69,25 @@ pub async fn get_block_by_height(api: &Api, height: Path<i64>) -> Result<GetBloc
     let app_hash: String = row.try_get("app_hash")?;
     let proposer: String = row.try_get("proposer")?;
     let size: i64 = row.try_get("size")?;
+
+    let str = format!(
+        "SELECT count(1) as tx_count FROM transaction where block_id='{}'",
+        block_id
+    );
+    let row = sqlx::query(str.as_str()).fetch_one(&mut conn).await?;
+    let tx_count: i64 = row.try_get("tx_count")?;
     let block = DisplayBlock {
         block_id,
         height,
         time: time.timestamp(),
-        tx_count: 0, //txs.as_array().unwrap().len(),
+        tx_count,
         size,
         app_hash,
         proposer,
     };
 
     Ok(GetBlockResponse::Ok(Json(BlockRes {
-        code: 0,
+        code: 200,
         message: "".to_string(),
         data: Some(block),
     })))
@@ -85,12 +100,19 @@ pub async fn get_block_by_hash(api: &Api, hash: Path<String>) -> Result<GetBlock
     let res = sqlx::query(str.as_str()).fetch_one(&mut conn).await;
     let row = match res {
         Ok(row) => row,
-        _ => {
-            return Ok(GetBlockResponse::Ok(Json(BlockRes {
-                code: 200,
-                message: "".to_string(),
-                data: Some(DisplayBlock::default()),
-            })));
+        Err(e) => {
+            return match e {
+                RowNotFound => Ok(GetBlockResponse::Ok(Json(BlockRes {
+                    code: 200,
+                    message: "".to_string(),
+                    data: Some(DisplayBlock::default()),
+                }))),
+                _ => Ok(GetBlockResponse::Ok(Json(BlockRes {
+                    code: 50001,
+                    message: "internal error".to_string(),
+                    data: None,
+                }))),
+            }
         }
     };
 
@@ -99,13 +121,20 @@ pub async fn get_block_by_hash(api: &Api, hash: Path<String>) -> Result<GetBlock
     let time: NaiveDateTime = row.try_get("time")?;
     let app_hash: String = row.try_get("app_hash")?;
     let proposer: String = row.try_get("proposer")?;
-    //let txs: Value = row.try_get("txs")?;
     let size: i64 = row.try_get("size")?;
+
+    let str = format!(
+        "SELECT count(1) as tx_count FROM transaction where block_id='{}'",
+        block_id
+    );
+    let row = sqlx::query(str.as_str()).fetch_one(&mut conn).await?;
+    let tx_count: i64 = row.try_get("tx_count")?;
+
     let block = DisplayBlock {
         block_id,
         height,
         time: time.timestamp(),
-        tx_count: 0, //txs.as_array().unwrap().len(),
+        tx_count,
         size,
         app_hash,
         proposer,
@@ -179,13 +208,20 @@ pub async fn get_blocks(
         let time: NaiveDateTime = row.try_get("time")?;
         let app_hash: String = row.try_get("app_hash")?;
         let proposer: String = row.try_get("proposer")?;
-        //let txs: Value = r.try_get("txs")?;
         let size: i64 = row.try_get("size")?;
+
+        let str = format!(
+            "SELECT count(1) as tx_count FROM transaction where block_id='{}'",
+            block_id
+        );
+        let row = sqlx::query(str.as_str()).fetch_one(&mut conn).await?;
+        let tx_count: i64 = row.try_get("tx_count")?;
+
         let block = DisplayBlock {
             block_id,
             height,
             time: time.timestamp(),
-            tx_count: 0, //txs.as_array().unwrap().len(),
+            tx_count,
             size,
             app_hash,
             proposer,
