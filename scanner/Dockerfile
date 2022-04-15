@@ -4,6 +4,6 @@ FROM docker.io/busybox:latest
 COPY --from=fundation /etc/ssl/certs /etc/ssl/certs
 
 RUN mkdir scanner
-COPY --from=fundation /scanner /scanner/scanner
+COPY --from=fundation /scanner-cli /scanner/scanner-cli
 
-ENTRYPOINT ["/scanner/scanner"]
+ENTRYPOINT ["/scanner/scanner-cli"]

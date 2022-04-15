@@ -17,15 +17,15 @@ RUN cargo build --release --target $(cat /rust_targets)
 
 RUN mkdir /findora-scanner-binaries
 RUN cp target/$(cat /rust_targets)/release/explorer /findora-scanner-binaries
-RUN cp target/$(cat /rust_targets)/release/scanner /findora-scanner-binaries
+RUN cp target/$(cat /rust_targets)/release/scanner-cli /findora-scanner-binaries
 RUN cp target/$(cat /rust_targets)/release/temp-server /findora-scanner-binaries
 RUN strip --strip-all /findora-scanner-binaries/explorer
-RUN strip --strip-all /findora-scanner-binaries/scanner
+RUN strip --strip-all /findora-scanner-binaries/scanner-cli
 RUN strip --strip-all /findora-scanner-binaries/temp-server
  
 FROM docker.io/busybox:latest
 
 COPY --from=builder /etc/ssl/certs /etc/ssl/certs
 COPY --from=builder /findora-scanner-binaries/explorer /explorer
-COPY --from=builder /findora-scanner-binaries/scanner /scanner
+COPY --from=builder /findora-scanner-binaries/scanner-cli /scanner-cli
 COPY --from=builder /findora-scanner-binaries/temp-server /temp-server
