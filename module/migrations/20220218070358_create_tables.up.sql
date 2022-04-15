@@ -46,7 +46,3 @@ CREATE TABLE delegations (
     height BIGINT NOT NULL PRIMARY KEY,
     info JSONB
 );
-
-CREATE TABLE active_address (
-    address VARCHAR(255) NOT NULL PRIMARY KEY
-);

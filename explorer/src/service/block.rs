@@ -71,7 +71,7 @@ pub async fn get_block_by_height(api: &Api, height: Path<i64>) -> Result<GetBloc
     let size: i64 = row.try_get("size")?;
 
     let str = format!(
-        "SELECT count(1) as tx_count FROM transaction where block_id='{}'",
+        "SELECT count(*) as tx_count FROM transaction where block_id='{}'",
         block_id
     );
     let row = sqlx::query(str.as_str()).fetch_one(&mut conn).await?;
@@ -124,7 +124,7 @@ pub async fn get_block_by_hash(api: &Api, hash: Path<String>) -> Result<GetBlock
     let size: i64 = row.try_get("size")?;
 
     let str = format!(
-        "SELECT count(1) as tx_count FROM transaction where block_id='{}'",
+        "SELECT count(*) as tx_count FROM transaction where block_id='{}'",
         block_id
     );
     let row = sqlx::query(str.as_str()).fetch_one(&mut conn).await?;
@@ -211,7 +211,7 @@ pub async fn get_blocks(
         let size: i64 = row.try_get("size")?;
 
         let str = format!(
-            "SELECT count(1) as tx_count FROM transaction where block_id='{}'",
+            "SELECT count(*) as tx_count FROM transaction where block_id='{}'",
             block_id
         );
         let row = sqlx::query(str.as_str()).fetch_one(&mut conn).await?;

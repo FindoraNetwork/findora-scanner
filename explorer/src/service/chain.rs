@@ -7,6 +7,7 @@ use serde_json::Value;
 use sqlx::types::chrono::Local;
 use sqlx::Error::RowNotFound;
 use sqlx::Row;
+use std::collections::HashSet;
 
 #[derive(ApiResponse)]
 pub enum ChainStatisticsResponse {
@@ -61,7 +62,7 @@ pub async fn statistics(api: &Api) -> Result<ChainStatisticsResponse> {
     };
 
     // total txs
-    let mut sql_str = String::from("SELECT COUNT(*) as cnt FROM transaction");
+    let sql_str = String::from("SELECT COUNT(*) as cnt FROM transaction");
     let total_txs_res = sqlx::query(sql_str.as_str()).fetch_one(&mut conn).await;
     if let Err(ref err) = total_txs_res {
         match err {
@@ -78,8 +79,8 @@ pub async fn statistics(api: &Api) -> Result<ChainStatisticsResponse> {
     let total_txs = total_txs_res.unwrap().try_get("cnt")?;
 
     // total address
-    sql_str = String::from("SELECT COUNT(*) as cnt FROM active_address");
-    let active_addresses_res = sqlx::query(sql_str.as_str()).fetch_one(&mut conn).await;
+    let sql_str = String::from("SELECT jsonb_path_query(value,'$.body.operations[*].TransferAsset.body.transfer.outputs[*].public_key') as addr FROM transaction");
+    let active_addresses_res = sqlx::query(sql_str.as_str()).fetch_all(&mut conn).await;
     if let Err(ref err) = active_addresses_res {
         match err {
             RowNotFound => {}
@@ -92,7 +93,14 @@ pub async fn statistics(api: &Api) -> Result<ChainStatisticsResponse> {
             }
         }
     }
-    let active_addresses = active_addresses_res.unwrap().try_get("cnt")?;
+    let vec = active_addresses_res.unwrap();
+    let mut hs: HashSet<String> = HashSet::new();
+    for row in vec {
+        let value: Value = row.try_get("addr")?;
+        let addr: String = serde_json::from_value(value).unwrap();
+        hs.insert(addr);
+    }
+    let active_addresses = hs.len() as i64;
 
     // daily txs
     let t = Local::now().timestamp() - 3600 * 24;
