@@ -1,8 +1,8 @@
 use module::schema::{Block as ModuleBlock, DelegationInfo};
 use sqlx::{Error, PgPool, Row};
 
-pub use sqlx::PgPool as SqlxPgPool;
 pub use sqlx::Error as SqlxError;
+pub use sqlx::PgPool as SqlxPgPool;
 
 #[cfg(feature = "static-check")]
 use module::schema::LastHeight;
