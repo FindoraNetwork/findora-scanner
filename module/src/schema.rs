@@ -61,7 +61,7 @@ pub struct DelegationInfo {
 pub struct DelegationLite {
     #[serde(rename = "entries")]
     pub delegations: HashMap<XfrPublicKey, u64>,
-    pub id: String, // delegation rewards will be paid to this pk by default
+    pub id: XfrPublicKey, // delegation rewards will be paid to this pk by default
     pub start_height: u64,
     pub end_height: u64,
     pub state: DelegationState,
