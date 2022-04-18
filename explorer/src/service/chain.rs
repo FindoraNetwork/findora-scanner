@@ -1,6 +1,7 @@
 use crate::Api;
 use anyhow::Result;
 use module::schema::DelegationInfo;
+use poem_openapi::param::Query;
 use poem_openapi::{payload::Json, ApiResponse, Object};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -25,7 +26,6 @@ pub struct ChainStatisticsRes {
 #[derive(Serialize, Deserialize, Default, Debug, Object)]
 pub struct StatisticsData {
     pub active_addresses: i64,
-    pub wallet_downloads: i64,
     pub total_txs: i64,
     pub daily_txs: i64,
 }
@@ -56,7 +56,6 @@ pub async fn statistics(api: &Api) -> Result<ChainStatisticsResponse> {
 
     let mut res_data = StatisticsData {
         active_addresses: 0,
-        wallet_downloads: 0,
         total_txs: 0,
         daily_txs: 0,
     };
@@ -133,28 +132,29 @@ pub async fn statistics(api: &Api) -> Result<ChainStatisticsResponse> {
     })))
 }
 
-pub async fn staking_info(api: &Api) -> Result<StakingResponse> {
+pub async fn staking_info(api: &Api, height: Query<Option<i64>>) -> Result<StakingResponse> {
     let mut conn = api.storage.lock().await.acquire().await?;
-    let delegation_res = sqlx::query("SELECT info FROM delegations ORDER BY height DESC LIMIT 1")
-        .fetch_one(&mut conn)
-        .await;
+
+    let sql_str = if let Some(height) = height.0 {
+        format!("SELECT info FROM delegations WHERE height={}", height)
+    } else {
+        "SELECT info FROM delegations ORDER BY height DESC LIMIT 1".to_string()
+    };
+    let delegation_res = sqlx::query(sql_str.as_str()).fetch_one(&mut conn).await;
+
     if let Err(ref err) = delegation_res {
-        match err {
-            RowNotFound => {
-                return Ok(StakingResponse::Ok(Json(StakingRes {
-                    code: 200,
-                    message: "".to_string(),
-                    data: Some(StakingData::default()),
-                })));
-            }
-            _ => {
-                return Ok(StakingResponse::Ok(Json(StakingRes {
-                    code: 50001,
-                    message: "internal error.".to_string(),
-                    data: None,
-                })));
-            }
-        }
+        return match err {
+            RowNotFound => Ok(StakingResponse::Ok(Json(StakingRes {
+                code: 200,
+                message: "".to_string(),
+                data: Some(StakingData::default()),
+            }))),
+            _ => Ok(StakingResponse::Ok(Json(StakingRes {
+                code: 50001,
+                message: "internal error.".to_string(),
+                data: None,
+            }))),
+        };
     }
     let info_value: Value = delegation_res.unwrap().try_get("info")?;
     let delegation_info: DelegationInfo = serde_json::from_value(info_value).unwrap();

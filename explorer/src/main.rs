@@ -175,8 +175,12 @@ impl Api {
     }
 
     #[oai(path = "/chain/staking", method = "get", tag = "ApiTags::BlockChain")]
-    async fn staking(&self) -> poem::Result<StakingResponse> {
-        service::chain::staking_info(self)
+    async fn staking(
+        &self,
+        /// block height
+        height: Query<Option<i64>>,
+    ) -> poem::Result<StakingResponse> {
+        service::chain::staking_info(self, height)
             .await
             .map_err(utils::handle_fetch_one_err)
     }
