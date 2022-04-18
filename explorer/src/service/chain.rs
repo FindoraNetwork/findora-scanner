@@ -166,7 +166,7 @@ pub async fn staking_info(api: &Api) -> Result<StakingResponse> {
     let mut reward: u64 = 0;
     let mut total_pledge: u64 = 0;
     for (_, dl) in delegation_info.global_delegation_records_map {
-        reward += dl.delegation_rwd_cnt;
+        reward += dl.rwd_amount;
         for (_, amount) in dl.delegations {
             total_pledge += amount
         }
