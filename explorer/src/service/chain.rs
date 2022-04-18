@@ -70,7 +70,7 @@ pub async fn statistics(api: &Api) -> Result<ChainStatisticsResponse> {
             _ => {
                 return Ok(ChainStatisticsResponse::Ok(Json(ChainStatisticsRes {
                     code: 50001,
-                    message: "internal error.".to_string(),
+                    message: "internal error, total txs.".to_string(),
                     data: Some(res_data),
                 })));
             }
@@ -87,7 +87,7 @@ pub async fn statistics(api: &Api) -> Result<ChainStatisticsResponse> {
             _ => {
                 return Ok(ChainStatisticsResponse::Ok(Json(ChainStatisticsRes {
                     code: 50001,
-                    message: "internal error.".to_string(),
+                    message: "internal error, total addresses.".to_string(),
                     data: Some(res_data),
                 })));
             }
@@ -114,7 +114,7 @@ pub async fn statistics(api: &Api) -> Result<ChainStatisticsResponse> {
             _ => {
                 return Ok(ChainStatisticsResponse::Ok(Json(ChainStatisticsRes {
                     code: 50001,
-                    message: "internal error.".to_string(),
+                    message: "internal error, daily txs.".to_string(),
                     data: Some(res_data),
                 })));
             }
