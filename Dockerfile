@@ -1,7 +1,8 @@
 FROM docker.io/rust:slim AS builder
 
 RUN apt-get update -y && apt-get install -y musl-tools libssl-dev pkg-config make perl
-RUN export OPENSSL_LIB_DIR="/usr/lib/x86_64-linux-gnu"; export OPENSSL_INCLUDE_DIR="/usr/include/openssl"
+ENV OPENSSL_LIB_DIR="/usr/lib/x86_64-linux-gnu"
+ENV OPENSSL_INCLUDE_DIR="/usr/include/openssl"
 
 ARG TARGETPLATFORM
 RUN case "$TARGETPLATFORM" in \
