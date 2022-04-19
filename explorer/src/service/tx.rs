@@ -227,29 +227,21 @@ pub async fn get_triple_masking_txs(
         params.push(format!(" block_id='{}' ", block_id));
     }
     if let Some(bar) = bar.0 {
-        let bar_filter = if bar == ABAR_TO_BAR {
-            "AbarToBar"
+        if bar == ABAR_TO_BAR {
+            if let Some(pk) = pub_key.0 {
+                params.push(format!(" (value @? '$.body.operations[*].AbarToBar.note.body.output.public_key ? (@==\"{}\")') ", pk));
+            } else {
+                params.push(" (value @? '$.body.operations[*].AbarToBar.note.body.output.public_key ? (@!=\"\")') ".to_string());
+            }
         } else if bar == BAR_TO_ABAR {
-            "BarToAbar"
-        } else {
-            "*"
-        };
-        if let Some(pk) = pub_key.0 {
-            params.push(format!(
-                " (value @? '$.body.operations[*].{}.note.body.output.public_key ? (@==\"{}\")') ",
-                bar_filter, pk
-            ));
-        } else {
-            params.push(format!(
-                " (value @? '$.body.operations[*].{}.note.body.output.public_key ? (@!=\"\")') ",
-                bar_filter
-            ));
+            if let Some(pk) = pub_key.0 {
+                params.push(format!(" (value @? '$.body.operations[*].BarToAbar.note.body.output.commitment ? (@==\"{}\")') ", pk));
+            } else {
+                params.push(" (value @? '$.body.operations[*].BarToAbar.note.body.output.commitment ? (@!=\"\")') ".to_string());
+            }
         }
     } else if let Some(pk) = pub_key.0 {
-        params.push(format!(
-            " (value @? '$.body.operations[*].*.note.body.output.public_key ? (@==\"{}\")') ",
-            pk
-        ));
+        params.push(format!(" (value @? '$.body.operations[*].AbarToBar.note.body.output.public_key ? (@==\"{}\")') OR (value @? '$.body.operations[*].BarToAbar.note.body.output.commitment ? (@==\"{}\")')", pk, pk));
     }
 
     if let Some(start_time) = start_time.0 {
@@ -271,9 +263,7 @@ pub async fn get_triple_masking_txs(
         sql_str += &String::from(" WHERE ");
         sql_str += &params.join(" AND ");
     } else {
-        sql_str += &String::from(
-            " WHERE value @? '$.body.operations[*].*.note.body.output.public_key ? (@!=\"\")' ",
-        );
+        sql_str += &String::from(" WHERE (value @? '$.body.operations[*].AbarToBar.note.body.output.public_key ? (@!=\"\")') OR (value @? '$.body.operations[*].BarToAbar.note.body.output.commitment ? (@!=\"\")')");
     }
     sql_str += &format!(
         " ORDER BY time DESC LIMIT {} OFFSET {}",
