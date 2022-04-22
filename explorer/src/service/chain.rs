@@ -46,8 +46,8 @@ pub struct StakingRes {
 #[derive(Serialize, Deserialize, Default, Debug, Object)]
 pub struct StakingData {
     pub block_reward: u64,
-    pub pledge_rate: f64,
-    pub annual_interest_rate: f64,
+    pub stake_ratio: f64,
+    pub apy: f64,
     pub active_validators: Vec<String>,
 }
 
@@ -164,18 +164,18 @@ pub async fn staking_info(api: &Api, height: Query<Option<i64>>) -> Result<Staki
         active_validators.push(id);
     }
     let mut reward: u64 = 0;
-    let mut total_pledge: u64 = 0;
+    let mut total_stake: u64 = 0;
     for (_, dl) in delegation_info.global_delegation_records_map {
         reward += dl.rwd_amount;
         for (_, amount) in dl.delegations {
-            total_pledge += amount
+            total_stake += amount
         }
     }
 
     let data = StakingData {
         block_reward: reward,
-        pledge_rate: delegation_info.return_rate.value,
-        annual_interest_rate: total_pledge as f64 / 21_420_000_000_000_000.0,
+        apy: delegation_info.return_rate.value,
+        stake_ratio: total_stake as f64 / 21_420_000_000_000_000.0,
         active_validators,
     };
 
