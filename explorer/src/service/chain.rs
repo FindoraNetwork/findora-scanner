@@ -51,7 +51,7 @@ pub struct StakingData {
     pub active_validators: Vec<String>,
 }
 
-pub async fn statistics(api: &Api) -> Result<ChainStatisticsResponse> {
+pub async fn statistics(api: &Api, ty: Query<Option<i64>>) -> Result<ChainStatisticsResponse> {
     let mut conn = api.storage.lock().await.acquire().await?;
 
     let mut res_data = StatisticsData {
@@ -61,7 +61,11 @@ pub async fn statistics(api: &Api) -> Result<ChainStatisticsResponse> {
     };
 
     // total txs
-    let sql_str = String::from("SELECT COUNT(*) as cnt FROM transaction");
+    let sql_str = if let Some(ty) = ty.0 {
+        format!("SELECT COUNT(*) as cnt FROM transaction WHERE ty={}", ty)
+    } else {
+        "SELECT COUNT(*) as cnt FROM transaction".to_string()
+    };
     let total_txs_res = sqlx::query(sql_str.as_str()).fetch_one(&mut conn).await;
     if let Err(ref err) = total_txs_res {
         match err {
@@ -78,7 +82,11 @@ pub async fn statistics(api: &Api) -> Result<ChainStatisticsResponse> {
     let total_txs = total_txs_res.unwrap().try_get("cnt")?;
 
     // total address
-    let sql_str = String::from("SELECT jsonb_path_query(value,'$.body.operations[*].TransferAsset.body.transfer.outputs[*].public_key') as addr FROM transaction");
+    let sql_str = if let Some(ty) = ty.0 {
+        format!("SELECT jsonb_path_query(value,'$.body.operations[*].TransferAsset.body.transfer.outputs[*].public_key') as addr FROM transaction WHERE ty={}", ty)
+    } else {
+        "SELECT jsonb_path_query(value,'$.body.operations[*].TransferAsset.body.transfer.outputs[*].public_key') as addr FROM transaction".to_string()
+    };
     let active_addresses_res = sqlx::query(sql_str.as_str()).fetch_all(&mut conn).await;
     if let Err(ref err) = active_addresses_res {
         match err {
@@ -103,10 +111,18 @@ pub async fn statistics(api: &Api) -> Result<ChainStatisticsResponse> {
 
     // daily txs
     let t = Local::now().timestamp() - 3600 * 24;
-    let daily_txs_res = sqlx::query("SELECT COUNT(*) as cnt FROM transaction where timestamp>=$1")
-        .bind(t)
-        .fetch_one(&mut conn)
-        .await;
+    let sql_str = if let Some(ty) = ty.0 {
+        format!(
+            "SELECT COUNT(*) as cnt FROM transaction WHERE ty={} AND timestamp>={}",
+            ty, t
+        )
+    } else {
+        format!(
+            "SELECT COUNT(*) as cnt FROM transaction where timestamp>={}",
+            t
+        )
+    };
+    let daily_txs_res = sqlx::query(sql_str.as_str()).fetch_one(&mut conn).await;
     if let Err(ref err) = daily_txs_res {
         match err {
             RowNotFound => {}

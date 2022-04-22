@@ -168,8 +168,12 @@ impl Api {
         method = "get",
         tag = "ApiTags::BlockChain"
     )]
-    async fn statistics(&self) -> poem::Result<ChainStatisticsResponse> {
-        service::chain::statistics(self)
+    async fn statistics(
+        &self,
+        /// ty: tx type, 0 - Findora tx, 1 - EVM tx.
+        ty: Query<Option<i64>>,
+    ) -> poem::Result<ChainStatisticsResponse> {
+        service::chain::statistics(self, ty)
             .await
             .map_err(utils::handle_fetch_one_err)
     }
