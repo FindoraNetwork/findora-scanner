@@ -6,7 +6,6 @@ use poem_openapi::{payload::Json, ApiResponse, Object};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sqlx::types::chrono::Local;
-use sqlx::Error::RowNotFound;
 use sqlx::Row;
 use std::collections::HashSet;
 
@@ -54,12 +53,6 @@ pub struct StakingData {
 pub async fn statistics(api: &Api, ty: Query<Option<i64>>) -> Result<ChainStatisticsResponse> {
     let mut conn = api.storage.lock().await.acquire().await?;
 
-    let mut res_data = StatisticsData {
-        active_addresses: 0,
-        total_txs: 0,
-        daily_txs: 0,
-    };
-
     // total txs
     let sql_str = if let Some(ty) = ty.0 {
         format!("SELECT COUNT(*) as cnt FROM transaction WHERE ty={}", ty)
@@ -67,19 +60,17 @@ pub async fn statistics(api: &Api, ty: Query<Option<i64>>) -> Result<ChainStatis
         "SELECT COUNT(*) as cnt FROM transaction".to_string()
     };
     let total_txs_res = sqlx::query(sql_str.as_str()).fetch_one(&mut conn).await;
-    if let Err(ref err) = total_txs_res {
-        match err {
-            RowNotFound => {}
-            _ => {
-                return Ok(ChainStatisticsResponse::Ok(Json(ChainStatisticsRes {
-                    code: 50001,
-                    message: "internal error, total txs.".to_string(),
-                    data: Some(res_data),
-                })));
-            }
+    let row = match total_txs_res {
+        Ok(row) => row,
+        _ => {
+            return Ok(ChainStatisticsResponse::Ok(Json(ChainStatisticsRes {
+                code: 500,
+                message: "internal error, querying total txs.".to_string(),
+                data: None,
+            })));
         }
-    }
-    let total_txs = total_txs_res.unwrap().try_get("cnt")?;
+    };
+    let total_txs = row.try_get("cnt")?;
 
     // total address
     let sql_str = if let Some(ty) = ty.0 {
@@ -88,21 +79,19 @@ pub async fn statistics(api: &Api, ty: Query<Option<i64>>) -> Result<ChainStatis
         "SELECT jsonb_path_query(value,'$.body.operations[*].TransferAsset.body.transfer.outputs[*].public_key') as addr FROM transaction".to_string()
     };
     let active_addresses_res = sqlx::query(sql_str.as_str()).fetch_all(&mut conn).await;
-    if let Err(ref err) = active_addresses_res {
-        match err {
-            RowNotFound => {}
-            _ => {
-                return Ok(ChainStatisticsResponse::Ok(Json(ChainStatisticsRes {
-                    code: 50001,
-                    message: "internal error, total addresses.".to_string(),
-                    data: Some(res_data),
-                })));
-            }
+    let rows = match active_addresses_res {
+        Ok(rows) => rows,
+        _ => {
+            return Ok(ChainStatisticsResponse::Ok(Json(ChainStatisticsRes {
+                code: 500,
+                message: "internal error, querying total addresses.".to_string(),
+                data: None,
+            })));
         }
-    }
-    let vec = active_addresses_res.unwrap();
+    };
+
     let mut hs: HashSet<String> = HashSet::new();
-    for row in vec {
+    for row in rows {
         let value: Value = row.try_get("addr")?;
         let addr: String = serde_json::from_value(value).unwrap();
         hs.insert(addr);
@@ -123,27 +112,27 @@ pub async fn statistics(api: &Api, ty: Query<Option<i64>>) -> Result<ChainStatis
         )
     };
     let daily_txs_res = sqlx::query(sql_str.as_str()).fetch_one(&mut conn).await;
-    if let Err(ref err) = daily_txs_res {
-        match err {
-            RowNotFound => {}
-            _ => {
-                return Ok(ChainStatisticsResponse::Ok(Json(ChainStatisticsRes {
-                    code: 50001,
-                    message: "internal error, daily txs.".to_string(),
-                    data: Some(res_data),
-                })));
-            }
+    let row = match daily_txs_res {
+        Ok(row) => row,
+        _ => {
+            return Ok(ChainStatisticsResponse::Ok(Json(ChainStatisticsRes {
+                code: 500,
+                message: "internal error, querying daily txs.".to_string(),
+                data: None,
+            })));
         }
-    }
-    let daily_txs = daily_txs_res.unwrap().try_get("cnt")?;
+    };
+    let daily_txs = row.try_get("cnt")?;
 
-    res_data.daily_txs = daily_txs;
-    res_data.total_txs = total_txs;
-    res_data.active_addresses = active_addresses;
+    let res_data = StatisticsData {
+        active_addresses,
+        total_txs,
+        daily_txs,
+    };
 
     Ok(ChainStatisticsResponse::Ok(Json(ChainStatisticsRes {
         code: 200,
-        message: "".to_string(),
+        message: "ok".to_string(),
         data: Some(res_data),
     })))
 }
@@ -157,22 +146,18 @@ pub async fn staking_info(api: &Api, height: Query<Option<i64>>) -> Result<Staki
         "SELECT info FROM delegations ORDER BY height DESC LIMIT 1".to_string()
     };
     let delegation_res = sqlx::query(sql_str.as_str()).fetch_one(&mut conn).await;
-
-    if let Err(ref err) = delegation_res {
-        return match err {
-            RowNotFound => Ok(StakingResponse::Ok(Json(StakingRes {
-                code: 200,
-                message: "".to_string(),
-                data: Some(StakingData::default()),
-            }))),
-            _ => Ok(StakingResponse::Ok(Json(StakingRes {
-                code: 50001,
+    let row = match delegation_res {
+        Ok(row) => row,
+        _ => {
+            return Ok(StakingResponse::Ok(Json(StakingRes {
+                code: 500,
                 message: "internal error.".to_string(),
                 data: None,
-            }))),
-        };
-    }
-    let info_value: Value = delegation_res.unwrap().try_get("info")?;
+            })));
+        }
+    };
+
+    let info_value: Value = row.try_get("info")?;
     let delegation_info: DelegationInfo = serde_json::from_value(info_value).unwrap();
 
     let mut active_validators: Vec<String> = vec![];
@@ -197,7 +182,7 @@ pub async fn staking_info(api: &Api, height: Query<Option<i64>>) -> Result<Staki
 
     Ok(StakingResponse::Ok(Json(StakingRes {
         code: 200,
-        message: "".to_string(),
+        message: "ok".to_string(),
         data: Some(data),
     })))
 }
