@@ -5,7 +5,6 @@ use module::schema::Transaction;
 use poem_openapi::{param::Path, payload::Json, ApiResponse, Object};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use sqlx::Error::RowNotFound;
 use sqlx::Row;
 
 #[derive(ApiResponse)]
@@ -32,7 +31,7 @@ pub async fn get_address(api: &Api, address: Path<String>) -> Result<GetAddressR
     let pk = public_key_from_bech32(address.0.as_str());
     if pk.is_err() {
         return Ok(GetAddressResponse::Ok(Json(AddressRes {
-            code: 40001,
+            code: 400,
             message: "invalid address".to_string(),
             data: None,
         })));
@@ -50,19 +49,12 @@ pub async fn get_address(api: &Api, address: Path<String>) -> Result<GetAddressR
     let mut txs: Vec<Transaction> = vec![];
     let rows = match res {
         Ok(rows) => rows,
-        Err(e) => {
-            return match e {
-                RowNotFound => Ok(GetAddressResponse::Ok(Json(AddressRes {
-                    code: 200,
-                    message: "".to_string(),
-                    data: Some(AddressData::default()),
-                }))),
-                _ => Ok(GetAddressResponse::Ok(Json(AddressRes {
-                    code: 50001,
-                    message: "internal error".to_string(),
-                    data: None,
-                }))),
-            }
+        _ => {
+            return Ok(GetAddressResponse::Ok(Json(AddressRes {
+                code: 500,
+                message: "internal error".to_string(),
+                data: None,
+            })));
         }
     };
 
@@ -88,10 +80,12 @@ pub async fn get_address(api: &Api, address: Path<String>) -> Result<GetAddressR
 
         txs.push(tx)
     }
+
     let l = txs.len();
+
     Ok(GetAddressResponse::Ok(Json(AddressRes {
         code: 200,
-        message: "".to_string(),
+        message: "ok".to_string(),
         data: Some(AddressData { txs, counts: l }),
     })))
 }

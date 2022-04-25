@@ -5,7 +5,6 @@ use poem_openapi::param::Query;
 use poem_openapi::{param::Path, payload::Json, ApiResponse, Object};
 use serde::{Deserialize, Serialize};
 use sqlx::types::chrono::NaiveDateTime;
-use sqlx::Error::RowNotFound;
 use sqlx::Row;
 
 #[derive(ApiResponse)]
@@ -47,19 +46,12 @@ pub async fn get_block_by_height(api: &Api, height: Path<i64>) -> Result<GetBloc
     let res = sqlx::query(str.as_str()).fetch_one(&mut conn).await;
     let row = match res {
         Ok(row) => row,
-        Err(e) => {
-            return match e {
-                RowNotFound => Ok(GetBlockResponse::Ok(Json(BlockRes {
-                    code: 200,
-                    message: "".to_string(),
-                    data: Some(DisplayBlock::default()),
-                }))),
-                _ => Ok(GetBlockResponse::Ok(Json(BlockRes {
-                    code: 50001,
-                    message: "internal error".to_string(),
-                    data: None,
-                }))),
-            }
+        _ => {
+            return Ok(GetBlockResponse::Ok(Json(BlockRes {
+                code: 500,
+                message: "internal error".to_string(),
+                data: None,
+            })));
         }
     };
 
@@ -88,7 +80,7 @@ pub async fn get_block_by_height(api: &Api, height: Path<i64>) -> Result<GetBloc
 
     Ok(GetBlockResponse::Ok(Json(BlockRes {
         code: 200,
-        message: "".to_string(),
+        message: "ok".to_string(),
         data: Some(block),
     })))
 }
@@ -100,19 +92,12 @@ pub async fn get_block_by_hash(api: &Api, hash: Path<String>) -> Result<GetBlock
     let res = sqlx::query(str.as_str()).fetch_one(&mut conn).await;
     let row = match res {
         Ok(row) => row,
-        Err(e) => {
-            return match e {
-                RowNotFound => Ok(GetBlockResponse::Ok(Json(BlockRes {
-                    code: 200,
-                    message: "".to_string(),
-                    data: Some(DisplayBlock::default()),
-                }))),
-                _ => Ok(GetBlockResponse::Ok(Json(BlockRes {
-                    code: 50001,
-                    message: "internal error".to_string(),
-                    data: None,
-                }))),
-            }
+        _ => {
+            return Ok(GetBlockResponse::Ok(Json(BlockRes {
+                code: 500,
+                message: "internal error".to_string(),
+                data: None,
+            })));
         }
     };
 
@@ -142,7 +127,7 @@ pub async fn get_block_by_hash(api: &Api, hash: Path<String>) -> Result<GetBlock
 
     Ok(GetBlockResponse::Ok(Json(BlockRes {
         code: 200,
-        message: "".to_string(),
+        message: "ok".to_string(),
         data: Some(block),
     })))
 }
@@ -195,9 +180,9 @@ pub async fn get_blocks(
         Ok(rows) => rows,
         _ => {
             return Ok(GetBlocksResponse::Ok(Json(BlocksRes {
-                code: 200,
-                message: "".to_string(),
-                data: Some(BlocksData::default()),
+                code: 500,
+                message: "internal error".to_string(),
+                data: None,
             })));
         }
     };
@@ -228,10 +213,12 @@ pub async fn get_blocks(
         };
         blocks.push(block);
     }
+
     let l = blocks.len();
+
     Ok(GetBlocksResponse::Ok(Json(BlocksRes {
         code: 200,
-        message: "".to_string(),
+        message: "ok".to_string(),
         data: Some(BlocksData { counts: l, blocks }),
     })))
 }

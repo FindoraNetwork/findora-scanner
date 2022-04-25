@@ -52,9 +52,9 @@ pub async fn get_tx(api: &Api, tx_id: Path<String>) -> Result<GetTxResponse> {
         Ok(row) => row,
         _ => {
             return Ok(GetTxResponse::Ok(Json(TxRes {
-                code: 200,
-                message: "".to_string(),
-                data: Some(Transaction::default()),
+                code: 500,
+                message: "internal error".to_string(),
+                data: None,
             })));
         }
     };
@@ -79,7 +79,7 @@ pub async fn get_tx(api: &Api, tx_id: Path<String>) -> Result<GetTxResponse> {
 
     Ok(GetTxResponse::Ok(Json(TxRes {
         code: 200,
-        message: "".to_string(),
+        message: "ok".to_string(),
         data: Some(tx),
     })))
 }
@@ -109,8 +109,8 @@ pub async fn get_txs(
         let pk = public_key_from_bech32(from_address.as_str());
         if pk.is_err() {
             return Ok(GetTxsResponse::Ok(Json(TxsRes {
-                code: 40001,
-                message: "invalid public key".to_string(),
+                code: 400,
+                message: "invalid from address".to_string(),
                 data: None,
             })));
         }
@@ -123,8 +123,8 @@ pub async fn get_txs(
         let pk = public_key_from_bech32(to_address.as_str());
         if pk.is_err() {
             return Ok(GetTxsResponse::Ok(Json(TxsRes {
-                code: 40001,
-                message: "invalid public key".to_string(),
+                code: 400,
+                message: "invalid to address".to_string(),
                 data: None,
             })));
         }
@@ -167,8 +167,8 @@ pub async fn get_txs(
         Ok(rows) => rows,
         _ => {
             return Ok(GetTxsResponse::Ok(Json(TxsRes {
-                code: 200,
-                message: "".to_string(),
+                code: 500,
+                message: "internal error".to_string(),
                 data: Some(TxsData::default()),
             })));
         }
@@ -201,7 +201,7 @@ pub async fn get_txs(
 
     Ok(GetTxsResponse::Ok(Json(TxsRes {
         code: 200,
-        message: "".to_string(),
+        message: "ok".to_string(),
         data: Some(TxsData { counts: l, txs }),
     })))
 }
@@ -277,9 +277,9 @@ pub async fn get_triple_masking_txs(
         Ok(rows) => rows,
         _ => {
             return Ok(GetTxsResponse::Ok(Json(TxsRes {
-                code: 200,
-                message: "".to_string(),
-                data: Some(TxsData::default()),
+                code: 500,
+                message: "internal error".to_string(),
+                data: None,
             })));
         }
     };
@@ -311,7 +311,7 @@ pub async fn get_triple_masking_txs(
 
     Ok(GetTxsResponse::Ok(Json(TxsRes {
         code: 200,
-        message: "".to_string(),
+        message: "ok".to_string(),
         data: Some(TxsData { counts: l, txs }),
     })))
 }
