@@ -56,3 +56,23 @@ pub struct BlockMeta {
     pub header: BlockHeader,
     pub num_txs: String,
 }
+#[derive(Deserialize, Debug)]
+pub struct PubKey {
+    pub value: String,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct Validator {
+    pub address: String,
+    pub pub_key: PubKey,
+    pub voting_power: String,
+    pub proposer_priority: String,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct ValidatorsRPC {
+    pub block_height: String,
+    pub validators: Vec<Validator>,
+    pub count: String,
+    pub total: String,
+}

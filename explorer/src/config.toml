@@ -8,3 +8,6 @@
     addr = "localhost"
     database = "test"
 
+[tendermint]
+    rpc = "https://prod-mainnet.prod.findora.org:26657"
+
