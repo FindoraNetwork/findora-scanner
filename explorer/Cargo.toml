@@ -23,3 +23,5 @@ bech32 = "0.7.2"
 ruc = "1.0"
 zei = { git = "https://github.com/FindoraNetwork/zei", tag = "v0.1.4x" }
 
+scanner = {path = "../scanner"}
+

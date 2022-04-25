@@ -15,7 +15,7 @@ use crate::{db, tx};
 
 use module::schema::{Block as ModuleBlock, DelegationInfo, Transaction, Validator};
 
-use module::rpc::block::BlockSizeRPC;
+use module::rpc::block::{BlockSizeRPC, ValidatorsRPC};
 use reqwest::{Client, ClientBuilder, Url};
 
 pub struct TendermintRPC {
@@ -27,6 +27,14 @@ impl TendermintRPC {
     pub fn new(timeout: Duration, rpc: Url) -> Self {
         let client = ClientBuilder::new().timeout(timeout).build().unwrap();
         TendermintRPC { client, rpc }
+    }
+
+    pub async fn get_active_validators(&self, height: i64) -> Result<ValidatorsRPC> {
+        let mut url = self.rpc.join("validators").unwrap();
+        url.set_query(Some(&format!("height={}&per_page={}", height, 100)));
+        debug!("{}", url.as_str());
+        let r: ValidatorsRPC = self.client_get(url).await?;
+        Ok(r)
     }
 
     pub async fn load_block(&self, height: i64) -> Result<ModuleBlockRPC> {

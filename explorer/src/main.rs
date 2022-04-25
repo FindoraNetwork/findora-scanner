@@ -10,10 +10,13 @@ use anyhow::Result;
 use poem::{listener::TcpListener, Route, Server};
 use poem_openapi::param::{Path, Query};
 use poem_openapi::{OpenApi, OpenApiService, Tags};
+use scanner::rpc::TendermintRPC;
 use sqlx::{Pool, Postgres};
+use std::time::Duration;
 use tokio::sync::Mutex;
 
 pub struct Api {
+    rpc: TendermintRPC,
     storage: Mutex<Pool<Postgres>>,
 }
 
@@ -220,7 +223,14 @@ async fn main() -> Result<()> {
     // std::env::set_var("DATABASE_URL", postgres_config);
     let pool = sqlx::PgPool::connect(&postgres_config).await.unwrap();
 
+    // tendermint rpc
+    let rpc_client = TendermintRPC::new(
+        Duration::from_secs(10),
+        config.tendermint.rpc.to_string().parse().unwrap(),
+    );
+
     let api = Api {
+        rpc: rpc_client,
         storage: Mutex::new(pool),
     };
 

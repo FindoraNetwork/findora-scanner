@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sqlx::types::chrono::Local;
 use sqlx::Row;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 #[derive(ApiResponse)]
 pub enum ChainStatisticsResponse {
@@ -48,6 +48,7 @@ pub struct StakingData {
     pub stake_ratio: f64,
     pub apy: f64,
     pub active_validators: Vec<String>,
+    pub nonactive_validators: Vec<String>,
 }
 
 pub async fn statistics(api: &Api, ty: Query<Option<i64>>) -> Result<ChainStatisticsResponse> {
@@ -141,9 +142,12 @@ pub async fn staking_info(api: &Api, height: Query<Option<i64>>) -> Result<Staki
     let mut conn = api.storage.lock().await.acquire().await?;
 
     let sql_str = if let Some(height) = height.0 {
-        format!("SELECT info FROM delegations WHERE height={}", height)
+        format!(
+            "SELECT height,info FROM delegations WHERE height={}",
+            height
+        )
     } else {
-        "SELECT info FROM delegations ORDER BY height DESC LIMIT 1".to_string()
+        "SELECT height,info FROM delegations ORDER BY height DESC LIMIT 1".to_string()
     };
     let delegation_res = sqlx::query(sql_str.as_str()).fetch_one(&mut conn).await;
     let row = match delegation_res {
@@ -157,13 +161,10 @@ pub async fn staking_info(api: &Api, height: Query<Option<i64>>) -> Result<Staki
         }
     };
 
+    let height: i64 = row.try_get("height")?;
     let info_value: Value = row.try_get("info")?;
     let delegation_info: DelegationInfo = serde_json::from_value(info_value).unwrap();
 
-    let mut active_validators: Vec<String> = vec![];
-    for (id, _) in delegation_info.validator_addr_map {
-        active_validators.push(id);
-    }
     let mut reward: u64 = 0;
     let mut total_stake: u64 = 0;
     for (_, dl) in delegation_info.global_delegation_records_map {
@@ -173,11 +174,29 @@ pub async fn staking_info(api: &Api, height: Query<Option<i64>>) -> Result<Staki
         }
     }
 
+    let validators_res = api.rpc.get_active_validators(height).await;
+    let validators = validators_res.unwrap();
+    let mut mp = HashMap::new();
+    for v in &validators.validators {
+        mp.insert(v.address.clone(), v);
+    }
+
+    let mut active_validators: Vec<String> = vec![];
+    let mut nonactive_validators: Vec<String> = vec![];
+    for (addr, _) in delegation_info.validator_addr_map {
+        if !mp.contains_key(addr.as_str()) {
+            nonactive_validators.push(addr);
+        } else {
+            active_validators.push(addr);
+        }
+    }
+
     let data = StakingData {
         block_reward: reward,
         apy: delegation_info.return_rate.value,
         stake_ratio: total_stake as f64 / 21_420_000_000_000_000.0,
         active_validators,
+        nonactive_validators,
     };
 
     Ok(StakingResponse::Ok(Json(StakingRes {
