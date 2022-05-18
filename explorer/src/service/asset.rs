@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{from_value, json, Value};
 use sqlx::Row;
 #[derive(ApiResponse)]
-pub enum GetAssetResponse {
+pub enum AssetResponse {
     #[oai(status = 200)]
     Ok(Json<AssetRes>),
 }
@@ -70,13 +70,13 @@ pub struct DisplayAsset {
     pub updatable: bool,
 }
 
-pub async fn get_asset(api: &Api, address: Path<String>) -> Result<GetAssetResponse> {
+pub async fn get_asset(api: &Api, address: Path<String>) -> Result<AssetResponse> {
     let mut conn = api.storage.lock().await.acquire().await?;
     let code_res = base64::decode(&address.0);
     let code = match code_res {
         Ok(code) => code,
         _ => {
-            return Ok(GetAssetResponse::Ok(Json(AssetRes {
+            return Ok(AssetResponse::Ok(Json(AssetRes {
                 code: 400,
                 message: "invalid asset code".to_string(),
                 data: None,
@@ -89,7 +89,7 @@ pub async fn get_asset(api: &Api, address: Path<String>) -> Result<GetAssetRespo
     let rows = match res {
         Ok(rows) => rows,
         _ => {
-            return Ok(GetAssetResponse::Ok(Json(AssetRes {
+            return Ok(AssetResponse::Ok(Json(AssetRes {
                 code: 500,
                 message: "internal error".to_string(),
                 data: None,
@@ -125,7 +125,7 @@ pub async fn get_asset(api: &Api, address: Path<String>) -> Result<GetAssetRespo
         }
     }
 
-    Ok(GetAssetResponse::Ok(Json(AssetRes {
+    Ok(AssetResponse::Ok(Json(AssetRes {
         code: 200,
         message: "ok".to_string(),
         data: Some(asset),

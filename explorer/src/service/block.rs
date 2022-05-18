@@ -8,7 +8,7 @@ use sqlx::types::chrono::NaiveDateTime;
 use sqlx::Row;
 
 #[derive(ApiResponse)]
-pub enum GetBlockResponse {
+pub enum BlockResponse {
     #[oai(status = 200)]
     Ok(Json<BlockRes>),
 }
@@ -21,7 +21,7 @@ pub struct BlockRes {
 }
 
 #[derive(ApiResponse)]
-pub enum GetBlocksResponse {
+pub enum BlocksResponse {
     #[oai(status = 200)]
     Ok(Json<BlocksRes>),
 }
@@ -39,7 +39,7 @@ pub struct BlocksData {
     blocks: Vec<DisplayBlock>,
 }
 
-pub async fn get_block_by_height(api: &Api, height: Path<i64>) -> Result<GetBlockResponse> {
+pub async fn get_block_by_height(api: &Api, height: Path<i64>) -> Result<BlockResponse> {
     let mut conn = api.storage.lock().await.acquire().await?;
 
     let str = format!("SELECT * FROM block WHERE height = {}", height.0);
@@ -47,7 +47,7 @@ pub async fn get_block_by_height(api: &Api, height: Path<i64>) -> Result<GetBloc
     let row = match res {
         Ok(row) => row,
         _ => {
-            return Ok(GetBlockResponse::Ok(Json(BlockRes {
+            return Ok(BlockResponse::Ok(Json(BlockRes {
                 code: 500,
                 message: "internal error".to_string(),
                 data: None,
@@ -78,14 +78,14 @@ pub async fn get_block_by_height(api: &Api, height: Path<i64>) -> Result<GetBloc
         proposer,
     };
 
-    Ok(GetBlockResponse::Ok(Json(BlockRes {
+    Ok(BlockResponse::Ok(Json(BlockRes {
         code: 200,
         message: "ok".to_string(),
         data: Some(block),
     })))
 }
 
-pub async fn get_block_by_hash(api: &Api, hash: Path<String>) -> Result<GetBlockResponse> {
+pub async fn get_block_by_hash(api: &Api, hash: Path<String>) -> Result<BlockResponse> {
     let mut conn = api.storage.lock().await.acquire().await?;
 
     let str = format!("SELECT * FROM block WHERE block_id = '{}'", hash.0);
@@ -93,7 +93,7 @@ pub async fn get_block_by_hash(api: &Api, hash: Path<String>) -> Result<GetBlock
     let row = match res {
         Ok(row) => row,
         _ => {
-            return Ok(GetBlockResponse::Ok(Json(BlockRes {
+            return Ok(BlockResponse::Ok(Json(BlockRes {
                 code: 500,
                 message: "internal error".to_string(),
                 data: None,
@@ -125,7 +125,7 @@ pub async fn get_block_by_hash(api: &Api, hash: Path<String>) -> Result<GetBlock
         proposer,
     };
 
-    Ok(GetBlockResponse::Ok(Json(BlockRes {
+    Ok(BlockResponse::Ok(Json(BlockRes {
         code: 200,
         message: "ok".to_string(),
         data: Some(block),
@@ -140,7 +140,7 @@ pub async fn get_blocks(
     end_time: Query<Option<i64>>,
     page: Query<Option<i64>>,
     page_size: Query<Option<i64>>,
-) -> Result<GetBlocksResponse> {
+) -> Result<BlocksResponse> {
     let mut conn = api.storage.lock().await.acquire().await?;
     let mut sql_str = String::from("SELECT * FROM block ");
     let mut params: Vec<String> = vec![];
@@ -179,7 +179,7 @@ pub async fn get_blocks(
     let rows = match res {
         Ok(rows) => rows,
         _ => {
-            return Ok(GetBlocksResponse::Ok(Json(BlocksRes {
+            return Ok(BlocksResponse::Ok(Json(BlocksRes {
                 code: 500,
                 message: "internal error".to_string(),
                 data: None,
@@ -216,7 +216,7 @@ pub async fn get_blocks(
 
     let l = blocks.len();
 
-    Ok(GetBlocksResponse::Ok(Json(BlocksRes {
+    Ok(BlocksResponse::Ok(Json(BlocksRes {
         code: 200,
         message: "ok".to_string(),
         data: Some(BlocksData { counts: l, blocks }),

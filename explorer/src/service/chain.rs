@@ -75,9 +75,11 @@ pub async fn statistics(api: &Api, ty: Query<Option<i64>>) -> Result<ChainStatis
 
     // total address
     let sql_str = if let Some(ty) = ty.0 {
-        format!("SELECT jsonb_path_query(value,'$.body.operations[*].TransferAsset.body.transfer.outputs[*].public_key') as addr FROM transaction WHERE ty={}", ty)
+        format!("SELECT jsonb_path_query(value,'$.body.operations[*].TransferAsset.body.transfer.outputs[*].public_key') \
+        as addr FROM transaction WHERE ty={}", ty)
     } else {
-        "SELECT jsonb_path_query(value,'$.body.operations[*].TransferAsset.body.transfer.outputs[*].public_key') as addr FROM transaction".to_string()
+        "SELECT jsonb_path_query(value,'$.body.operations[*].TransferAsset.body.transfer.outputs[*].public_key') \
+        as addr FROM transaction".to_string()
     };
     let active_addresses_res = sqlx::query(sql_str.as_str()).fetch_all(&mut conn).await;
     let rows = match active_addresses_res {

@@ -92,8 +92,8 @@ pub async fn save(block: ModuleBlock, pool: &PgPool) -> Result<(), Error> {
 
     for tx in block.txs {
         sqlx::query!(
-                "INSERT INTO transaction VALUES ($1, $2, 0, $3, $4, $5, $6) ON CONFLICT(txid) DO UPDATE SET ty=0, block_id=$2, time=$3, value=$4, code=$5, log=$6",
-                &tx.txid, &tx.block_id, &tx.time, &tx.value, &tx.code, &tx.log
+                "INSERT INTO transaction VALUES ($1, $2, 0, $3, $4, $5, $6) ON CONFLICT(txid) DO UPDATE SET ty=0, block_id=$2, timestamp=$3, value=$4, code=$5, log=$6",
+                &tx.txid, &tx.block_id, &tx.timestamp, &tx.value, &tx.code, &tx.log
             )
             .execute(pool)
             .await?;
@@ -101,8 +101,8 @@ pub async fn save(block: ModuleBlock, pool: &PgPool) -> Result<(), Error> {
 
     for tx in block.evm_txs {
         sqlx::query!(
-                "INSERT INTO transaction VALUES ($1, $2, 1, $3, $4, $5, $6) ON CONFLICT(txid) DO UPDATE SET ty=1, block_id=$2, time=$3, value=$4, code=$5, log=$6",
-                &tx.txid, &tx.block_id, &tx.time, &tx.value, &tx.code, &tx.log
+                "INSERT INTO transaction VALUES ($1, $2, 1, $3, $4, $5, $6) ON CONFLICT(txid) DO UPDATE SET ty=1, block_id=$2, timestamp=$3, value=$4, code=$5, log=$6",
+                &tx.txid, &tx.block_id, &tx.timestamp, &tx.value, &tx.code, &tx.log
             )
             .execute(pool)
             .await?;

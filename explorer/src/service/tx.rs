@@ -6,14 +6,13 @@ use poem_openapi::param::Query;
 use poem_openapi::{param::Path, payload::Json, ApiResponse, Object};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use sqlx::types::chrono::NaiveDateTime;
 use sqlx::Row;
 
 const ABAR_TO_BAR: i64 = 1;
 const BAR_TO_ABAR: i64 = 2;
 
 #[derive(ApiResponse)]
-pub enum GetTxResponse {
+pub enum TxResponse {
     #[oai(status = 200)]
     Ok(Json<TxRes>),
 }
@@ -26,7 +25,7 @@ pub struct TxRes {
 }
 
 #[derive(ApiResponse)]
-pub enum GetTxsResponse {
+pub enum TxsResponse {
     #[oai(status = 200)]
     Ok(Json<TxsRes>),
 }
@@ -44,14 +43,14 @@ pub struct TxsData {
     txs: Vec<Transaction>,
 }
 
-pub async fn get_tx(api: &Api, tx_id: Path<String>) -> Result<GetTxResponse> {
+pub async fn get_tx(api: &Api, tx_id: Path<String>) -> Result<TxResponse> {
     let mut conn = api.storage.lock().await.acquire().await?;
     let str = format!("SELECT * FROM transaction WHERE txid = '{}'", tx_id.0);
     let res = sqlx::query(str.as_str()).fetch_one(&mut conn).await;
     let row = match res {
         Ok(row) => row,
         _ => {
-            return Ok(GetTxResponse::Ok(Json(TxRes {
+            return Ok(TxResponse::Ok(Json(TxRes {
                 code: 500,
                 message: "internal error".to_string(),
                 data: None,
@@ -77,7 +76,7 @@ pub async fn get_tx(api: &Api, tx_id: Path<String>) -> Result<GetTxResponse> {
         events: vec![],
     };
 
-    Ok(GetTxResponse::Ok(Json(TxRes {
+    Ok(TxResponse::Ok(Json(TxRes {
         code: 200,
         message: "ok".to_string(),
         data: Some(tx),
@@ -95,11 +94,9 @@ pub async fn get_txs(
     end_time: Query<Option<i64>>,
     page: Query<Option<i64>>,
     page_size: Query<Option<i64>>,
-) -> Result<GetTxsResponse> {
+) -> Result<TxsResponse> {
     let mut conn = api.storage.lock().await.acquire().await?;
-    let mut sql_str = String::from(
-        "SELECT * FROM transaction AS t LEFT JOIN block AS b ON t.block_id=b.block_id ",
-    );
+    let mut sql_str = String::from("SELECT * FROM transaction ");
 
     let mut params: Vec<String> = vec![];
     if let Some(block_id) = block_id.0 {
@@ -108,7 +105,7 @@ pub async fn get_txs(
     if let Some(from_address) = from.0 {
         let pk = public_key_from_bech32(from_address.as_str());
         if pk.is_err() {
-            return Ok(GetTxsResponse::Ok(Json(TxsRes {
+            return Ok(TxsResponse::Ok(Json(TxsRes {
                 code: 400,
                 message: "invalid from address".to_string(),
                 data: None,
@@ -122,7 +119,7 @@ pub async fn get_txs(
     if let Some(to_address) = to.0 {
         let pk = public_key_from_bech32(to_address.as_str());
         if pk.is_err() {
-            return Ok(GetTxsResponse::Ok(Json(TxsRes {
+            return Ok(TxsResponse::Ok(Json(TxsRes {
                 code: 400,
                 message: "invalid to address".to_string(),
                 data: None,
@@ -137,16 +134,10 @@ pub async fn get_txs(
         params.push(format!(" ty={} ", ty));
     }
     if let Some(start_time) = start_time.0 {
-        params.push(format!(
-            " time>='{}' ",
-            NaiveDateTime::from_timestamp(start_time, 0)
-        ));
+        params.push(format!(" timestamp>={} ", start_time));
     }
     if let Some(end_time) = end_time.0 {
-        params.push(format!(
-            " time<='{}' ",
-            NaiveDateTime::from_timestamp(end_time, 0)
-        ));
+        params.push(format!(" timestamp<={} ", end_time));
     }
     let page = page.0.unwrap_or(1);
     let page_size = page_size.0.unwrap_or(10);
@@ -156,7 +147,7 @@ pub async fn get_txs(
         sql_str += &params.join(" AND ");
     }
     sql_str += &format!(
-        " ORDER BY time DESC LIMIT {} OFFSET {}",
+        " ORDER BY timestamp DESC LIMIT {} OFFSET {}",
         page_size,
         (page - 1) * page_size
     );
@@ -166,7 +157,7 @@ pub async fn get_txs(
     let rows = match res {
         Ok(rows) => rows,
         _ => {
-            return Ok(GetTxsResponse::Ok(Json(TxsRes {
+            return Ok(TxsResponse::Ok(Json(TxsRes {
                 code: 500,
                 message: "internal error".to_string(),
                 data: Some(TxsData::default()),
@@ -199,7 +190,7 @@ pub async fn get_txs(
 
     let l = txs.len();
 
-    Ok(GetTxsResponse::Ok(Json(TxsRes {
+    Ok(TxsResponse::Ok(Json(TxsRes {
         code: 200,
         message: "ok".to_string(),
         data: Some(TxsData { counts: l, txs }),
@@ -216,11 +207,9 @@ pub async fn get_triple_masking_txs(
     end_time: Query<Option<i64>>,
     page: Query<Option<i64>>,
     page_size: Query<Option<i64>>,
-) -> Result<GetTxsResponse> {
+) -> Result<TxsResponse> {
     let mut conn = api.storage.lock().await.acquire().await?;
-    let mut sql_str = String::from(
-        "SELECT * FROM transaction AS t LEFT JOIN block AS b ON t.block_id=b.block_id ",
-    );
+    let mut sql_str = String::from("SELECT * FROM transaction ");
 
     let mut params: Vec<String> = vec![];
     if let Some(block_id) = block_id.0 {
@@ -245,16 +234,10 @@ pub async fn get_triple_masking_txs(
     }
 
     if let Some(start_time) = start_time.0 {
-        params.push(format!(
-            " time>='{}' ",
-            NaiveDateTime::from_timestamp(start_time, 0)
-        ));
+        params.push(format!(" timestamp>={} ", start_time));
     }
     if let Some(end_time) = end_time.0 {
-        params.push(format!(
-            " time<='{}' ",
-            NaiveDateTime::from_timestamp(end_time, 0)
-        ));
+        params.push(format!(" timestamp<={} ", end_time));
     }
     let page = page.0.unwrap_or(1);
     let page_size = page_size.0.unwrap_or(10);
@@ -263,10 +246,13 @@ pub async fn get_triple_masking_txs(
         sql_str += &String::from(" WHERE ");
         sql_str += &params.join(" AND ");
     } else {
-        sql_str += &String::from(" WHERE (value @? '$.body.operations[*].AbarToBar.note.body.output.public_key ? (@!=\"\")') OR (value @? '$.body.operations[*].BarToAbar.note.body.output.commitment ? (@!=\"\")')");
+        sql_str += &String::from(
+            " WHERE (value @? '$.body.operations[*].AbarToBar.note.body.output.public_key ? (@!=\"\")') \
+            OR (value @? '$.body.operations[*].BarToAbar.note.body.output.commitment ? (@!=\"\")')",
+        );
     }
     sql_str += &format!(
-        " ORDER BY time DESC LIMIT {} OFFSET {}",
+        " ORDER BY timestamp DESC LIMIT {} OFFSET {}",
         page_size,
         (page - 1) * page_size
     );
@@ -276,7 +262,7 @@ pub async fn get_triple_masking_txs(
     let rows = match res {
         Ok(rows) => rows,
         _ => {
-            return Ok(GetTxsResponse::Ok(Json(TxsRes {
+            return Ok(TxsResponse::Ok(Json(TxsRes {
                 code: 500,
                 message: "internal error".to_string(),
                 data: None,
@@ -309,7 +295,95 @@ pub async fn get_triple_masking_txs(
 
     let l = txs.len();
 
-    Ok(GetTxsResponse::Ok(Json(TxsRes {
+    Ok(TxsResponse::Ok(Json(TxsRes {
+        code: 200,
+        message: "ok".to_string(),
+        data: Some(TxsData { counts: l, txs }),
+    })))
+}
+
+pub async fn get_claim_txs(
+    api: &Api,
+    block_id: Query<Option<String>>,
+    pub_key: Query<Option<String>>,
+    start_time: Query<Option<i64>>,
+    end_time: Query<Option<i64>>,
+    page: Query<Option<i64>>,
+    page_size: Query<Option<i64>>,
+) -> Result<TxsResponse> {
+    let mut conn = api.storage.lock().await.acquire().await?;
+    let mut sql_str = String::from("SELECT * FROM transaction ");
+
+    let mut params: Vec<String> = vec![];
+    if let Some(block_id) = block_id.0 {
+        params.push(format!(" block_id='{}' ", block_id));
+    }
+    if let Some(pk) = pub_key.0 {
+        params.push(format!(
+            "(value @? '$.body.operations[*].Claim.pubkey ? (@==\"{}\")')",
+            pk
+        ));
+    }
+    if let Some(start_time) = start_time.0 {
+        params.push(format!(" timestamp>={} ", start_time));
+    }
+    if let Some(end_time) = end_time.0 {
+        params.push(format!(" timestamp<={} ", end_time));
+    }
+    let page = page.0.unwrap_or(1);
+    let page_size = page_size.0.unwrap_or(10);
+    if !params.is_empty() {
+        sql_str += &String::from(" WHERE ");
+        sql_str += &params.join(" AND ");
+    } else {
+        sql_str +=
+            &String::from(" WHERE (value @? '$.body.operations[*].Claim.pubkey ? (@!=\"\")') ");
+    }
+    sql_str += &format!(
+        " ORDER BY timestamp DESC LIMIT {} OFFSET {}",
+        page_size,
+        (page - 1) * page_size
+    );
+
+    let res = sqlx::query(sql_str.as_str()).fetch_all(&mut conn).await;
+    let mut txs: Vec<Transaction> = vec![];
+    let rows = match res {
+        Ok(rows) => rows,
+        _ => {
+            return Ok(TxsResponse::Ok(Json(TxsRes {
+                code: 500,
+                message: "internal error".to_string(),
+                data: None,
+            })));
+        }
+    };
+
+    for row in rows {
+        let tx_id: String = row.try_get("txid")?;
+        let block_id: String = row.try_get("block_id")?;
+        let ty: i32 = row.try_get("ty")?;
+        let value: Value = row.try_get("value")?;
+        let timestamp: i64 = row.try_get("timestamp")?;
+        let code: i64 = row.try_get("code")?;
+        let log: String = row.try_get("log")?;
+
+        let tx = Transaction {
+            txid: tx_id,
+            block_id,
+            ty,
+            value,
+            code,
+            timestamp,
+            log,
+            events: vec![],
+        };
+
+        txs.push(tx);
+    }
+
+    let l = txs.len();
+
+    Ok(TxsResponse::Ok(Json(TxsRes {
         code: 200,
         message: "ok".to_string(),
         data: Some(TxsData { counts: l, txs }),
