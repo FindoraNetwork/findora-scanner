@@ -8,7 +8,7 @@ use serde_json::Value;
 use sqlx::Row;
 
 #[derive(ApiResponse)]
-pub enum GetAddressResponse {
+pub enum AddressResponse {
     #[oai(status = 200)]
     Ok(Json<AddressRes>),
 }
@@ -26,11 +26,11 @@ pub struct AddressData {
     pub counts: usize,
 }
 
-pub async fn get_address(api: &Api, address: Path<String>) -> Result<GetAddressResponse> {
+pub async fn get_address(api: &Api, address: Path<String>) -> Result<AddressResponse> {
     let mut conn = api.storage.lock().await.acquire().await?;
     let pk = public_key_from_bech32(address.0.as_str());
     if pk.is_err() {
-        return Ok(GetAddressResponse::Ok(Json(AddressRes {
+        return Ok(AddressResponse::Ok(Json(AddressRes {
             code: 400,
             message: "invalid address".to_string(),
             data: None,
@@ -50,7 +50,7 @@ pub async fn get_address(api: &Api, address: Path<String>) -> Result<GetAddressR
     let rows = match res {
         Ok(rows) => rows,
         _ => {
-            return Ok(GetAddressResponse::Ok(Json(AddressRes {
+            return Ok(AddressResponse::Ok(Json(AddressRes {
                 code: 500,
                 message: "internal error".to_string(),
                 data: None,
@@ -83,7 +83,7 @@ pub async fn get_address(api: &Api, address: Path<String>) -> Result<GetAddressR
 
     let l = txs.len();
 
-    Ok(GetAddressResponse::Ok(Json(AddressRes {
+    Ok(AddressResponse::Ok(Json(AddressRes {
         code: 200,
         message: "ok".to_string(),
         data: Some(AddressData { txs, counts: l }),

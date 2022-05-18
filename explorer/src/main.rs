@@ -1,11 +1,11 @@
 mod service;
 mod utils;
 
-use crate::service::address::GetAddressResponse;
-use crate::service::asset::GetAssetResponse;
-use crate::service::block::{GetBlockResponse, GetBlocksResponse};
+use crate::service::address::AddressResponse;
+use crate::service::asset::AssetResponse;
+use crate::service::block::{BlockResponse, BlocksResponse};
 use crate::service::chain::{ChainStatisticsResponse, StakingResponse};
-use crate::service::tx::{GetTxResponse, GetTxsResponse};
+use crate::service::tx::{TxResponse, TxsResponse};
 use anyhow::Result;
 use poem::{listener::TcpListener, Route, Server};
 use poem_openapi::param::{Path, Query};
@@ -27,7 +27,7 @@ impl Api {
         &self,
         /// transaction hash, like 'c19fc22beb61030607367b42d4898a26ede1e6aa6b400330804c95b241f29bd0'.
         tx_id: Path<String>,
-    ) -> poem::Result<GetTxResponse> {
+    ) -> poem::Result<TxResponse> {
         service::tx::get_tx(self, tx_id)
             .await
             .map_err(utils::handle_fetch_one_err)
@@ -45,15 +45,15 @@ impl Api {
         to: Query<Option<String>>,
         /// transaction type. 0 is for Findora tx, 1 is for evm tx.
         ty: Query<Option<i64>>,
-        /// time of transaction starts in seconds.
+        /// start timestamp.
         start_time: Query<Option<i64>>,
-        /// time of transaction ends in seconds.
+        /// end timestamp.
         end_time: Query<Option<i64>>,
-        /// page number, staring at 1, default 1.
+        /// page number, default 1.
         page: Query<Option<i64>>,
         /// page size, default 10.
         page_size: Query<Option<i64>>,
-    ) -> poem::Result<GetTxsResponse> {
+    ) -> poem::Result<TxsResponse> {
         service::tx::get_txs(
             self, block_id, from, to, ty, start_time, end_time, page, page_size,
         )
@@ -77,17 +77,40 @@ impl Api {
         /// 1: AbarToBar.
         /// 2: BarToAbar.
         bar: Query<Option<i64>>,
-        /// time of transaction starts in seconds.
+        /// start timestamp.
         start_time: Query<Option<i64>>,
-        /// time of transaction ends in seconds.
+        /// end timestamp.
         end_time: Query<Option<i64>>,
-        /// page number, staring at 1, default 1.
+        /// page number, default 1.
         page: Query<Option<i64>>,
         /// page size, default 10.
         page_size: Query<Option<i64>>,
-    ) -> poem::Result<GetTxsResponse> {
+    ) -> poem::Result<TxsResponse> {
         service::tx::get_triple_masking_txs(
             self, block_id, pub_key, bar, start_time, end_time, page, page_size,
+        )
+        .await
+        .map_err(utils::handle_fetch_one_err)
+    }
+
+    #[oai(path = "/txs/claim", method = "get", tag = "ApiTags::Transaction")]
+    async fn get_claim_txs(
+        &self,
+        /// block hash.
+        block_id: Query<Option<String>>,
+        /// public key.
+        pub_key: Query<Option<String>>,
+        /// start timestamp.
+        start_time: Query<Option<i64>>,
+        /// end timestamp.
+        end_time: Query<Option<i64>>,
+        /// page number, default 1.
+        page: Query<Option<i64>>,
+        /// page size, default 10.
+        page_size: Query<Option<i64>>,
+    ) -> poem::Result<TxsResponse> {
+        service::tx::get_claim_txs(
+            self, block_id, pub_key, start_time, end_time, page, page_size,
         )
         .await
         .map_err(utils::handle_fetch_one_err)
@@ -98,7 +121,7 @@ impl Api {
         &self,
         /// block height.
         height: Path<i64>,
-    ) -> poem::Result<GetBlockResponse> {
+    ) -> poem::Result<BlockResponse> {
         service::block::get_block_by_height(self, height)
             .await
             .map_err(utils::handle_fetch_one_err)
@@ -109,7 +132,7 @@ impl Api {
         &self,
         /// block hash.
         hash: Path<String>,
-    ) -> poem::Result<GetBlockResponse> {
+    ) -> poem::Result<BlockResponse> {
         service::block::get_block_by_hash(self, hash)
             .await
             .map_err(utils::handle_fetch_one_err)
@@ -130,7 +153,7 @@ impl Api {
         page: Query<Option<i64>>,
         /// page size, default 10.
         page_size: Query<Option<i64>>,
-    ) -> poem::Result<GetBlocksResponse> {
+    ) -> poem::Result<BlocksResponse> {
         service::block::get_blocks(
             self,
             start_height,
@@ -149,7 +172,7 @@ impl Api {
         &self,
         /// account address, like 'fra1p4vy5n9mlkdys7xczegj398xtyvw2nawz00nnfh4yr7fpjh297cqsxfv7v'.
         address: Path<String>,
-    ) -> poem::Result<GetAddressResponse> {
+    ) -> poem::Result<AddressResponse> {
         service::address::get_address(self, address)
             .await
             .map_err(utils::handle_fetch_one_err)
@@ -160,7 +183,7 @@ impl Api {
         &self,
         /// an asset address, like 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA='.
         code: Path<String>,
-    ) -> poem::Result<GetAssetResponse> {
+    ) -> poem::Result<AssetResponse> {
         service::asset::get_asset(self, code)
             .await
             .map_err(utils::handle_fetch_one_err)
