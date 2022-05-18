@@ -311,7 +311,6 @@ pub async fn get_claim_txs(
     page: Query<Option<i64>>,
     page_size: Query<Option<i64>>,
 ) -> Result<TxsResponse> {
-    println!("111111111111111111");
     let mut conn = api.storage.lock().await.acquire().await?;
     let mut sql_str = String::from("SELECT * FROM transaction ");
 
@@ -345,7 +344,7 @@ pub async fn get_claim_txs(
         page_size,
         (page - 1) * page_size
     );
-    println!("{}", sql_str);
+
     let res = sqlx::query(sql_str.as_str()).fetch_all(&mut conn).await;
     let mut txs: Vec<Transaction> = vec![];
     let rows = match res {
