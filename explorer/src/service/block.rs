@@ -187,7 +187,7 @@ pub async fn get_blocks(
         }
     };
 
-    for row in rows.iter() {
+    for row in rows {
         let block_id: String = row.try_get("block_id")?;
         let height: i64 = row.try_get("height")?;
         let time: NaiveDateTime = row.try_get("time")?;

@@ -25,7 +25,7 @@ impl Api {
     #[oai(path = "/tx/:tx_id", method = "get", tag = "ApiTags::Transaction")]
     async fn get_tx(
         &self,
-        /// transaction hash, like 'c19fc22beb61030607367b42d4898a26ede1e6aa6b400330804c95b241f29bd0'.
+        /// transaction hash, e.g. 'c19fc22beb61030607367b42d4898a26ede1e6aa6b400330804c95b241f29bd0'.
         tx_id: Path<String>,
     ) -> poem::Result<TxResponse> {
         service::tx::get_tx(self, tx_id)
@@ -37,9 +37,9 @@ impl Api {
     #[oai(path = "/txs", method = "get", tag = "ApiTags::Transaction")]
     async fn get_txs(
         &self,
-        /// block hash, like '4B7C22FA8FC6913E091DC324830181BBA1F01EBFF53049F958EA5AA65327BFE0'.
+        /// block hash, e.g. '4B7C22FA8FC6913E091DC324830181BBA1F01EBFF53049F958EA5AA65327BFE0'.
         block_id: Query<Option<String>>,
-        /// from address, like 'fra1p4vy5n9mlkdys7xczegj398xtyvw2nawz00nnfh4yr7fpjh297cqsxfv7v'.
+        /// from address, e.g. 'fra1p4vy5n9mlkdys7xczegj398xtyvw2nawz00nnfh4yr7fpjh297cqsxfv7v'.
         from: Query<Option<String>>,
         /// to address.
         to: Query<Option<String>>,
@@ -69,9 +69,9 @@ impl Api {
     )]
     async fn get_triple_masking_txs(
         &self,
-        /// block hash, like '4B7C22FA8FC6913E091DC324830181BBA1F01EBFF53049F958EA5AA65327BFE0'.
+        /// block hash, e.g. '4B7C22FA8FC6913E091DC324830181BBA1F01EBFF53049F958EA5AA65327BFE0'.
         block_id: Query<Option<String>>,
-        /// output public key, like 'b2fdE7jKfQg_XL2CT7jdw84XkTdpX3uiRgpgW-h6k6o='.
+        /// output public key, e.g. 'b2fdE7jKfQg_XL2CT7jdw84XkTdpX3uiRgpgW-h6k6o='.
         pub_key: Query<Option<String>>,
         /// 0: both, default.
         /// 1: AbarToBar.
@@ -170,7 +170,7 @@ impl Api {
     #[oai(path = "/address/:address", method = "get", tag = "ApiTags::Address")]
     async fn get_address(
         &self,
-        /// account address, like 'fra1p4vy5n9mlkdys7xczegj398xtyvw2nawz00nnfh4yr7fpjh297cqsxfv7v'.
+        /// bech32 account address, e.g. 'fra1p4vy5n9mlkdys7xczegj398xtyvw2nawz00nnfh4yr7fpjh297cqsxfv7v'.
         address: Path<String>,
     ) -> poem::Result<AddressResponse> {
         service::address::get_address(self, address)
@@ -181,7 +181,7 @@ impl Api {
     #[oai(path = "/asset/:code", method = "get", tag = "ApiTags::Asset")]
     async fn get_asset(
         &self,
-        /// an asset address, like 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA='.
+        /// base64 asset code, e.g. 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA='.
         code: Path<String>,
     ) -> poem::Result<AssetResponse> {
         service::asset::get_asset(self, code)

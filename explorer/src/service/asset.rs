@@ -2,7 +2,7 @@ use crate::Api;
 use anyhow::Result;
 use poem_openapi::{param::Path, payload::Json, ApiResponse, Object};
 use serde::{Deserialize, Serialize};
-use serde_json::{from_value, json, Value};
+use serde_json::Value;
 use sqlx::Row;
 #[derive(ApiResponse)]
 pub enum AssetResponse {
@@ -84,7 +84,7 @@ pub async fn get_asset(api: &Api, address: Path<String>) -> Result<AssetResponse
         }
     };
 
-    let str = "select value from transaction where value @? '$.body.operations[*].DefineAsset.body.asset'".to_string();
+    let str = "SELECT jsonb_path_query(value,'$.body.operations[*].DefineAsset.body.asset') as asset FROM transaction".to_string();
     let res = sqlx::query(str.as_str()).fetch_all(&mut conn).await;
     let rows = match res {
         Ok(rows) => rows,
@@ -97,37 +97,27 @@ pub async fn get_asset(api: &Api, address: Path<String>) -> Result<AssetResponse
         }
     };
 
-    let mut asset = DisplayAsset::default();
+    let mut da = DisplayAsset::default();
     for row in rows {
-        let value: Value = row.try_get("value")?;
-        let v = value
-            .get("body")
-            .unwrap()
-            .get("operations")
-            .unwrap()
-            .get(0)
-            .unwrap()
-            .get("DefineAsset")
-            .unwrap();
-
-        let da: DefineAsset = from_value(json!(v)).unwrap();
-        if da.body.asset.code.val.eq(code.as_slice()) {
-            asset.code = base64::encode(&da.body.asset.code.val);
-            asset.memo = da.body.asset.memo;
-            asset.issuer = da.body.asset.issuer.key;
-            asset.chain_name = String::from("Findora");
-            asset.decimals = da.body.asset.asset_rules.decimals;
-            asset.max_units = da.body.asset.asset_rules.max_units.parse().unwrap();
-            asset.transferable = da.body.asset.asset_rules.transferable;
-            asset.updatable = da.body.asset.asset_rules.updatable;
-            asset.price = 0f64;
-            asset.market_value *= asset.price;
+        let v: Value = row.try_get("asset").unwrap();
+        let asset: Asset = serde_json::from_value(v).unwrap();
+        if asset.code.val.eq(&code) {
+            da.code = base64::encode(&asset.code.val);
+            da.memo = asset.memo;
+            da.issuer = asset.issuer.key;
+            da.chain_name = String::from("Findora");
+            da.max_units = asset.asset_rules.max_units.parse().unwrap();
+            da.decimals = asset.asset_rules.decimals;
+            da.price = 0.0;
+            da.market_value = 0.0;
+            da.transferable = asset.asset_rules.transferable;
+            da.updatable = asset.asset_rules.updatable;
         }
     }
 
     Ok(AssetResponse::Ok(Json(AssetRes {
         code: 200,
         message: "ok".to_string(),
-        data: Some(asset),
+        data: Some(da),
     })))
 }
