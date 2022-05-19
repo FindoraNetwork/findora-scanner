@@ -5,7 +5,7 @@ use poem_openapi::param::Query;
 use poem_openapi::{payload::Json, ApiResponse, Object};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use sqlx::types::chrono::{Local, TimeZone};
+use sqlx::types::chrono::Local;
 use sqlx::Row;
 use std::collections::{HashMap, HashSet};
 
@@ -102,11 +102,12 @@ pub async fn statistics(api: &Api, ty: Query<Option<i64>>) -> Result<ChainStatis
     let active_addresses = hs.len() as i64;
 
     // daily txs
-    let now = Local::now().date().and_hms(0,0,0);
+    let now = Local::now().date().and_hms(0, 0, 0);
     let sql_str = if let Some(ty) = ty.0 {
         format!(
             "SELECT COUNT(*) as cnt FROM transaction WHERE ty={} AND timestamp>={}",
-            ty, now.timestamp()
+            ty,
+            now.timestamp()
         )
     } else {
         format!(
