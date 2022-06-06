@@ -17,4 +17,6 @@ pub struct Validator {
 #[derive(Serialize, Deserialize, Debug, Default)]
 pub struct ValidatorsRPC {
     pub validators: Vec<Validator>,
+    pub count: String,
+    pub total: String,
 }
