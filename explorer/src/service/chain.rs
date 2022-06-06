@@ -177,7 +177,7 @@ pub async fn staking_info(api: &Api, height: Query<Option<i64>>) -> Result<Staki
         }
     }
 
-    let validators_res = api.rpc.get_active_validators(height).await;
+    let validators_res = api.rpc.load_validators(height).await;
     let validators = validators_res.unwrap();
     let mut mp = HashMap::new();
     for v in &validators.validators {

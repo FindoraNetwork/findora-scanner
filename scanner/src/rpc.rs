@@ -15,7 +15,7 @@ use crate::{db, tx};
 
 use module::schema::{Block as ModuleBlock, DelegationInfo, Transaction, Validator};
 
-use module::rpc::block::{BlockSizeRPC, ValidatorsRPC};
+use module::rpc::block::BlockSizeRPC;
 use reqwest::{Client, ClientBuilder, Url};
 
 pub struct TendermintRPC {
@@ -27,14 +27,6 @@ impl TendermintRPC {
     pub fn new(timeout: Duration, rpc: Url) -> Self {
         let client = ClientBuilder::new().timeout(timeout).build().unwrap();
         TendermintRPC { client, rpc }
-    }
-
-    pub async fn get_active_validators(&self, height: i64) -> Result<ValidatorsRPC> {
-        let mut url = self.rpc.join("validators").unwrap();
-        url.set_query(Some(&format!("height={}&per_page={}", height, 100)));
-        debug!("{}", url.as_str());
-        let r: ValidatorsRPC = self.client_get(url).await?;
-        Ok(r)
     }
 
     pub async fn load_block(&self, height: i64) -> Result<ModuleBlockRPC> {
@@ -53,11 +45,33 @@ impl TendermintRPC {
         Ok(r)
     }
 
-    pub async fn load_validators(&self, height: i64) -> Result<ModuleValidatorsRPC> {
+    fn validator_url(&self, height: i64, page: i32, per_page: i32) -> Result<Url> {
         let mut url = self.rpc.join("validators").unwrap();
-        url.set_query(Some(&format!("height={}", height)));
+        url.set_query(Some(&format!(
+            "height={}&per_page={}&page={}",
+            height, per_page, page
+        )));
+        Ok(url)
+    }
 
-        let r: ModuleValidatorsRPC = self.client_get(url).await?;
+    pub async fn load_validators(&self, height: i64) -> Result<ModuleValidatorsRPC> {
+        let mut page = 1;
+        let per_page = 100;
+
+        let url = self.validator_url(height, page, per_page).unwrap();
+        let mut r: ModuleValidatorsRPC = self.client_get(url).await?;
+        let mut count = r.count.clone().parse::<i32>().unwrap();
+        let mut total = r.total.clone().parse::<i32>().unwrap();
+
+        while total > count {
+            total -= count;
+            page += 1;
+            let tmp_url = self.validator_url(height, page, per_page).unwrap();
+            let mut tmp_res: ModuleValidatorsRPC = self.client_get(tmp_url).await?;
+            count = tmp_res.count.clone().parse::<i32>().unwrap();
+            r.validators.append(&mut tmp_res.validators)
+        }
+
         Ok(r)
     }
 
@@ -304,6 +318,20 @@ mod tests {
         let _ = rpc
             .load_transaction("c19fc22beb61030607367b42d4898a26ede1e6aa6b400330804c95b241f29bd0")
             .await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_load_validators() -> Result<()> {
+        let rpc = TendermintRPC::new(
+            Duration::from_secs(10),
+            "https://prod-mainnet.prod.findora.org:26657"
+                .to_string()
+                .parse()
+                .unwrap(),
+        );
+        let r = rpc.load_validators(2360073).await?;
+        assert_eq!(r.validators.len(), 69, "get validators");
         Ok(())
     }
 }
