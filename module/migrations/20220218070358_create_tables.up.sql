@@ -2,7 +2,7 @@ CREATE TABLE block (
     block_id VARCHAR(255) NOT NULL,
     height BIGINT NOT NULL,
     size BIGINT NOT NULL,
-    tx_count INT,
+    tx_count BIGINT,
     time TIMESTAMP NOT NULL,
     app_hash VARCHAR(255) NOT NULL,
     proposer VARCHAR(255) NOT NULL,
