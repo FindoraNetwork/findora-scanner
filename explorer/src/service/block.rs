@@ -144,7 +144,7 @@ pub async fn get_blocks(
 ) -> Result<BlocksResponse> {
     let mut conn = api.storage.lock().await.acquire().await?;
     let mut sql_str = String::from("SELECT * FROM block ");
-    let mut sql_total = String::from("SELECT count(*) as total FROM transaction ");
+    let mut sql_total = String::from("SELECT count(*) as total FROM block ");
     let mut params: Vec<String> = vec![];
 
     if let Some(start_height) = start_height.0 {

@@ -255,6 +255,7 @@ impl RPCCaller {
             block_id,
             height,
             size: block_size,
+            tx_count: (evm_txs.len() + txs.len()) as i64,
             timestamp,
             app_hash,
             proposer,

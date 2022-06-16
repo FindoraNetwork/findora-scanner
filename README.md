@@ -10,20 +10,20 @@ Set environment variable `RUST_LOG=scanner=info` to show logs.
 
 ### Scan a single block.
 
-``` shell
-$ scanner load -s https://prod-mainnet.prod.findora.org:26657/ --height <int> 
+```
+scanner-cli load -s https://prod-mainnet.prod.findora.org:26657/ --height <int> 
 ```
 
 ### Scan blocks in a range.
 
-```shell
-$ scanner scan -s https://prod-mainnet.prod.findora.org:26657/ --start <int> --end <int>
+```
+scanner-cli scan -s https://prod-mainnet.prod.findora.org:26657/ --start <int> --end <int>
 ```
 
 ### Periodically scan a block
 
 ```
-$ scanner subscribe -s https://prod-mainnet.prod.findora.org:26657/
+scanner-cli subscribe -s https://prod-mainnet.prod.findora.org:26657/
 ```
 
 start height is loaded from database, or specified by `--start <int>`
