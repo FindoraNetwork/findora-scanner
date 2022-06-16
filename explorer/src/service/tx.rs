@@ -7,6 +7,7 @@ use poem_openapi::{param::Path, payload::Json, ApiResponse, Object};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sqlx::Row;
+use std::ops::Add;
 
 const ABAR_TO_BAR: i64 = 1;
 const BAR_TO_ABAR: i64 = 2;
@@ -39,7 +40,9 @@ pub struct TxsRes {
 
 #[derive(Serialize, Deserialize, Debug, Default, Object)]
 pub struct TxsData {
-    counts: usize,
+    page: i64,
+    page_size: i64,
+    total: i64,
     txs: Vec<Transaction>,
 }
 
@@ -97,7 +100,7 @@ pub async fn get_txs(
 ) -> Result<TxsResponse> {
     let mut conn = api.storage.lock().await.acquire().await?;
     let mut sql_str = String::from("SELECT * FROM transaction ");
-
+    let mut sql_total = String::from("SELECT count(*) as total FROM transaction ");
     let mut params: Vec<String> = vec![];
     if let Some(block_id) = block_id.0 {
         params.push(format!(" block_id='{}' ", block_id));
@@ -143,8 +146,8 @@ pub async fn get_txs(
     let page_size = page_size.0.unwrap_or(10);
 
     if !params.is_empty() {
-        sql_str += &String::from(" WHERE ");
-        sql_str += &params.join(" AND ");
+        sql_str = sql_str.add(" WHERE ").add(params.join(" AND ").as_str());
+        sql_total = sql_total.add(" WHERE ").add(params.join(" AND ").as_str());
     }
     sql_str += &format!(
         " ORDER BY timestamp DESC LIMIT {} OFFSET {}",
@@ -188,12 +191,19 @@ pub async fn get_txs(
         txs.push(tx);
     }
 
-    let l = txs.len();
+    // total items
+    let res = sqlx::query(sql_total.as_str()).fetch_all(&mut conn).await;
+    let total: i64 = res.unwrap()[0].try_get("total")?;
 
     Ok(TxsResponse::Ok(Json(TxsRes {
         code: 200,
-        message: "ok".to_string(),
-        data: Some(TxsData { counts: l, txs }),
+        message: "".to_string(),
+        data: Some(TxsData {
+            page,
+            page_size,
+            total,
+            txs,
+        }),
     })))
 }
 
@@ -210,7 +220,7 @@ pub async fn get_triple_masking_txs(
 ) -> Result<TxsResponse> {
     let mut conn = api.storage.lock().await.acquire().await?;
     let mut sql_str = String::from("SELECT * FROM transaction ");
-
+    let mut sql_total = String::from("SELECT count(*) as total FROM transaction ");
     let mut params: Vec<String> = vec![];
     if let Some(block_id) = block_id.0 {
         params.push(format!(" block_id='{}' ", block_id));
@@ -243,8 +253,8 @@ pub async fn get_triple_masking_txs(
     let page_size = page_size.0.unwrap_or(10);
 
     if !params.is_empty() {
-        sql_str += &String::from(" WHERE ");
-        sql_str += &params.join(" AND ");
+        sql_str = sql_str.add(" WHERE ").add(params.join(" AND ").as_str());
+        sql_total = sql_total.add(" WHERE ").add(params.join(" AND ").as_str());
     } else {
         sql_str += &String::from(
             " WHERE (value @? '$.body.operations[*].AbarToBar.note.body.output.public_key ? (@!=\"\")') \
@@ -293,12 +303,19 @@ pub async fn get_triple_masking_txs(
         txs.push(tx);
     }
 
-    let l = txs.len();
+    // total items
+    let res = sqlx::query(sql_total.as_str()).fetch_all(&mut conn).await;
+    let total: i64 = res.unwrap()[0].try_get("total")?;
 
     Ok(TxsResponse::Ok(Json(TxsRes {
         code: 200,
         message: "ok".to_string(),
-        data: Some(TxsData { counts: l, txs }),
+        data: Some(TxsData {
+            page,
+            page_size,
+            total,
+            txs,
+        }),
     })))
 }
 
@@ -313,7 +330,7 @@ pub async fn get_claim_txs(
 ) -> Result<TxsResponse> {
     let mut conn = api.storage.lock().await.acquire().await?;
     let mut sql_str = String::from("SELECT * FROM transaction ");
-
+    let mut sql_total = String::from("SELECT count(*) as total FROM transaction ");
     let mut params: Vec<String> = vec![];
     if let Some(block_id) = block_id.0 {
         params.push(format!(" block_id='{}' ", block_id));
@@ -333,8 +350,8 @@ pub async fn get_claim_txs(
     let page = page.0.unwrap_or(1);
     let page_size = page_size.0.unwrap_or(10);
     if !params.is_empty() {
-        sql_str += &String::from(" WHERE ");
-        sql_str += &params.join(" AND ");
+        sql_str = sql_str.add(" WHERE ").add(params.join(" AND ").as_str());
+        sql_total = sql_total.add(" WHERE ").add(params.join(" AND ").as_str());
     } else {
         sql_str +=
             &String::from(" WHERE (value @? '$.body.operations[*].Claim.pubkey ? (@!=\"\")') ");
@@ -381,11 +398,18 @@ pub async fn get_claim_txs(
         txs.push(tx);
     }
 
-    let l = txs.len();
+    // total items
+    let res = sqlx::query(sql_total.as_str()).fetch_all(&mut conn).await;
+    let total: i64 = res.unwrap()[0].try_get("total")?;
 
     Ok(TxsResponse::Ok(Json(TxsRes {
         code: 200,
-        message: "ok".to_string(),
-        data: Some(TxsData { counts: l, txs }),
+        message: "".to_string(),
+        data: Some(TxsData {
+            page,
+            page_size,
+            total,
+            txs,
+        }),
     })))
 }

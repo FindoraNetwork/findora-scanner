@@ -204,7 +204,7 @@ pub async fn staking_info(api: &Api, height: Query<Option<i64>>) -> Result<Staki
 
     Ok(StakingResponse::Ok(Json(StakingRes {
         code: 200,
-        message: "ok".to_string(),
+        message: "".to_string(),
         data: Some(data),
     })))
 }

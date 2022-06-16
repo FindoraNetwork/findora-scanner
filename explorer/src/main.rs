@@ -49,7 +49,7 @@ impl Api {
         start_time: Query<Option<i64>>,
         /// end timestamp.
         end_time: Query<Option<i64>>,
-        /// page number, default 1.
+        /// page index, default 1.
         page: Query<Option<i64>>,
         /// page size, default 10.
         page_size: Query<Option<i64>>,
@@ -81,7 +81,7 @@ impl Api {
         start_time: Query<Option<i64>>,
         /// end timestamp.
         end_time: Query<Option<i64>>,
-        /// page number, default 1.
+        /// page index, default 1.
         page: Query<Option<i64>>,
         /// page size, default 10.
         page_size: Query<Option<i64>>,
@@ -104,7 +104,7 @@ impl Api {
         start_time: Query<Option<i64>>,
         /// end timestamp.
         end_time: Query<Option<i64>>,
-        /// page number, default 1.
+        /// page index, default 1.
         page: Query<Option<i64>>,
         /// page size, default 10.
         page_size: Query<Option<i64>>,
@@ -149,7 +149,7 @@ impl Api {
         start_time: Query<Option<i64>>,
         /// time of block ends in seconds.
         end_time: Query<Option<i64>>,
-        /// page number, starting at 1, default 1.
+        /// page index, starting at 1, default 1.
         page: Query<Option<i64>>,
         /// page size, default 10.
         page_size: Query<Option<i64>>,
@@ -172,8 +172,12 @@ impl Api {
         &self,
         /// bech32 account address, e.g. 'fra1p4vy5n9mlkdys7xczegj398xtyvw2nawz00nnfh4yr7fpjh297cqsxfv7v'.
         address: Path<String>,
+        /// page index, default 1.
+        page: Query<Option<i64>>,
+        /// page size, default 10.
+        page_size: Query<Option<i64>>,
     ) -> poem::Result<AddressResponse> {
-        service::address::get_address(self, address)
+        service::address::get_address(self, address, page, page_size)
             .await
             .map_err(utils::handle_fetch_one_err)
     }

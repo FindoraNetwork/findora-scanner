@@ -117,7 +117,7 @@ pub async fn get_asset(api: &Api, address: Path<String>) -> Result<AssetResponse
 
     Ok(AssetResponse::Ok(Json(AssetRes {
         code: 200,
-        message: "ok".to_string(),
+        message: "".to_string(),
         data: Some(da),
     })))
 }
