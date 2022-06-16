@@ -6,6 +6,7 @@ use poem_openapi::{param::Path, payload::Json, ApiResponse, Object};
 use serde::{Deserialize, Serialize};
 use sqlx::types::chrono::NaiveDateTime;
 use sqlx::Row;
+use std::ops::Add;
 
 #[derive(ApiResponse)]
 pub enum BlockResponse {
@@ -35,13 +36,14 @@ pub struct BlocksRes {
 
 #[derive(Serialize, Deserialize, Debug, Default, Object)]
 pub struct BlocksData {
-    counts: usize,
+    page: i64,
+    page_size: i64,
+    total: i64,
     blocks: Vec<DisplayBlock>,
 }
 
 pub async fn get_block_by_height(api: &Api, height: Path<i64>) -> Result<BlockResponse> {
     let mut conn = api.storage.lock().await.acquire().await?;
-
     let str = format!("SELECT * FROM block WHERE height = {}", height.0);
     let res = sqlx::query(str.as_str()).fetch_one(&mut conn).await;
     let row = match res {
@@ -80,14 +82,13 @@ pub async fn get_block_by_height(api: &Api, height: Path<i64>) -> Result<BlockRe
 
     Ok(BlockResponse::Ok(Json(BlockRes {
         code: 200,
-        message: "ok".to_string(),
+        message: "".to_string(),
         data: Some(block),
     })))
 }
 
 pub async fn get_block_by_hash(api: &Api, hash: Path<String>) -> Result<BlockResponse> {
     let mut conn = api.storage.lock().await.acquire().await?;
-
     let str = format!("SELECT * FROM block WHERE block_id = '{}'", hash.0);
     let res = sqlx::query(str.as_str()).fetch_one(&mut conn).await;
     let row = match res {
@@ -127,7 +128,7 @@ pub async fn get_block_by_hash(api: &Api, hash: Path<String>) -> Result<BlockRes
 
     Ok(BlockResponse::Ok(Json(BlockRes {
         code: 200,
-        message: "ok".to_string(),
+        message: "".to_string(),
         data: Some(block),
     })))
 }
@@ -143,6 +144,7 @@ pub async fn get_blocks(
 ) -> Result<BlocksResponse> {
     let mut conn = api.storage.lock().await.acquire().await?;
     let mut sql_str = String::from("SELECT * FROM block ");
+    let mut sql_total = String::from("SELECT count(*) as total FROM transaction ");
     let mut params: Vec<String> = vec![];
 
     if let Some(start_height) = start_height.0 {
@@ -166,8 +168,8 @@ pub async fn get_blocks(
     let page = page.0.unwrap_or(1);
     let page_size = page_size.0.unwrap_or(10);
     if !params.is_empty() {
-        sql_str += &String::from(" WHERE ");
-        sql_str += &params.join(" AND ")
+        sql_str = sql_str.add(" WHERE ").add(params.join(" AND ").as_str());
+        sql_total = sql_total.add(" WHERE ").add(params.join(" AND ").as_str());
     }
     sql_str += &format!(
         " ORDER BY time DESC LIMIT {} OFFSET {}",
@@ -214,11 +216,18 @@ pub async fn get_blocks(
         blocks.push(block);
     }
 
-    let l = blocks.len();
+    // total items
+    let res = sqlx::query(sql_total.as_str()).fetch_all(&mut conn).await;
+    let total: i64 = res.unwrap()[0].try_get("total")?;
 
     Ok(BlocksResponse::Ok(Json(BlocksRes {
         code: 200,
-        message: "ok".to_string(),
-        data: Some(BlocksData { counts: l, blocks }),
+        message: "".to_string(),
+        data: Some(BlocksData {
+            page,
+            page_size,
+            total,
+            blocks,
+        }),
     })))
 }
