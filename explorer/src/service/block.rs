@@ -63,12 +63,6 @@ pub async fn get_block_by_height(api: &Api, height: Path<i64>) -> Result<BlockRe
     let app_hash: String = row.try_get("app_hash")?;
     let proposer: String = row.try_get("proposer")?;
     let size: i64 = row.try_get("size")?;
-
-    let str = format!(
-        "SELECT count(*) as tx_count FROM transaction where block_id='{}'",
-        block_id
-    );
-    let row = sqlx::query(str.as_str()).fetch_one(&mut conn).await?;
     let tx_count: i64 = row.try_get("tx_count")?;
     let block = DisplayBlock {
         block_id,
@@ -108,14 +102,7 @@ pub async fn get_block_by_hash(api: &Api, hash: Path<String>) -> Result<BlockRes
     let app_hash: String = row.try_get("app_hash")?;
     let proposer: String = row.try_get("proposer")?;
     let size: i64 = row.try_get("size")?;
-
-    let str = format!(
-        "SELECT count(*) as tx_count FROM transaction where block_id='{}'",
-        block_id
-    );
-    let row = sqlx::query(str.as_str()).fetch_one(&mut conn).await?;
     let tx_count: i64 = row.try_get("tx_count")?;
-
     let block = DisplayBlock {
         block_id,
         height,
@@ -144,7 +131,7 @@ pub async fn get_blocks(
 ) -> Result<BlocksResponse> {
     let mut conn = api.storage.lock().await.acquire().await?;
     let mut sql_str = String::from("SELECT * FROM block ");
-    let mut sql_total = String::from("SELECT count(*) as total FROM transaction ");
+    let mut sql_total = String::from("SELECT count(*) as total FROM block ");
     let mut params: Vec<String> = vec![];
 
     if let Some(start_height) = start_height.0 {
@@ -196,14 +183,7 @@ pub async fn get_blocks(
         let app_hash: String = row.try_get("app_hash")?;
         let proposer: String = row.try_get("proposer")?;
         let size: i64 = row.try_get("size")?;
-
-        let str = format!(
-            "SELECT count(*) as tx_count FROM transaction where block_id='{}'",
-            block_id
-        );
-        let row = sqlx::query(str.as_str()).fetch_one(&mut conn).await?;
         let tx_count: i64 = row.try_get("tx_count")?;
-
         let block = DisplayBlock {
             block_id,
             height,

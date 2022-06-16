@@ -16,10 +16,11 @@ pub async fn connect() -> Result<PgPool, Error> {
 #[cfg(not(feature = "static-check"))]
 pub async fn save(block: ModuleBlock, pool: &PgPool) -> Result<(), Error> {
     sqlx::query(
-            "INSERT INTO block VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT(height) DO UPDATE SET block_id=$1, size=$3, time=$4, app_hash=$5, proposer=$6")
+            "INSERT INTO block VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT(height) DO UPDATE SET block_id=$1, size=$3, tx_count=$4, time=$5, app_hash=$6, proposer=$7")
             .bind(&block.block_id)
             .bind(&block.height)
             .bind(&block.size)
+            .bind(&block.tx_count)
             .bind(&block.timestamp)
             .bind(&block.app_hash)
             .bind(&block.proposer)
@@ -79,10 +80,11 @@ pub async fn save(block: ModuleBlock, pool: &PgPool) -> Result<(), Error> {
 #[cfg(feature = "static-check")]
 pub async fn save(block: ModuleBlock, pool: &PgPool) -> Result<(), Error> {
     sqlx::query!(
-            "INSERT INTO block VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT(height) DO UPDATE SET block_id=$1, size=$3, time=$4, app_hash=$5, proposer=$6",
+            "INSERT INTO block VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT(height) DO UPDATE SET block_id=$1, size=$3, tx_count=$4, time=$5, app_hash=$6, proposer=$7",
                 &block.block_id,
                 &block.height,
                 &block.size,
+                &block.tx_count,
                 &block.timestamp,
                 &block.app_hash,
                 &block.proposer,
