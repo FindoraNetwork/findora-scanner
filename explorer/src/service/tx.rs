@@ -1,7 +1,7 @@
 use crate::service::util::{public_key_from_bech32, public_key_to_base64};
 use crate::Api;
 use anyhow::Result;
-use module::schema::Transaction;
+use module::schema::{PrismTransaction, Transaction};
 use poem_openapi::param::Query;
 use poem_openapi::{param::Path, payload::Json, ApiResponse, Object};
 use serde::{Deserialize, Serialize};
@@ -46,6 +46,25 @@ pub struct TxsData {
     txs: Vec<Transaction>,
 }
 
+#[derive(ApiResponse)]
+pub enum PmtxsResponse {
+    #[oai(status = 200)]
+    Ok(Json<PmtxsRes>),
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, Object)]
+pub struct PmtxsRes {
+    pub code: i32,
+    pub message: String,
+    pub data: Option<PmtxsData>,
+}
+#[derive(Serialize, Deserialize, Debug, Default, Object)]
+pub struct PmtxsData {
+    page: i64,
+    page_size: i64,
+    total: i64,
+    txs: Vec<PrismTransaction>,
+}
 pub async fn get_tx(api: &Api, tx_id: Path<String>) -> Result<TxResponse> {
     let mut conn = api.storage.lock().await.acquire().await?;
     let str = format!("SELECT * FROM transaction WHERE txid = '{}'", tx_id.0);
@@ -406,6 +425,93 @@ pub async fn get_claim_txs(
         code: 200,
         message: "".to_string(),
         data: Some(TxsData {
+            page,
+            page_size,
+            total,
+            txs,
+        }),
+    })))
+}
+
+pub async fn get_prism_tx(
+    api: &Api,
+    address: Path<String>,
+    start_time: Query<Option<i64>>,
+    end_time: Query<Option<i64>>,
+    page: Query<Option<i64>>,
+    page_size: Query<Option<i64>>,
+) -> Result<PmtxsResponse> {
+    let mut conn = api.storage.lock().await.acquire().await?;
+    let mut sql = String::from("SELECT txid,block_id,ty,timestamp,CASE WHEN fnuc_code = '248,251,204,194' THEN '_consumeMint' WHEN fnuc_code = '242,38,15,112' THEN '_withdrawFRA' WHEN fnuc_code = '116,64,166,22' THEN '_withdrawFRC20' WHEN fnuc_code = '250,190,177,88' THEN 'adminSetAsset' WHEN fnuc_code = '185,50,44,225' THEN 'adminSetLedger' WHEN fnuc_code = '5,5,220,224' THEN 'asset_contract' WHEN fnuc_code = '82,79,49,152' THEN 'consumeMint' WHEN fnuc_code = '222,147,129,28' THEN 'depositFRA' WHEN fnuc_code = '230,242,112,109' THEN 'depositFRC20' WHEN fnuc_code = '4,78,219,111' THEN 'ledger_contract' WHEN fnuc_code = '253,253,93,76' THEN 'ops' WHEN fnuc_code = '141,165,203,91' THEN 'owner' WHEN fnuc_code = '216,78,128,56' THEN 'proxy_contract' WHEN fnuc_code = '113,80,24,166' THEN 'renounceOwnership' WHEN fnuc_code = '242,253,227,139' THEN 'transferOwnership' WHEN fnuc_code = '24,188,157,230' THEN 'withdrawFRA' WHEN fnuc_code = '82,119,153,176' THEN 'withdrawFRC20' ELSE 'unknown' END AS fnuc_name,value,code,log FROM(SELECT txid,block_id,ty,timestamp,concat(value -> 'function' -> 'Ethereum' -> 'Transact' -> 'input'->0, NULL, ',', value -> 'function' -> 'Ethereum' -> 'Transact' -> 'input'->1, NULL, ',', value -> 'function' -> 'Ethereum' -> 'Transact' -> 'input'->2, NULL, ',', value -> 'function' -> 'Ethereum' -> 'Transact' -> 'input'->3) AS fnuc_code,value,code,log FROM transaction WHERE ty = 1");
+    let mut sql_total = String::from("SELECT count(*) as total FROM transaction WHERE ty = 1");
+    let mut params: Vec<String> = vec![];
+    params.push(format!(
+        " value -> 'function' -> 'Ethereum' -> 'Transact' -> 'action' -> 'Call' = '\"{}\"'",
+        address.as_str().to_lowercase()
+    ));
+    if let Some(start_time) = start_time.0 {
+        params.push(format!(" timestamp>={} ", start_time));
+    }
+    if let Some(end_time) = end_time.0 {
+        params.push(format!(" timestamp<={} ", end_time));
+    }
+    if !params.is_empty() {
+        sql = sql.add(" AND ").add(params.join(" AND ").as_str());
+        sql_total = sql_total.add(" AND ").add(params.join(" AND ").as_str());
+    }
+    let page = page.0.unwrap_or(1);
+    let page_size = page_size.0.unwrap_or(10);
+    sql += &format!(
+        " ORDER BY timestamp DESC LIMIT {} OFFSET {}",
+        page_size,
+        (page - 1) * page_size
+    );
+    sql += ") AS t";
+
+    let res = sqlx::query(sql.as_str()).fetch_all(&mut conn).await;
+    let rows = match res {
+        Ok(rows) => rows,
+        Err(e) => {
+            return Ok(PmtxsResponse::Ok(Json(PmtxsRes {
+                code: 500,
+                message: format!("internal error:{}", e.to_string()),
+                data: None,
+            })));
+        }
+    };
+
+    let mut txs: Vec<PrismTransaction> = vec![];
+    for row in rows {
+        let tx_id: String = row.try_get("txid")?;
+        let block_id: String = row.try_get("block_id")?;
+        let ty: i32 = row.try_get("ty")?;
+        let fnuc_name: String = row.try_get("fnuc_name")?;
+        let value: Value = row.try_get("value")?;
+        let timestamp: i64 = row.try_get("timestamp")?;
+        let code: i64 = row.try_get("code")?;
+        let log: String = row.try_get("log")?;
+
+        let tx = PrismTransaction {
+            txid: tx_id,
+            block_id,
+            ty,
+            fnuc_name,
+            value,
+            code,
+            timestamp,
+            log,
+            events: vec![],
+        };
+        txs.push(tx);
+    }
+
+    // total items
+    let res = sqlx::query(sql_total.as_str()).fetch_all(&mut conn).await;
+    let total: i64 = res.unwrap()[0].try_get("total")?;
+    Ok(PmtxsResponse::Ok(Json(PmtxsRes {
+        code: 200,
+        message: "".to_string(),
+        data: Some(PmtxsData {
             page,
             page_size,
             total,

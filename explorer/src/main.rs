@@ -11,6 +11,7 @@ use poem::{listener::TcpListener, Route, Server};
 use poem_openapi::param::{Path, Query};
 use poem_openapi::{OpenApi, OpenApiService, Tags};
 use scanner::rpc::TendermintRPC;
+use service::tx::PmtxsResponse;
 use sqlx::{Pool, Postgres};
 use std::time::Duration;
 use tokio::sync::Mutex;
@@ -115,7 +116,29 @@ impl Api {
         .await
         .map_err(utils::handle_fetch_one_err)
     }
-
+    #[allow(clippy::too_many_arguments)]
+    #[oai(
+        path = "/txs/prism/:address",
+        method = "get",
+        tag = "ApiTags::Transaction"
+    )]
+    async fn get_prism_tx(
+        &self,
+        ///Bridge Contract deploy address, e.g. 0x2B7835AE05C9Cb5EF086e3BFe249e2658b450E8d
+        address: Path<String>,
+        /// start timestamp.
+        start_time: Query<Option<i64>>,
+        /// end timestamp.
+        end_time: Query<Option<i64>>,
+        /// page index, default 1.
+        page: Query<Option<i64>>,
+        /// page size, default 10.
+        page_size: Query<Option<i64>>,
+    ) -> poem::Result<PmtxsResponse> {
+        service::tx::get_prism_tx(self, address, start_time, end_time, page, page_size)
+            .await
+            .map_err(utils::handle_fetch_one_err)
+    }
     #[oai(path = "/block/height/:height", method = "get", tag = "ApiTags::Block")]
     async fn get_block_by_height(
         &self,
