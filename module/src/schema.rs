@@ -35,7 +35,18 @@ pub struct Transaction {
     pub log: String,
     pub events: Vec<Value>,
 }
-
+#[derive(Serialize, Deserialize, Debug, Default, Object)]
+pub struct PrismTransaction {
+    pub txid: String,
+    pub block_id: String,
+    pub ty: i32,
+    pub fnuc_name: String,
+    pub value: Value,
+    pub code: i64,
+    pub timestamp: i64,
+    pub log: String,
+    pub events: Vec<Value>,
+}
 #[derive(Serialize, Deserialize, Debug, Default)]
 pub struct Validator {
     pub address: String,
