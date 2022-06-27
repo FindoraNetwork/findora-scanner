@@ -471,10 +471,10 @@ pub async fn get_prism_tx(
     let res = sqlx::query(sql.as_str()).fetch_all(&mut conn).await;
     let rows = match res {
         Ok(rows) => rows,
-        Err(e) => {
+        Err(_) => {
             return Ok(PmtxsResponse::Ok(Json(PmtxsRes {
                 code: 500,
-                message: format!("internal error:{}", e.to_string()),
+                message: "internal error".to_string(),
                 data: None,
             })));
         }
