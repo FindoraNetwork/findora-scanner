@@ -272,7 +272,6 @@ impl RPCCaller {
             match self.load_height(height).await {
                 Ok(r) => return Ok(r),
                 Err(Error::NotFound) => {
-                    println!("xxxxxxxxxxxxxxx");
                     return Err(Error::NotFound);
                 }
                 Err(e) => {
