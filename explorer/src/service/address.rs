@@ -75,10 +75,10 @@ pub async fn get_address(
         let block_hash: String = row.try_get("block_hash")?;
         let ty: i32 = row.try_get("ty")?;
         let timestamp: i64 = row.try_get("timestamp")?;
-        let height:i64 = row.try_get("height")?;
+        let height: i64 = row.try_get("height")?;
         let code: i64 = row.try_get("code")?;
         let log: String = row.try_get("log")?;
-        let result: Value =row.try_get("result")?;
+        let result: Value = row.try_get("result")?;
         let value: Value = row.try_get("value")?;
         let tx = Transaction {
             tx_hash,
