@@ -71,22 +71,25 @@ pub async fn get_address(
         }
     };
     for row in rows {
-        let tx_id: String = row.try_get("txid")?;
-        let block_id: String = row.try_get("block_id")?;
+        let tx_hash: String = row.try_get("tx_hash")?;
+        let block_hash: String = row.try_get("block_hash")?;
         let ty: i32 = row.try_get("ty")?;
-        let value: Value = row.try_get("value")?;
-        let code: i64 = row.try_get("code")?;
         let timestamp: i64 = row.try_get("timestamp")?;
+        let height:i64 = row.try_get("height")?;
+        let code: i64 = row.try_get("code")?;
         let log: String = row.try_get("log")?;
+        let result: Value =row.try_get("result")?;
+        let value: Value = row.try_get("value")?;
         let tx = Transaction {
-            txid: tx_id,
-            block_id,
-            ty,
-            value,
-            code,
+            tx_hash,
+            block_hash,
+            height,
             timestamp,
+            code,
+            ty,
             log,
-            events: vec![],
+            result,
+            value,
         };
         txs.push(tx)
     }

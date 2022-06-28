@@ -27,19 +27,21 @@ pub struct Block {
 
 #[derive(Serialize, Deserialize, Debug, Default, Object)]
 pub struct Transaction {
-    pub txid: String,
-    pub block_id: String,
-    pub ty: i32,
-    pub value: Value,
-    pub code: i64,
+    pub tx_hash: String,
+    pub block_hash: String,
+    pub height: i64,
     pub timestamp: i64,
+    pub ty: i32,
+    pub code: i64,
     pub log: String,
-    pub events: Vec<Value>,
+    pub result: Value, // result.tx_result
+    pub value: Value, // result.tx
 }
+
 #[derive(Serialize, Deserialize, Debug, Default, Object)]
 pub struct PrismTransaction {
-    pub txid: String,
-    pub block_id: String,
+    pub tx_hash: String,
+    pub block_hash: String,
     pub ty: i32,
     pub fnuc_name: String,
     pub value: Value,

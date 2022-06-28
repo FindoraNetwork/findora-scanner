@@ -16,7 +16,7 @@ pub async fn connect() -> Result<PgPool, Error> {
 #[cfg(not(feature = "static-check"))]
 pub async fn save(block: ModuleBlock, pool: &PgPool) -> Result<(), Error> {
     sqlx::query(
-            "INSERT INTO block VALUES ($1, $2, $3, $4, $5, $6, $7, $8) ON CONFLICT(height) DO UPDATE SET block_hash=$1, size=$3, tx_count=$4, time=$5, app_hash=$6, proposer=$7, block_data=$8")
+            "INSERT INTO block VALUES ($1, $2, $3, $4, $5, $6, $7, $8) ON CONFLICT(block_hash) DO UPDATE SET block_hash=$1, size=$3, tx_count=$4, time=$5, app_hash=$6, proposer=$7, block_data=$8")
             .bind(&block.block_hash)
             .bind(&block.height)
             .bind(&block.size)
@@ -30,26 +30,32 @@ pub async fn save(block: ModuleBlock, pool: &PgPool) -> Result<(), Error> {
 
     for tx in block.txs {
         sqlx::query(
-            "INSERT INTO transaction VALUES ($1, $2, 0, $3, $4, $5, $6) ON CONFLICT(txid) DO UPDATE SET ty=0, block_id=$2, timestamp=$3, value=$4, code=$5, log=$6")
-            .bind(&tx.txid)
-            .bind(&tx.block_id)
+            "INSERT INTO transaction VALUES ($1, $2, $3, $4, $5, 0, $7, $8, $9) ON CONFLICT(tx_hash) DO UPDATE SET ty=0, block_hash=$2, height=$3, timestamp=$4, code=$5, log=$7, result=$8, value=$9")
+            .bind(&tx.tx_hash)
+            .bind(&tx.block_hash)
+            .bind(&tx.height)
             .bind(&tx.timestamp)
-            .bind(&tx.value)
             .bind(&tx.code)
+            .bind(&tx.ty)
             .bind(&tx.log)
+            .bind(&tx.result)
+            .bind(&tx.value)
             .execute(pool)
             .await?;
     }
 
     for tx in block.evm_txs {
         sqlx::query(
-                "INSERT INTO transaction VALUES ($1, $2, 1, $3, $4, $5, $6) ON CONFLICT(txid) DO UPDATE SET ty=1, block_id=$2, timestamp=$3, value=$4, code=$5, log=$6")
-                .bind(&tx.txid)
-                .bind(&tx.block_id)
-                .bind(&tx.timestamp)
-                .bind(&tx.value)
-                .bind(&tx.code)
-                .bind(&tx.log)
+            "INSERT INTO transaction VALUES ($1, $2, $3, $4, $5, 1, $7, $8, $9) ON CONFLICT(tx_hash) DO UPDATE SET ty=1, block_hash=$2, height=$3, timestamp=$4, code=$5, log=$7, result=$8, value=$9")
+            .bind(&tx.tx_hash)
+            .bind(&tx.block_hash)
+            .bind(&tx.height)
+            .bind(&tx.timestamp)
+            .bind(&tx.code)
+            .bind(&tx.ty)
+            .bind(&tx.log)
+            .bind(&tx.result)
+            .bind(&tx.value)
             .execute(pool)
             .await?;
     }
@@ -96,8 +102,8 @@ pub async fn save(block: ModuleBlock, pool: &PgPool) -> Result<(), Error> {
 
     for tx in block.txs {
         sqlx::query!(
-                "INSERT INTO transaction VALUES ($1, $2, 0, $3, $4, $5, $6) ON CONFLICT(txid) DO UPDATE SET ty=0, block_id=$2, timestamp=$3, value=$4, code=$5, log=$6",
-                &tx.txid, &tx.block_id, &tx.timestamp, &tx.value, &tx.code, &tx.log
+                "INSERT INTO transaction VALUES ($1, $2, $3, $4, $5, 0, $7, $8, $9) ON CONFLICT(tx_hash) DO UPDATE SET ty=0, block_hash=$2, height=$3, timestamp=$4, code=$5, log=$7, result=$8, value=$9",
+                &tx.tx_hash, &tx.block_hash, &tx.height, &tx.timestamp, &tx.code, &tx.ty, &tx.log, &tx.result, &tx.value
             )
             .execute(pool)
             .await?;
@@ -105,8 +111,8 @@ pub async fn save(block: ModuleBlock, pool: &PgPool) -> Result<(), Error> {
 
     for tx in block.evm_txs {
         sqlx::query!(
-                "INSERT INTO transaction VALUES ($1, $2, 1, $3, $4, $5, $6) ON CONFLICT(txid) DO UPDATE SET ty=1, block_id=$2, timestamp=$3, value=$4, code=$5, log=$6",
-                &tx.txid, &tx.block_id, &tx.timestamp, &tx.value, &tx.code, &tx.log
+                "INSERT INTO transaction VALUES ($1, $2, $3, $4, $5, 1, $7, $8, $9) ON CONFLICT(tx_hash) DO UPDATE SET ty=1, block_hash=$2, height=$3, timestamp=$4, code=$5, log=$7, result=$8, value=$9",
+                &tx.tx_hash, &tx.block_hash, &tx.height, &tx.timestamp, &tx.code, &tx.ty, &tx.log, &tx.result, &tx.value
             )
             .execute(pool)
             .await?;
