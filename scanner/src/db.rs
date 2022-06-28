@@ -16,20 +16,21 @@ pub async fn connect() -> Result<PgPool, Error> {
 #[cfg(not(feature = "static-check"))]
 pub async fn save(block: ModuleBlock, pool: &PgPool) -> Result<(), Error> {
     sqlx::query(
-            "INSERT INTO block VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT(height) DO UPDATE SET block_id=$1, size=$3, tx_count=$4, time=$5, app_hash=$6, proposer=$7")
-            .bind(&block.block_id)
+            "INSERT INTO block VALUES ($1, $2, $3, $4, $5, $6, $7, $8) ON CONFLICT(height) DO UPDATE SET block_hash=$1, size=$3, tx_count=$4, time=$5, app_hash=$6, proposer=$7, block_data=$8")
+            .bind(&block.block_hash)
             .bind(&block.height)
             .bind(&block.size)
             .bind(&block.tx_count)
             .bind(&block.timestamp)
             .bind(&block.app_hash)
             .bind(&block.proposer)
-        .execute(pool)
-        .await?;
+            .bind(&block.block_data)
+            .execute(pool)
+            .await?;
 
     for tx in block.txs {
         sqlx::query(
-                "INSERT INTO transaction VALUES ($1, $2, 0, $3, $4, $5, $6) ON CONFLICT(txid) DO UPDATE SET ty=0, block_id=$2, timestamp=$3, value=$4, code=$5, log=$6")
+            "INSERT INTO transaction VALUES ($1, $2, 0, $3, $4, $5, $6) ON CONFLICT(txid) DO UPDATE SET ty=0, block_id=$2, timestamp=$3, value=$4, code=$5, log=$6")
             .bind(&tx.txid)
             .bind(&tx.block_id)
             .bind(&tx.timestamp)
@@ -80,14 +81,15 @@ pub async fn save(block: ModuleBlock, pool: &PgPool) -> Result<(), Error> {
 #[cfg(feature = "static-check")]
 pub async fn save(block: ModuleBlock, pool: &PgPool) -> Result<(), Error> {
     sqlx::query!(
-            "INSERT INTO block VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT(height) DO UPDATE SET block_id=$1, size=$3, tx_count=$4, time=$5, app_hash=$6, proposer=$7",
-                &block.block_id,
+            "INSERT INTO block VALUES ($1, $2, $3, $4, $5, $6, $7, $8) ON CONFLICT(height) DO UPDATE SET block_hash=$1, size=$3, tx_count=$4, time=$5, app_hash=$6, proposer=$7, block_data=$8",
+                &block.block_hash,
                 &block.height,
                 &block.size,
                 &block.tx_count,
                 &block.timestamp,
                 &block.app_hash,
                 &block.proposer,
+                &block.block_data,
         )
         .execute(pool)
         .await?;

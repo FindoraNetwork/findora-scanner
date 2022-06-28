@@ -1,11 +1,12 @@
 CREATE TABLE block (
-    block_id VARCHAR(255) NOT NULL,
+    block_hash VARCHAR(255) NOT NULL,
     height BIGINT NOT NULL,
     size BIGINT NOT NULL,
-    tx_count BIGINT,
+    tx_count BIGINT NOT NULL,
     time TIMESTAMP NOT NULL,
     app_hash VARCHAR(255) NOT NULL,
     proposer VARCHAR(255) NOT NULL,
+    block_data JSONB NOT NULL,
     PRIMARY KEY(height)
 );
 

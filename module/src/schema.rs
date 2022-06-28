@@ -12,7 +12,7 @@ use zei::xfr::sig::XfrPublicKey;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Block {
-    pub block_id: String,
+    pub block_hash: String,
     pub height: i64,
     pub size: i64,
     pub tx_count: i64,
@@ -22,6 +22,7 @@ pub struct Block {
     pub txs: Vec<Transaction>,
     pub evm_txs: Vec<Transaction>,
     pub validators: Vec<Validator>,
+    pub block_data: Value,
 }
 
 #[derive(Serialize, Deserialize, Debug, Default, Object)]
