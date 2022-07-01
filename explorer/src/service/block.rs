@@ -227,10 +227,18 @@ pub async fn get_blocks(
         sql_str = sql_str.add(" WHERE ").add(params.join(" AND ").as_str());
         sql_total = sql_total.add(" WHERE ").add(params.join(" AND ").as_str());
     }
-    sql_str += &format!(
-        " ORDER BY time DESC LIMIT {} OFFSET {}",
-        page_size,
-        (page - 1) * page_size
+    // sql_str += &format!(
+    //     " ORDER BY time DESC LIMIT {} OFFSET {}",
+    //     page_size,
+    //     (page - 1) * page_size
+    // );
+    sql_str = sql_str.add(
+        format!(
+            " ORDER BY time DESC LIMIT {} OFFSET {}",
+            page_size,
+            (page - 1) * page_size
+        )
+        .as_str(),
     );
     let mut blocks: Vec<DisplayBlock> = vec![];
     let res = sqlx::query(sql_str.as_str()).fetch_all(&mut conn).await;

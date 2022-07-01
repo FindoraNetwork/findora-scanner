@@ -171,10 +171,18 @@ pub async fn get_txs(
         sql_str = sql_str.add(" WHERE ").add(params.join(" AND ").as_str());
         sql_total = sql_total.add(" WHERE ").add(params.join(" AND ").as_str());
     }
-    sql_str += &format!(
-        " ORDER BY timestamp DESC LIMIT {} OFFSET {}",
-        page_size,
-        (page - 1) * page_size
+    // sql_str += &format!(
+    //     " ORDER BY timestamp DESC LIMIT {} OFFSET {}",
+    //     page_size,
+    //     (page - 1) * page_size
+    // );
+    sql_str = sql_str.add(
+        format!(
+            " ORDER BY timestamp DESC LIMIT {} OFFSET {}",
+            page_size,
+            (page - 1) * page_size
+        )
+        .as_str(),
     );
 
     let res = sqlx::query(sql_str.as_str()).fetch_all(&mut conn).await;
@@ -286,12 +294,19 @@ pub async fn get_triple_masking_txs(
             OR (value @? '$.body.operations[*].BarToAbar.note.body.output.commitment ? (@!=\"\")')",
         );
     }
-    sql_str += &format!(
-        " ORDER BY timestamp DESC LIMIT {} OFFSET {}",
-        page_size,
-        (page - 1) * page_size
+    // sql_str += &format!(
+    //     " ORDER BY timestamp DESC LIMIT {} OFFSET {}",
+    //     page_size,
+    //     (page - 1) * page_size
+    // );
+    sql_str = sql_str.add(
+        format!(
+            " ORDER BY timestamp DESC LIMIT {} OFFSET {}",
+            page_size,
+            (page - 1) * page_size
+        )
+        .as_str(),
     );
-
     let res = sqlx::query(sql_str.as_str()).fetch_all(&mut conn).await;
     let mut txs: Vec<Transaction> = vec![];
     let rows = match res {
@@ -384,12 +399,19 @@ pub async fn get_claim_txs(
         sql_str +=
             &String::from(" WHERE (value @? '$.body.operations[*].Claim.pubkey ? (@!=\"\")') ");
     }
-    sql_str += &format!(
-        " ORDER BY timestamp DESC LIMIT {} OFFSET {}",
-        page_size,
-        (page - 1) * page_size
+    // sql_str += &format!(
+    //     " ORDER BY timestamp DESC LIMIT {} OFFSET {}",
+    //     page_size,
+    //     (page - 1) * page_size
+    // );
+    sql_str = sql_str.add(
+        format!(
+            " ORDER BY timestamp DESC LIMIT {} OFFSET {}",
+            page_size,
+            (page - 1) * page_size
+        )
+        .as_str(),
     );
-
     let res = sqlx::query(sql_str.as_str()).fetch_all(&mut conn).await;
     let mut txs: Vec<Transaction> = vec![];
     let rows = match res {
@@ -473,10 +495,18 @@ pub async fn get_prism_tx(
     }
     let page = page.0.unwrap_or(1);
     let page_size = page_size.0.unwrap_or(10);
-    sql += &format!(
-        " ORDER BY timestamp DESC LIMIT {} OFFSET {}",
-        page_size,
-        (page - 1) * page_size
+    // sql += &format!(
+    //     " ORDER BY timestamp DESC LIMIT {} OFFSET {}",
+    //     page_size,
+    //     (page - 1) * page_size
+    // );
+    sql = sql.add(
+        format!(
+            " ORDER BY timestamp DESC LIMIT {} OFFSET {}",
+            page_size,
+            (page - 1) * page_size
+        )
+        .as_str(),
     );
     sql += ") AS t";
 
