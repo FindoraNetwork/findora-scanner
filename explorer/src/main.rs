@@ -3,9 +3,10 @@ mod utils;
 
 use crate::service::address::AddressResponse;
 use crate::service::asset::AssetResponse;
-use crate::service::block::{BlockResponse, BlocksResponse};
+use crate::service::block::{BlockResponse, BlocksResponse, FullBlockResponse};
 use crate::service::chain::{ChainStatisticsResponse, StakingResponse};
 use crate::service::tx::{TxResponse, TxsResponse};
+use crate::service::validator::ValidatorListResponse;
 use anyhow::Result;
 use poem::{listener::TcpListener, Route, Server};
 use poem_openapi::param::{Path, Query};
@@ -150,6 +151,21 @@ impl Api {
             .map_err(utils::handle_fetch_one_err)
     }
 
+    #[oai(
+        path = "/block/full/height/:height",
+        method = "get",
+        tag = "ApiTags::Block"
+    )]
+    async fn get_full_block_by_height(
+        &self,
+        /// block height.
+        height: Path<i64>,
+    ) -> poem::Result<FullBlockResponse> {
+        service::block::get_full_block_by_height(self, height)
+            .await
+            .map_err(utils::handle_fetch_one_err)
+    }
+
     #[oai(path = "/block/hash/:hash", method = "get", tag = "ApiTags::Block")]
     async fn get_block_by_hash(
         &self,
@@ -157,6 +173,21 @@ impl Api {
         hash: Path<String>,
     ) -> poem::Result<BlockResponse> {
         service::block::get_block_by_hash(self, hash)
+            .await
+            .map_err(utils::handle_fetch_one_err)
+    }
+
+    #[oai(
+        path = "/block/full/hash/:hash",
+        method = "get",
+        tag = "ApiTags::Block"
+    )]
+    async fn get_full_block_by_hash(
+        &self,
+        /// block hash.
+        hash: Path<String>,
+    ) -> poem::Result<FullBlockResponse> {
+        service::block::get_full_block_by_hash(self, hash)
             .await
             .map_err(utils::handle_fetch_one_err)
     }
@@ -238,6 +269,17 @@ impl Api {
         height: Query<Option<i64>>,
     ) -> poem::Result<StakingResponse> {
         service::chain::staking_info(self, height)
+            .await
+            .map_err(utils::handle_fetch_one_err)
+    }
+
+    #[oai(
+        path = "/chain/validator_list",
+        method = "get",
+        tag = "ApiTags::BlockChain"
+    )]
+    async fn validator_list(&self) -> poem::Result<ValidatorListResponse> {
+        service::validator::validator_list(self)
             .await
             .map_err(utils::handle_fetch_one_err)
     }

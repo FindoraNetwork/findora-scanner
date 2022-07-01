@@ -154,6 +154,7 @@ impl RPCCaller {
 
     pub async fn load_height(&self, height: i64) -> Result<ModuleBlock> {
         let block = self.rpc.load_block(height).await?;
+        let block_data = serde_json::to_value(block.clone()).unwrap();
         let block_size_rpc = self.rpc.get_block_size(height).await?;
         let block_size = block_size_rpc.block_metas.unwrap().as_slice()[0]
             .block_size
@@ -161,7 +162,7 @@ impl RPCCaller {
             .unwrap();
         let validator_info = self.rpc.load_validators(height).await?;
 
-        let block_id = block.block_id.hash;
+        let block_hash = block.block_id.hash;
         let height = block.block.header.height.parse::<i64>()?;
         let timestamp =
             NaiveDateTime::parse_from_str(&block.block.header.time, "%Y-%m-%dT%H:%M:%S%.fZ")?;
@@ -177,32 +178,34 @@ impl RPCCaller {
             let hasher = sha2::Sha256::digest(&bytes);
             let txid = hex::encode(hasher);
             let tx = self.rpc.load_transaction(&txid).await?;
-
+            let result = serde_json::to_value(tx.tx_result.clone()).unwrap();
             match tx::try_tx_catalog(&bytes) {
                 tx::TxCatalog::EvmTx => {
                     let value = serde_json::from_slice(tx::unwrap(&bytes)?)?;
                     evm_txs.push(Transaction {
-                        txid,
-                        block_id: block_id.clone(),
-                        ty: 1,
-                        value,
-                        code: tx.tx_result.code,
+                        tx_hash: txid,
+                        block_hash: block_hash.clone(),
+                        height,
                         timestamp: timestamp.timestamp(),
+                        code: tx.tx_result.code,
+                        ty: 1,
                         log: tx.tx_result.log,
-                        events: tx.tx_result.events,
+                        result,
+                        value,
                     });
                 }
                 tx::TxCatalog::FindoraTx => {
                     let value = serde_json::from_slice(&bytes)?;
                     txs.push(Transaction {
-                        txid,
-                        block_id: block_id.clone(),
-                        ty: 0,
-                        value,
-                        code: tx.tx_result.code,
+                        tx_hash: txid,
+                        block_hash: block_hash.clone(),
+                        height,
                         timestamp: timestamp.timestamp(),
+                        code: tx.tx_result.code,
+                        ty: 0,
                         log: tx.tx_result.log,
-                        events: tx.tx_result.events,
+                        result,
+                        value,
                     });
                 }
                 tx::TxCatalog::Unknown => {}
@@ -252,7 +255,7 @@ impl RPCCaller {
         }
 
         Ok(ModuleBlock {
-            block_id,
+            block_hash,
             height,
             size: block_size,
             tx_count: (evm_txs.len() + txs.len()) as i64,
@@ -262,6 +265,7 @@ impl RPCCaller {
             txs,
             evm_txs,
             validators,
+            block_data,
         })
     }
 
@@ -269,7 +273,9 @@ impl RPCCaller {
         for i in 0..self.retries + 1 {
             match self.load_height(height).await {
                 Ok(r) => return Ok(r),
-                Err(Error::NotFound) => return Err(Error::NotFound),
+                Err(Error::NotFound) => {
+                    return Err(Error::NotFound);
+                }
                 Err(e) => {
                     if i == self.retries {
                         return Err(e);

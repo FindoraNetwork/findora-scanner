@@ -1,9 +1,11 @@
 use crate::Api;
 use anyhow::Result;
-use module::display::block::DisplayBlock;
+use module::display::block::{DisplayBlock, DisplayFullBlock};
+use module::rpc::block::BlockRPC;
 use poem_openapi::param::Query;
 use poem_openapi::{param::Path, payload::Json, ApiResponse, Object};
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use sqlx::types::chrono::NaiveDateTime;
 use sqlx::Row;
 use std::ops::Add;
@@ -11,14 +13,27 @@ use std::ops::Add;
 #[derive(ApiResponse)]
 pub enum BlockResponse {
     #[oai(status = 200)]
-    Ok(Json<BlockRes>),
+    Ok(Json<SimpleBlock>),
 }
 
 #[derive(Serialize, Deserialize, Debug, Default, Object)]
-pub struct BlockRes {
+pub struct SimpleBlock {
     pub code: i32,
     pub message: String,
     pub data: Option<DisplayBlock>,
+}
+
+#[derive(ApiResponse)]
+pub enum FullBlockResponse {
+    #[oai(status = 200)]
+    Ok(Json<FullBlock>),
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, Object)]
+pub struct FullBlock {
+    pub code: i32,
+    pub message: String,
+    pub data: Option<DisplayFullBlock>,
 }
 
 #[derive(ApiResponse)]
@@ -42,6 +57,33 @@ pub struct BlocksData {
     blocks: Vec<DisplayBlock>,
 }
 
+pub async fn get_full_block_by_height(api: &Api, height: Path<i64>) -> Result<FullBlockResponse> {
+    let mut conn = api.storage.lock().await.acquire().await?;
+    let str = format!("SELECT * FROM block WHERE height = {}", height.0);
+    let res = sqlx::query(str.as_str()).fetch_one(&mut conn).await;
+    let row = match res {
+        Ok(row) => row,
+        _ => {
+            return Ok(FullBlockResponse::Ok(Json(FullBlock {
+                code: 500,
+                message: "internal error".to_string(),
+                data: None,
+            })));
+        }
+    };
+    let block_data = row.try_get("block_data")?;
+    let block_rpc: BlockRPC = serde_json::from_value(block_data).unwrap();
+    let full_block = DisplayFullBlock {
+        block_id: block_rpc.block_id,
+        block: block_rpc.block,
+    };
+    Ok(FullBlockResponse::Ok(Json(FullBlock {
+        code: 200,
+        message: "".to_string(),
+        data: Some(full_block),
+    })))
+}
+
 pub async fn get_block_by_height(api: &Api, height: Path<i64>) -> Result<BlockResponse> {
     let mut conn = api.storage.lock().await.acquire().await?;
     let str = format!("SELECT * FROM block WHERE height = {}", height.0);
@@ -49,7 +91,7 @@ pub async fn get_block_by_height(api: &Api, height: Path<i64>) -> Result<BlockRe
     let row = match res {
         Ok(row) => row,
         _ => {
-            return Ok(BlockResponse::Ok(Json(BlockRes {
+            return Ok(BlockResponse::Ok(Json(SimpleBlock {
                 code: 500,
                 message: "internal error".to_string(),
                 data: None,
@@ -57,38 +99,66 @@ pub async fn get_block_by_height(api: &Api, height: Path<i64>) -> Result<BlockRe
         }
     };
 
-    let block_id: String = row.try_get("block_id")?;
-    let height: i64 = row.try_get("height")?;
-    let time: NaiveDateTime = row.try_get("time")?;
+    let block_hash: String = row.try_get("block_hash")?;
     let app_hash: String = row.try_get("app_hash")?;
     let proposer: String = row.try_get("proposer")?;
-    let size: i64 = row.try_get("size")?;
-    let tx_count: i64 = row.try_get("tx_count")?;
+    let block_size: i64 = row.try_get("size")?;
+    let num_txs: i64 = row.try_get("tx_count")?;
+    let block_data: Value = row.try_get("block_data")?;
+    let block_rpc: BlockRPC = serde_json::from_value(block_data).unwrap();
+
     let block = DisplayBlock {
-        block_id,
-        height,
-        time: time.timestamp(),
-        tx_count,
-        size,
+        block_hash,
+        num_txs,
+        block_size,
         app_hash,
         proposer,
+        block_id: block_rpc.block_id,
+        block_header: block_rpc.block.header,
     };
 
-    Ok(BlockResponse::Ok(Json(BlockRes {
+    Ok(BlockResponse::Ok(Json(SimpleBlock {
         code: 200,
         message: "".to_string(),
         data: Some(block),
     })))
 }
 
-pub async fn get_block_by_hash(api: &Api, hash: Path<String>) -> Result<BlockResponse> {
+pub async fn get_full_block_by_hash(api: &Api, hash: Path<String>) -> Result<FullBlockResponse> {
     let mut conn = api.storage.lock().await.acquire().await?;
-    let str = format!("SELECT * FROM block WHERE block_id = '{}'", hash.0);
+    let str = format!("SELECT * FROM block WHERE block_hash = '{}'", hash.0);
     let res = sqlx::query(str.as_str()).fetch_one(&mut conn).await;
     let row = match res {
         Ok(row) => row,
         _ => {
-            return Ok(BlockResponse::Ok(Json(BlockRes {
+            return Ok(FullBlockResponse::Ok(Json(FullBlock {
+                code: 500,
+                message: "internal error".to_string(),
+                data: None,
+            })));
+        }
+    };
+    let block_data = row.try_get("block_data")?;
+    let block_rpc: BlockRPC = serde_json::from_value(block_data).unwrap();
+    let full_block = DisplayFullBlock {
+        block_id: block_rpc.block_id,
+        block: block_rpc.block,
+    };
+    Ok(FullBlockResponse::Ok(Json(FullBlock {
+        code: 200,
+        message: "".to_string(),
+        data: Some(full_block),
+    })))
+}
+
+pub async fn get_block_by_hash(api: &Api, hash: Path<String>) -> Result<BlockResponse> {
+    let mut conn = api.storage.lock().await.acquire().await?;
+    let str = format!("SELECT * FROM block WHERE block_hash = '{}'", hash.0);
+    let res = sqlx::query(str.as_str()).fetch_one(&mut conn).await;
+    let row = match res {
+        Ok(row) => row,
+        _ => {
+            return Ok(BlockResponse::Ok(Json(SimpleBlock {
                 code: 500,
                 message: "internal error".to_string(),
                 data: None,
@@ -96,24 +166,23 @@ pub async fn get_block_by_hash(api: &Api, hash: Path<String>) -> Result<BlockRes
         }
     };
 
-    let block_id: String = row.try_get("block_id")?;
-    let height: i64 = row.try_get("height")?;
-    let time: NaiveDateTime = row.try_get("time")?;
+    let block_hash: String = row.try_get("block_hash")?;
     let app_hash: String = row.try_get("app_hash")?;
     let proposer: String = row.try_get("proposer")?;
-    let size: i64 = row.try_get("size")?;
-    let tx_count: i64 = row.try_get("tx_count")?;
+    let block_size: i64 = row.try_get("size")?;
+    let num_txs: i64 = row.try_get("tx_count")?;
+    let block_data: Value = row.try_get("block_data")?;
+    let block_rpc: BlockRPC = serde_json::from_value(block_data).unwrap();
     let block = DisplayBlock {
-        block_id,
-        height,
-        time: time.timestamp(),
-        tx_count,
-        size,
+        block_hash,
+        num_txs,
+        block_size,
         app_hash,
         proposer,
+        block_id: block_rpc.block_id,
+        block_header: block_rpc.block.header,
     };
-
-    Ok(BlockResponse::Ok(Json(BlockRes {
+    Ok(BlockResponse::Ok(Json(SimpleBlock {
         code: 200,
         message: "".to_string(),
         data: Some(block),
@@ -158,10 +227,18 @@ pub async fn get_blocks(
         sql_str = sql_str.add(" WHERE ").add(params.join(" AND ").as_str());
         sql_total = sql_total.add(" WHERE ").add(params.join(" AND ").as_str());
     }
-    sql_str += &format!(
-        " ORDER BY time DESC LIMIT {} OFFSET {}",
-        page_size,
-        (page - 1) * page_size
+    // sql_str += &format!(
+    //     " ORDER BY time DESC LIMIT {} OFFSET {}",
+    //     page_size,
+    //     (page - 1) * page_size
+    // );
+    sql_str = sql_str.add(
+        format!(
+            " ORDER BY time DESC LIMIT {} OFFSET {}",
+            page_size,
+            (page - 1) * page_size
+        )
+        .as_str(),
     );
     let mut blocks: Vec<DisplayBlock> = vec![];
     let res = sqlx::query(sql_str.as_str()).fetch_all(&mut conn).await;
@@ -177,21 +254,21 @@ pub async fn get_blocks(
     };
 
     for row in rows {
-        let block_id: String = row.try_get("block_id")?;
-        let height: i64 = row.try_get("height")?;
-        let time: NaiveDateTime = row.try_get("time")?;
+        let block_hash: String = row.try_get("block_hash")?;
         let app_hash: String = row.try_get("app_hash")?;
         let proposer: String = row.try_get("proposer")?;
-        let size: i64 = row.try_get("size")?;
-        let tx_count: i64 = row.try_get("tx_count")?;
+        let block_size: i64 = row.try_get("size")?;
+        let num_txs: i64 = row.try_get("tx_count")?;
+        let block_data: Value = row.try_get("block_data")?;
+        let block_rpc: BlockRPC = serde_json::from_value(block_data).unwrap();
         let block = DisplayBlock {
-            block_id,
-            height,
-            time: time.timestamp(),
-            tx_count,
-            size,
+            block_hash,
+            num_txs,
+            block_size,
             app_hash,
             proposer,
+            block_id: block_rpc.block_id,
+            block_header: block_rpc.block.header,
         };
         blocks.push(block);
     }

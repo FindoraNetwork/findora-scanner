@@ -72,7 +72,7 @@ impl RangeScanner {
                 tokio::spawn(async move {
                     while let Ok(Some(fut)) = rev_cloned.recv() {
                         //handle error within.
-                        let _: () = fut.await;
+                        fut.await;
                     }
                 })
             })

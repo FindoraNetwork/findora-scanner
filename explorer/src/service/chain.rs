@@ -136,7 +136,7 @@ pub async fn statistics(api: &Api, ty: Query<Option<i64>>) -> Result<ChainStatis
 
     Ok(ChainStatisticsResponse::Ok(Json(ChainStatisticsRes {
         code: 200,
-        message: "ok".to_string(),
+        message: "".to_string(),
         data: Some(res_data),
     })))
 }

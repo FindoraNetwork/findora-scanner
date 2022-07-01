@@ -12,7 +12,7 @@ use zei::xfr::sig::XfrPublicKey;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Block {
-    pub block_id: String,
+    pub block_hash: String,
     pub height: i64,
     pub size: i64,
     pub tx_count: i64,
@@ -22,23 +22,26 @@ pub struct Block {
     pub txs: Vec<Transaction>,
     pub evm_txs: Vec<Transaction>,
     pub validators: Vec<Validator>,
+    pub block_data: Value,
 }
 
 #[derive(Serialize, Deserialize, Debug, Default, Object)]
 pub struct Transaction {
-    pub txid: String,
-    pub block_id: String,
-    pub ty: i32,
-    pub value: Value,
-    pub code: i64,
+    pub tx_hash: String,
+    pub block_hash: String,
+    pub height: i64,
     pub timestamp: i64,
+    pub ty: i32,
+    pub code: i64,
     pub log: String,
-    pub events: Vec<Value>,
+    pub result: Value, // result.tx_result
+    pub value: Value,  // result.tx
 }
+
 #[derive(Serialize, Deserialize, Debug, Default, Object)]
 pub struct PrismTransaction {
-    pub txid: String,
-    pub block_id: String,
+    pub tx_hash: String,
+    pub block_hash: String,
     pub ty: i32,
     pub fnuc_name: String,
     pub value: Value,
@@ -47,6 +50,45 @@ pub struct PrismTransaction {
     pub log: String,
     pub events: Vec<Value>,
 }
+
+#[derive(Serialize, Deserialize, Debug, Default)]
+pub struct DelegationOpt {
+    pub body: DelegationOptBody,
+    pub pubkey: String,
+    pub signature: String,
+    pub v_signature: Option<Vec<i64>>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default)]
+pub struct DelegationOptBody {
+    pub validator: String,
+    pub new_validator: Option<NewValidator>,
+    pub amount: i64,
+    //pub nonce: Value,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default)]
+pub struct NewValidator {
+    pub id: String,
+    pub td_pubkey: Vec<i64>,
+    pub td_addr: Vec<i64>,
+    pub td_power: i64,
+    pub commission_rate: Vec<i64>,
+    pub memo: Memo,
+    pub kind: String,
+    pub signed_last_block: bool,
+    pub signed_cnt: i64,
+    pub delegators: Value,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, Object)]
+pub struct Memo {
+    pub name: String,
+    pub desc: String,
+    pub website: String,
+    pub logo: String,
+}
+
 #[derive(Serialize, Deserialize, Debug, Default)]
 pub struct Validator {
     pub address: String,

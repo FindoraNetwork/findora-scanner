@@ -1,23 +1,26 @@
 CREATE TABLE block (
-    block_id VARCHAR(255) NOT NULL,
+    block_hash VARCHAR(255) NOT NULL,
     height BIGINT NOT NULL,
     size BIGINT NOT NULL,
-    tx_count BIGINT,
+    tx_count BIGINT NOT NULL,
     time TIMESTAMP NOT NULL,
     app_hash VARCHAR(255) NOT NULL,
     proposer VARCHAR(255) NOT NULL,
-    PRIMARY KEY(height)
+    block_data JSONB NOT NULL,
+    PRIMARY KEY(block_hash)
 );
 
 CREATE TABLE transaction (
-    txid VARCHAR(255) NOT NULL,
-    block_id VARCHAR(255) NOT NULL,
-    ty INT NOT NULL,
-    timestamp BIGINT NOT NULL,
-    value JSONB NOT NULL,
-    code BIGINT NOT NULL,
-    log TEXT,
-    PRIMARY KEY(txid)
+     tx_hash VARCHAR(255) NOT NULL,
+     block_hash VARCHAR(255) NOT NULL,
+     height BIGINT NOT NULL,
+     timestamp BIGINT NOT NULL,
+     code BIGINT NOT NULL,
+     ty INT NOT NULL,
+     log TEXT,
+     result JSONB NOT NULL,
+     value JSONB NOT NULL,
+     PRIMARY KEY(tx_hash)
 );
 
 CREATE TABLE validators (
