@@ -50,6 +50,45 @@ pub struct PrismTransaction {
     pub log: String,
     pub events: Vec<Value>,
 }
+
+#[derive(Serialize, Deserialize, Debug, Default)]
+pub struct DelegationOpt {
+    pub body: DelegationOptBody,
+    pub pubkey: String,
+    pub signature: String,
+    pub v_signature: Option<Vec<i64>>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default)]
+pub struct DelegationOptBody {
+    pub validator: String,
+    pub new_validator: Option<NewValidator>,
+    pub amount: i64,
+    //pub nonce: Value,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default)]
+pub struct NewValidator {
+    pub id: String,
+    pub td_pubkey: Vec<i64>,
+    pub td_addr: Vec<i64>,
+    pub td_power: i64,
+    pub commission_rate: Vec<i64>,
+    pub memo: Memo,
+    pub kind: String,
+    pub signed_last_block: bool,
+    pub signed_cnt: i64,
+    pub delegators: Value,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, Object)]
+pub struct Memo {
+    pub name: String,
+    pub desc: String,
+    pub website: String,
+    pub logo: String,
+}
+
 #[derive(Serialize, Deserialize, Debug, Default)]
 pub struct Validator {
     pub address: String,

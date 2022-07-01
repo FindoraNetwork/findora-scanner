@@ -6,6 +6,7 @@ use crate::service::asset::AssetResponse;
 use crate::service::block::{BlockResponse, BlocksResponse, FullBlockResponse};
 use crate::service::chain::{ChainStatisticsResponse, StakingResponse};
 use crate::service::tx::{TxResponse, TxsResponse};
+use crate::service::validator::ValidatorListResponse;
 use anyhow::Result;
 use poem::{listener::TcpListener, Route, Server};
 use poem_openapi::param::{Path, Query};
@@ -268,6 +269,17 @@ impl Api {
         height: Query<Option<i64>>,
     ) -> poem::Result<StakingResponse> {
         service::chain::staking_info(self, height)
+            .await
+            .map_err(utils::handle_fetch_one_err)
+    }
+
+    #[oai(
+        path = "/chain/validator_list",
+        method = "get",
+        tag = "ApiTags::BlockChain"
+    )]
+    async fn validator_list(&self) -> poem::Result<ValidatorListResponse> {
+        service::validator::validator_list(self)
             .await
             .map_err(utils::handle_fetch_one_err)
     }
