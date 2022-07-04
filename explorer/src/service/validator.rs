@@ -1,6 +1,7 @@
 use crate::Api;
 use anyhow::Result;
 use module::schema::{DelegationOpt, Memo};
+use poem_openapi::param::Path;
 use poem_openapi::{payload::Json, ApiResponse, Object};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -10,6 +11,38 @@ use sqlx::Row;
 pub enum ValidatorListResponse {
     #[oai(status = 200)]
     Ok(Json<ValidatorListResult>),
+}
+
+#[derive(ApiResponse)]
+pub enum ValidatorDetailResponse {
+    #[oai(status = 200)]
+    Ok(Json<ValidatorDetailResult>),
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, Object)]
+pub struct ValidatorDetailResult {
+    pub code: i32,
+    pub message: String,
+    pub data: Option<ValidatorDetail>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, Object)]
+pub struct ValidatorDetail {
+    pub addr: String,
+    pub kind: String,
+    pub is_online: bool,
+    pub voting_power: i64,
+    pub voting_power_rank: i64,
+    pub commission_rate: Vec<i64>,
+    pub self_staking: i64,
+    pub fra_rewards: i64,
+    pub memo: Memo,
+    pub start_height: i64,
+    pub cur_height: i64,
+    pub block_signed_cnt: i64,
+    pub block_proposed_cnt: i64,
+    pub validator_realtime_apy: Value,
+    pub delegator_cnt: i64,
 }
 
 #[derive(Serialize, Deserialize, Debug, Default, Object)]
@@ -43,7 +76,7 @@ pub async fn validator_list(api: &Api) -> Result<ValidatorListResponse> {
         .fetch_one(&mut conn)
         .await?;
     let height: i64 = row.try_get("height")?;
-    let sql = format!("SELECT jsonb_path_query(value->'body', '$.operations[*].Delegation') as d FROM transaction WHERE height={}", height);
+    let sql = format!("SELECT jsonb_path_query(value->'body', '$.operations[*].Delegation') as d FROM transaction WHERE code=0 AND height={}", height);
     let res = sqlx::query(sql.as_str()).fetch_all(&mut conn).await;
     let rows = match res {
         Ok(rows) => rows,
@@ -95,4 +128,93 @@ pub async fn validator_list(api: &Api) -> Result<ValidatorListResponse> {
         message: "".to_string(),
         data: Some(validator_list),
     })))
+}
+
+pub async fn validator_detail(api: &Api, address: Path<String>) -> Result<ValidatorDetailResponse> {
+    let mut conn = api.storage.lock().await.acquire().await?;
+    let sql_latest_height = "SELECT height FROM last_height".to_string();
+    let row = sqlx::query(sql_latest_height.as_str())
+        .fetch_one(&mut conn)
+        .await?;
+    let height: i64 = row.try_get("height")?;
+
+    let sql_proposed_cnt = format!(
+        "SELECT count(*) as cnt from block WHERE proposer=\'{}\'",
+        address.0
+    );
+    let row = sqlx::query(sql_proposed_cnt.as_str())
+        .fetch_one(&mut conn)
+        .await?;
+    let proposed_cnt: i64 = row.try_get("cnt")?;
+
+    let sql_update = format!("SELECT jsonb_path_query(value->'body', '$.operations[*].UpdateStaker ? (@.body.validator==\"{}\")') as d FROM transaction WHERE code=0 AND height={} ORDER BY height LIMIT 1", address.0, height);
+    let update_res = sqlx::query(sql_update.as_str()).fetch_one(&mut conn).await;
+
+    if let Ok(r) = update_res {
+        let d: Value = r.try_get("d").unwrap();
+        let delegation: DelegationOpt = serde_json::from_value(d).unwrap();
+        let nv = delegation.body.new_validator.unwrap_or_default();
+        let detail = ValidatorDetail {
+            addr: delegation.body.validator,
+            kind: nv.kind,
+            is_online: false,
+            voting_power: nv.td_power,
+            voting_power_rank: 0,
+            commission_rate: nv.commission_rate,
+            self_staking: 0,
+            fra_rewards: 0,
+            memo: nv.memo,
+            start_height: 0,
+            cur_height: height,
+            block_signed_cnt: nv.signed_cnt,
+            block_proposed_cnt: proposed_cnt,
+            validator_realtime_apy: Default::default(),
+            delegator_cnt: 0,
+        };
+
+        Ok(ValidatorDetailResponse::Ok(Json(ValidatorDetailResult {
+            code: 0,
+            message: "".to_string(),
+            data: Some(detail),
+        })))
+    } else {
+        let sql_delegation = format!("SELECT jsonb_path_query(value->'body', '$.operations[*].Delegation ? (@.body.validator==\"{}\")') as d FROM transaction WHERE code=0 AND height={} ORDER BY height LIMIT 1", address.0, height);
+        let delegate_res = sqlx::query(sql_delegation.as_str())
+            .fetch_one(&mut conn)
+            .await;
+        if delegate_res.is_err() {
+            return Ok(ValidatorDetailResponse::Ok(Json(ValidatorDetailResult {
+                code: 500,
+                message: "internal error".to_string(),
+                data: None,
+            })));
+        }
+        let r = delegate_res.unwrap();
+        let d: Value = r.try_get("d").unwrap();
+        let delegation: DelegationOpt = serde_json::from_value(d).unwrap();
+        let nv = delegation.body.new_validator.unwrap_or_default();
+        let detail = ValidatorDetail {
+            addr: delegation.body.validator,
+            kind: nv.kind,
+            is_online: false,
+            voting_power: nv.td_power,
+            voting_power_rank: 0,
+            commission_rate: nv.commission_rate,
+            self_staking: 0,
+            fra_rewards: 0,
+            memo: nv.memo,
+            start_height: 0,
+            cur_height: height,
+            block_signed_cnt: nv.signed_cnt,
+            block_proposed_cnt: proposed_cnt,
+            validator_realtime_apy: Default::default(),
+            delegator_cnt: 0,
+        };
+
+        Ok(ValidatorDetailResponse::Ok(Json(ValidatorDetailResult {
+            code: 0,
+            message: "".to_string(),
+            data: Some(detail),
+        })))
+    }
 }
