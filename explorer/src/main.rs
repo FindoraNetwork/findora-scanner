@@ -6,7 +6,9 @@ use crate::service::asset::AssetResponse;
 use crate::service::block::{BlockResponse, BlocksResponse, FullBlockResponse};
 use crate::service::chain::{ChainStatisticsResponse, StakingResponse};
 use crate::service::tx::{TxResponse, TxsResponse};
-use crate::service::validator::{ValidatorDetailResponse, ValidatorListResponse};
+use crate::service::validator::{
+    CirculatingSupplyResponse, ValidatorDetailResponse, ValidatorListResponse,
+};
 use anyhow::Result;
 use poem::{listener::TcpListener, Route, Server};
 use poem_openapi::param::{Path, Query};
@@ -294,6 +296,17 @@ impl Api {
         address: Path<String>,
     ) -> poem::Result<ValidatorDetailResponse> {
         service::validator::validator_detail(self, address)
+            .await
+            .map_err(utils::handle_fetch_one_err)
+    }
+
+    #[oai(
+        path = "/chain/circulating_supply",
+        method = "get",
+        tag = "ApiTags::BlockChain"
+    )]
+    async fn circulating_supply(&self) -> poem::Result<CirculatingSupplyResponse> {
+        service::validator::circulating_supply(self)
             .await
             .map_err(utils::handle_fetch_one_err)
     }

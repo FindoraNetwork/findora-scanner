@@ -1,6 +1,6 @@
 use crate::Api;
 use anyhow::Result;
-use module::schema::{DelegationOpt, Memo};
+use module::schema::{DelegationInfo, DelegationOpt, Memo};
 use poem_openapi::param::Path;
 use poem_openapi::{payload::Json, ApiResponse, Object};
 use serde::{Deserialize, Serialize};
@@ -17,6 +17,26 @@ pub enum ValidatorListResponse {
 pub enum ValidatorDetailResponse {
     #[oai(status = 200)]
     Ok(Json<ValidatorDetailResult>),
+}
+
+#[derive(ApiResponse)]
+pub enum CirculatingSupplyResponse {
+    #[oai(status = 200)]
+    Ok(Json<CirculatingSupplyResult>),
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, Object)]
+pub struct CirculatingSupplyResult {
+    pub code: i32,
+    pub message: String,
+    pub data: Option<CirculatingSupply>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, Object)]
+pub struct CirculatingSupply {
+    pub global_circulating_supply: f64,
+    pub global_delegation_amount: f64,
+    pub global_return_rate: f64,
 }
 
 #[derive(Serialize, Deserialize, Debug, Default, Object)]
@@ -173,7 +193,7 @@ pub async fn validator_detail(api: &Api, address: Path<String>) -> Result<Valida
         };
 
         Ok(ValidatorDetailResponse::Ok(Json(ValidatorDetailResult {
-            code: 0,
+            code: 200,
             message: "".to_string(),
             data: Some(detail),
         })))
@@ -212,9 +232,42 @@ pub async fn validator_detail(api: &Api, address: Path<String>) -> Result<Valida
         };
 
         Ok(ValidatorDetailResponse::Ok(Json(ValidatorDetailResult {
-            code: 0,
+            code: 200,
             message: "".to_string(),
             data: Some(detail),
         })))
     }
+}
+
+pub async fn circulating_supply(api: &Api) -> Result<CirculatingSupplyResponse> {
+    let mut conn = api.storage.lock().await.acquire().await?;
+    let sql = "SELECT info FROM delegations ORDER BY height DESC LIMIT 1".to_string();
+    let dl_res = sqlx::query(sql.as_str()).fetch_one(&mut conn).await;
+
+    let row = match dl_res {
+        Ok(row) => row,
+        _ => {
+            return Ok(CirculatingSupplyResponse::Ok(Json(
+                CirculatingSupplyResult {
+                    code: 500,
+                    message: "".to_string(),
+                    data: None,
+                },
+            )))
+        }
+    };
+    let info: Value = row.try_get("info")?;
+    let delegation_info: DelegationInfo = serde_json::from_value(info).unwrap();
+
+    Ok(CirculatingSupplyResponse::Ok(Json(
+        CirculatingSupplyResult {
+            code: 200,
+            message: "".to_string(),
+            data: Some(CirculatingSupply {
+                global_circulating_supply: 0.0,
+                global_delegation_amount: 0.0,
+                global_return_rate: delegation_info.return_rate.value,
+            }),
+        },
+    )))
 }
