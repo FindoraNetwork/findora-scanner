@@ -25,6 +25,30 @@ pub enum CirculatingSupplyResponse {
     Ok(Json<CirculatingSupplyResult>),
 }
 
+#[derive(ApiResponse)]
+pub enum DelegatorListResponse {
+    #[oai(status = 200)]
+    Ok(Json<DelegatorListResult>),
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, Object)]
+pub struct DelegatorListResult {
+    pub code: i32,
+    pub message: String,
+    pub data: Option<DelegatorList>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, Object)]
+pub struct DelegatorList {
+    pub delegators: Vec<DelegatorItem>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, Object)]
+pub struct DelegatorItem {
+    pub addr: String,
+    pub amount: i64,
+}
+
 #[derive(Serialize, Deserialize, Debug, Default, Object)]
 pub struct CirculatingSupplyResult {
     pub code: i32,
@@ -270,4 +294,37 @@ pub async fn circulating_supply(api: &Api) -> Result<CirculatingSupplyResponse> 
             }),
         },
     )))
+}
+
+pub async fn delegator_list(api: &Api, address: Path<String>) -> Result<DelegatorListResponse> {
+    let mut conn = api.storage.lock().await.acquire().await?;
+    let sql = format!("SELECT jsonb_path_query(value->'body'->'operations', '$[*].Delegation?(@.body.validator==\"{}\")') as d from transaction", address.0);
+    let list_res = sqlx::query(sql.as_str()).fetch_all(&mut conn).await;
+
+    let rows = match list_res {
+        Ok(rows) => rows,
+        _ => {
+            return Ok(DelegatorListResponse::Ok(Json(DelegatorListResult {
+                code: 500,
+                message: "".to_string(),
+                data: None,
+            })))
+        }
+    };
+    let mut lst: Vec<DelegatorItem> = vec![];
+    for r in rows {
+        let v: Value = r.try_get("d")?;
+        let delegation: DelegationOpt = serde_json::from_value(v).unwrap();
+        let item = DelegatorItem {
+            addr: delegation.body.validator,
+            amount: delegation.body.amount,
+        };
+        lst.push(item);
+    }
+
+    Ok(DelegatorListResponse::Ok(Json(DelegatorListResult {
+        code: 0,
+        message: "".to_string(),
+        data: Some(DelegatorList { delegators: lst }),
+    })))
 }

@@ -60,6 +60,25 @@ pub struct DelegationOpt {
 }
 
 #[derive(Serialize, Deserialize, Debug, Default)]
+pub struct UndelegationOpt {
+    pub body: UndelegationOptBody,
+    pub pubkey: String,
+    pub signature: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default)]
+pub struct UndelegationOptBody {
+    pub pu: Pu,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default)]
+pub struct Pu {
+    pub am: i64,
+    pub new_delegator_id: String,
+    pub target_validator: Vec<i64>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default)]
 pub struct DelegationOptBody {
     pub validator: String,
     pub new_validator: Option<NewValidator>,
