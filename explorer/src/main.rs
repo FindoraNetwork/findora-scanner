@@ -11,7 +11,8 @@ use crate::service::validator::{
     ValidatorListResponse,
 };
 use anyhow::Result;
-use poem::{listener::TcpListener, Route, Server};
+use poem::middleware::Cors;
+use poem::{listener::TcpListener, EndpointExt, Route, Server};
 use poem_openapi::param::{Path, Query};
 use poem_openapi::{OpenApi, OpenApiService, Tags};
 use scanner::rpc::TendermintRPC;
@@ -372,7 +373,12 @@ async fn main() -> Result<()> {
 
     let server_addr = format!("{}:{}", config.server.addr, config.server.port);
     Server::new(TcpListener::bind(server_addr))
-        .run(Route::new().nest("/api", api_service).nest("/", ui))
+        .run(
+            Route::new()
+                .nest("/api", api_service)
+                .nest("/", ui)
+                .with(Cors::new()),
+        )
         .await?;
 
     Ok(())
