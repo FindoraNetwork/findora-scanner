@@ -1,11 +1,13 @@
 use crate::service::util::{public_key_from_bech32, public_key_to_base64};
 use crate::Api;
 use anyhow::Result;
-use module::schema::{PrismTransaction, Transaction};
+use ethereum_types::H256;
+use module::schema::{EvmTx, PrismTransaction, TransactionResponse, TX_EVM};
 use poem_openapi::param::Query;
 use poem_openapi::{param::Path, payload::Json, ApiResponse, Object};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use sha3::{Digest, Keccak256};
 use sqlx::Row;
 use std::ops::Add;
 
@@ -22,7 +24,7 @@ pub enum TxResponse {
 pub struct TxRes {
     pub code: i32,
     pub message: String,
-    pub data: Option<Transaction>,
+    pub data: Option<TransactionResponse>,
 }
 
 #[derive(ApiResponse)]
@@ -43,7 +45,7 @@ pub struct TxsData {
     page: i64,
     page_size: i64,
     total: i64,
-    txs: Vec<Transaction>,
+    txs: Vec<TransactionResponse>,
 }
 
 #[derive(ApiResponse)]
@@ -66,6 +68,7 @@ pub struct PmtxsData {
     total: i64,
     txs: Vec<PrismTransaction>,
 }
+
 pub async fn get_tx(api: &Api, tx_hash: Path<String>) -> Result<TxResponse> {
     let mut conn = api.storage.lock().await.acquire().await?;
     let str = format!("SELECT * FROM transaction WHERE tx_hash = '{}'", tx_hash.0);
@@ -89,8 +92,15 @@ pub async fn get_tx(api: &Api, tx_hash: Path<String>) -> Result<TxResponse> {
     let log: String = row.try_get("log")?;
     let result: Value = row.try_get("result")?;
     let value: Value = row.try_get("value")?;
-    let tx = Transaction {
+    let mut evm_tx_hash: String = "".to_string();
+    if ty == TX_EVM {
+        let evm_tx: EvmTx = serde_json::from_value(value.clone()).unwrap();
+        let hash = H256::from_slice(Keccak256::digest(&rlp::encode(&evm_tx)).as_slice());
+        evm_tx_hash = format!("{:?}", hash);
+    }
+    let tx = TransactionResponse {
         tx_hash,
+        evm_tx_hash,
         block_hash,
         height,
         timestamp,
@@ -171,11 +181,7 @@ pub async fn get_txs(
         sql_str = sql_str.add(" WHERE ").add(params.join(" AND ").as_str());
         sql_total = sql_total.add(" WHERE ").add(params.join(" AND ").as_str());
     }
-    // sql_str += &format!(
-    //     " ORDER BY timestamp DESC LIMIT {} OFFSET {}",
-    //     page_size,
-    //     (page - 1) * page_size
-    // );
+
     sql_str = sql_str.add(
         format!(
             " ORDER BY timestamp DESC LIMIT {} OFFSET {}",
@@ -186,7 +192,7 @@ pub async fn get_txs(
     );
 
     let res = sqlx::query(sql_str.as_str()).fetch_all(&mut conn).await;
-    let mut txs: Vec<Transaction> = vec![];
+    let mut txs: Vec<TransactionResponse> = vec![];
     let rows = match res {
         Ok(rows) => rows,
         _ => {
@@ -208,9 +214,16 @@ pub async fn get_txs(
         let log: String = row.try_get("log")?;
         let result: Value = row.try_get("result")?;
         let value: Value = row.try_get("value")?;
+        let mut evm_tx_hash: String = "".to_string();
+        if ty == TX_EVM {
+            let evm_tx: EvmTx = serde_json::from_value(value.clone()).unwrap();
+            let hash = H256::from_slice(Keccak256::digest(&rlp::encode(&evm_tx)).as_slice());
+            evm_tx_hash = format!("{:?}", hash);
+        }
 
-        let tx = Transaction {
+        let tx = TransactionResponse {
             tx_hash,
+            evm_tx_hash,
             block_hash,
             height,
             timestamp,
@@ -294,11 +307,7 @@ pub async fn get_triple_masking_txs(
             OR (value @? '$.body.operations[*].BarToAbar.note.body.output.commitment ? (@!=\"\")')",
         );
     }
-    // sql_str += &format!(
-    //     " ORDER BY timestamp DESC LIMIT {} OFFSET {}",
-    //     page_size,
-    //     (page - 1) * page_size
-    // );
+
     sql_str = sql_str.add(
         format!(
             " ORDER BY timestamp DESC LIMIT {} OFFSET {}",
@@ -308,7 +317,7 @@ pub async fn get_triple_masking_txs(
         .as_str(),
     );
     let res = sqlx::query(sql_str.as_str()).fetch_all(&mut conn).await;
-    let mut txs: Vec<Transaction> = vec![];
+    let mut txs: Vec<TransactionResponse> = vec![];
     let rows = match res {
         Ok(rows) => rows,
         _ => {
@@ -330,9 +339,15 @@ pub async fn get_triple_masking_txs(
         let log: String = row.try_get("log")?;
         let result: Value = row.try_get("result")?;
         let value: Value = row.try_get("value")?;
-
-        let tx = Transaction {
+        let mut evm_tx_hash: String = "".to_string();
+        if ty == TX_EVM {
+            let evm_tx: EvmTx = serde_json::from_value(value.clone()).unwrap();
+            let hash = H256::from_slice(Keccak256::digest(&rlp::encode(&evm_tx)).as_slice());
+            evm_tx_hash = format!("{:?}", hash);
+        }
+        let tx = TransactionResponse {
             tx_hash,
+            evm_tx_hash,
             block_hash,
             height,
             timestamp,
@@ -399,11 +414,7 @@ pub async fn get_claim_txs(
         sql_str +=
             &String::from(" WHERE (value @? '$.body.operations[*].Claim.pubkey ? (@!=\"\")') ");
     }
-    // sql_str += &format!(
-    //     " ORDER BY timestamp DESC LIMIT {} OFFSET {}",
-    //     page_size,
-    //     (page - 1) * page_size
-    // );
+
     sql_str = sql_str.add(
         format!(
             " ORDER BY timestamp DESC LIMIT {} OFFSET {}",
@@ -413,7 +424,7 @@ pub async fn get_claim_txs(
         .as_str(),
     );
     let res = sqlx::query(sql_str.as_str()).fetch_all(&mut conn).await;
-    let mut txs: Vec<Transaction> = vec![];
+    let mut txs: Vec<TransactionResponse> = vec![];
     let rows = match res {
         Ok(rows) => rows,
         _ => {
@@ -435,9 +446,15 @@ pub async fn get_claim_txs(
         let log: String = row.try_get("log")?;
         let result: Value = row.try_get("result")?;
         let value: Value = row.try_get("value")?;
-
-        let tx = Transaction {
+        let mut evm_tx_hash: String = "".to_string();
+        if ty == TX_EVM {
+            let evm_tx: EvmTx = serde_json::from_value(value.clone()).unwrap();
+            let hash = H256::from_slice(Keccak256::digest(&rlp::encode(&evm_tx)).as_slice());
+            evm_tx_hash = format!("{:?}", hash);
+        }
+        let tx = TransactionResponse {
             tx_hash,
+            evm_tx_hash,
             block_hash,
             height,
             timestamp,
@@ -560,4 +577,24 @@ pub async fn get_prism_tx(
             txs,
         }),
     })))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_evm_tx_hash() -> Result<()> {
+        // eyJzaWduYXR1cmUiOm51bGwsImZ1bmN0aW9uIjp7IkV0aGVyZXVtIjp7IlRyYW5zYWN0Ijp7Im5vbmNlIjoiMHg5IiwiZ2FzX3ByaWNlIjoiMHhlOGQ0YTUxMDAwIiwiZ2FzX2xpbWl0IjoiMHg1MjA4IiwiYWN0aW9uIjp7IkNhbGwiOiIweGE1MjI1Y2JlZTUwNTIxMDBlYzJkMmQ5NGFhNmQyNTg1NTgwNzM3NTcifSwidmFsdWUiOiIweDk4YTdkOWI4MzE0YzAwMDAiLCJpbnB1dCI6W10sInNpZ25hdHVyZSI6eyJ2IjoxMDgyLCJyIjoiMHg4MDBjZjQ5ZTAzMmJhYzY4MjY3MzdhZGJhZDEzN2Y0MTk5OTRjNjgxZWE1ZDUyYjliMGJhZDJmNDAyYjMwMTI0IiwicyI6IjB4Mjk1Mjc3ZWY2NTYzNDAwY2VkNjFiODhkM2ZiNGM3YjMyY2NkNTcwYThiOWJiOGNiYmUyNTkyMTRhYjdkZTI1YSJ9fX19fQ
+        let tx_str= "{\"signature\":null,\"function\":{\"Ethereum\":{\"Transact\":{\"nonce\":\"0x9\",\"gas_price\":\"0xe8d4a51000\",\"gas_limit\":\"0x5208\",\"action\":{\"Call\":\"0xa5225cbee5052100ec2d2d94aa6d258558073757\"},\"value\":\"0x98a7d9b8314c0000\",\"input\":[],\"signature\":{\"v\":1082,\"r\":\"0x800cf49e032bac6826737adbad137f419994c681ea5d52b9b0bad2f402b30124\",\"s\":\"0x295277ef6563400ced61b88d3fb4c7b32ccd570a8b9bb8cbbe259214ab7de25a\"}}}}}";
+        let evm_tx: EvmTx = serde_json::from_str(tx_str).unwrap();
+        let hash = H256::from_slice(Keccak256::digest(&rlp::encode(&evm_tx)).as_slice());
+        let tx_hash = format!("{:?}", hash);
+        assert_eq!(
+            tx_hash,
+            "0x0eeb0ff455b1b57b821634cf853e7247e584a675610f13097cc49c2022505df3"
+        );
+
+        Ok(())
+    }
 }

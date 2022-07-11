@@ -1,6 +1,8 @@
 use crate::rpc::validator::PubKey;
 use chrono::NaiveDateTime;
+use ethereum::LegacyTransaction;
 use poem_openapi::Object;
+use rlp::{Encodable, RlpStream};
 use serde::{
     de::{self, Deserializer, MapAccess, SeqAccess, Visitor},
     Deserialize, Serialize,
@@ -9,6 +11,32 @@ use serde_json::Value;
 use std::collections::HashMap;
 use std::fmt;
 use zei::xfr::sig::XfrPublicKey;
+
+pub const TX_UTXO: i32 = 0;
+pub const TX_EVM: i32 = 1;
+
+#[derive(Serialize, Deserialize)]
+pub struct EvmTx {
+    pub function: Ethereum,
+}
+
+impl Encodable for EvmTx {
+    fn rlp_append(&self, s: &mut RlpStream) {
+        self.function.ethereum.transact.rlp_append(s)
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct Ethereum {
+    #[serde(rename = "Ethereum")]
+    pub ethereum: Transact,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct Transact {
+    #[serde(rename = "Transact")]
+    pub transact: LegacyTransaction,
+}
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Block {
@@ -28,6 +56,20 @@ pub struct Block {
 #[derive(Serialize, Deserialize, Debug, Default, Object)]
 pub struct Transaction {
     pub tx_hash: String,
+    pub block_hash: String,
+    pub height: i64,
+    pub timestamp: i64,
+    pub ty: i32,
+    pub code: i64,
+    pub log: String,
+    pub result: Value, // result.tx_result
+    pub value: Value,  // result.tx
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, Object)]
+pub struct TransactionResponse {
+    pub tx_hash: String,
+    pub evm_tx_hash: String,
     pub block_hash: String,
     pub height: i64,
     pub timestamp: i64,
