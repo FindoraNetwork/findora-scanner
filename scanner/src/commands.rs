@@ -61,12 +61,12 @@ impl Load {
 
         caller.load_and_save_block(target).await?;
 
-        if self.staking {
-            match caller.load_and_save_staking().await {
-                Ok(h) => info!("Staking at {} loaded.", h),
-                Err(e) => warn!("Failed to load staking: {:?}", e),
-            }
-        }
+        // if self.staking {
+        //     match caller.load_and_save_staking().await {
+        //         Ok(h) => info!("Staking at {} loaded.", h),
+        //         Err(e) => warn!("Failed to load staking: {:?}", e),
+        //     }
+        // }
 
         info!("Load block at height {} succeed.", target);
         Ok(())
@@ -197,12 +197,12 @@ impl Subscribe {
             match caller.load_and_save_block(cursor).await {
                 Ok(_) => {
                     info!("Block at {} loaded.", cursor);
-                    if self.staking {
-                        match caller.load_and_save_staking().await {
-                            Ok(h) => info!("Staking at {} loaded.", h),
-                            Err(e) => warn!("Failed to load staking: {:?}", e),
-                        }
-                    }
+                    // if self.staking {
+                    //     match caller.load_and_save_staking().await {
+                    //         Ok(h) => info!("Staking at {} loaded.", h),
+                    //         Err(e) => warn!("Failed to load staking: {:?}", e),
+                    //     }
+                    // }
                 }
                 Err(Error::NotFound) => (),
                 Err(e) => return Err(e),
