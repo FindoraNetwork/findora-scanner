@@ -122,6 +122,7 @@ pub async fn get_tx(api: &Api, tx_hash: Path<String>) -> Result<TxResponse> {
 pub async fn get_txs(
     api: &Api,
     block_hash: Query<Option<String>>,
+    block_height: Query<Option<i64>>,
     from: Query<Option<String>>,
     to: Query<Option<String>>,
     ty: Query<Option<i64>>,
@@ -136,6 +137,9 @@ pub async fn get_txs(
     let mut params: Vec<String> = vec![];
     if let Some(block_hash) = block_hash.0 {
         params.push(format!(" block_hash='{}' ", block_hash));
+    }
+    if let Some(height) = block_height.0 {
+        params.push(format!(" height={} ", height));
     }
     if let Some(from_address) = from.0 {
         let pk = public_key_from_bech32(from_address.as_str());

@@ -45,6 +45,8 @@ impl Api {
         &self,
         /// block hash, e.g. '4B7C22FA8FC6913E091DC324830181BBA1F01EBFF53049F958EA5AA65327BFE0'.
         block_id: Query<Option<String>>,
+        /// block height
+        height: Query<Option<i64>>,
         /// from address, e.g. 'fra1p4vy5n9mlkdys7xczegj398xtyvw2nawz00nnfh4yr7fpjh297cqsxfv7v'.
         from: Query<Option<String>>,
         /// to address.
@@ -61,7 +63,7 @@ impl Api {
         page_size: Query<Option<i64>>,
     ) -> poem::Result<TxsResponse> {
         service::tx::get_txs(
-            self, block_id, from, to, ty, start_time, end_time, page, page_size,
+            self, block_id, height, from, to, ty, start_time, end_time, page, page_size,
         )
         .await
         .map_err(utils::handle_fetch_one_err)
