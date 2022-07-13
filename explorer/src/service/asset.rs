@@ -14,11 +14,11 @@ pub enum AssetResponse {
 pub struct AssetRes {
     pub code: i32,
     pub message: String,
-    pub data: Option<DisplayAsset>,
+    pub data: Option<Asset>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Default)]
-struct AssetRules {
+#[derive(Serialize, Deserialize, Debug, Default, Object)]
+pub struct AssetRules {
     pub decimals: i64,
     pub max_units: String,
     pub transfer_multisig_rules: Option<String>,
@@ -26,18 +26,18 @@ struct AssetRules {
     pub updatable: bool,
 }
 
-#[derive(Serialize, Deserialize, Debug, Default)]
-struct Code {
+#[derive(Serialize, Deserialize, Debug, Default, Object)]
+pub struct Code {
     pub val: Vec<u8>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Default)]
-struct PubKey {
+#[derive(Serialize, Deserialize, Debug, Default, Object)]
+pub struct PubKey {
     pub key: String,
 }
 
-#[derive(Serialize, Deserialize, Debug, Default)]
-struct Asset {
+#[derive(Serialize, Deserialize, Debug, Default, Object)]
+pub struct Asset {
     pub asset_rules: AssetRules,
     pub code: Code,
     pub issuer: PubKey,
@@ -45,29 +45,15 @@ struct Asset {
 }
 
 #[derive(Serialize, Deserialize, Debug, Default)]
-struct Body {
+pub struct Body {
     pub asset: Asset,
 }
 
 #[derive(Serialize, Deserialize, Debug, Default)]
-struct DefineAsset {
+pub struct DefineAsset {
     pub body: Body,
     pub pubkey: PubKey,
     pub signature: String,
-}
-
-#[derive(Serialize, Deserialize, Debug, Default, Object)]
-pub struct DisplayAsset {
-    pub code: String,
-    pub memo: String,
-    pub issuer: String,
-    pub chain_name: String,
-    pub max_units: i64,
-    pub decimals: i64,
-    pub price: f64,
-    pub market_value: f64,
-    pub transferable: bool,
-    pub updatable: bool,
 }
 
 pub async fn get_asset(api: &Api, address: Path<String>) -> Result<AssetResponse> {
@@ -97,27 +83,21 @@ pub async fn get_asset(api: &Api, address: Path<String>) -> Result<AssetResponse
         }
     };
 
-    let mut da = DisplayAsset::default();
+    let mut asset = Asset::default();
     for row in rows {
         let v: Value = row.try_get("asset").unwrap();
-        let asset: Asset = serde_json::from_value(v).unwrap();
-        if asset.code.val.eq(&code) {
-            da.code = base64::encode(&asset.code.val);
-            da.memo = asset.memo;
-            da.issuer = asset.issuer.key;
-            da.chain_name = String::from("Findora");
-            da.max_units = asset.asset_rules.max_units.parse().unwrap();
-            da.decimals = asset.asset_rules.decimals;
-            da.price = 0.0;
-            da.market_value = 0.0;
-            da.transferable = asset.asset_rules.transferable;
-            da.updatable = asset.asset_rules.updatable;
+        let a: Asset = serde_json::from_value(v).unwrap();
+        if a.code.val.eq(&code) {
+            asset.memo = a.memo;
+            asset.issuer = a.issuer;
+            asset.code = a.code;
+            asset.asset_rules = a.asset_rules;
         }
     }
 
     Ok(AssetResponse::Ok(Json(AssetRes {
         code: 200,
         message: "".to_string(),
-        data: Some(da),
+        data: Some(asset),
     })))
 }
