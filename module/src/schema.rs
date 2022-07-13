@@ -1,6 +1,9 @@
 use crate::rpc::validator::PubKey;
+use crate::utils::crypto::recover_signer;
+use anyhow::Result;
 use chrono::NaiveDateTime;
-use ethereum::LegacyTransaction;
+use ethereum::{LegacyTransaction, TransactionAction, TransactionSignature};
+use ethereum_types::U256;
 use poem_openapi::Object;
 use rlp::{Encodable, RlpStream};
 use serde::{
@@ -26,6 +29,31 @@ impl Encodable for EvmTx {
     }
 }
 
+impl EvmTx {
+    pub fn to_evm_tx_response(&self) -> Result<EvmTxResponse> {
+        let signer = recover_signer(&self.function.ethereum.transact).unwrap();
+
+        let res = EvmTxResponse {
+            function: EthereumResponse {
+                ethereum: TransactResponse {
+                    transact: LegacyTransactionResponse {
+                        from: format!("{:?}", signer),
+                        nonce: self.function.ethereum.transact.nonce,
+                        gas_price: self.function.ethereum.transact.gas_price,
+                        gas_limit: self.function.ethereum.transact.gas_limit,
+                        action: self.function.ethereum.transact.action,
+                        value: self.function.ethereum.transact.value,
+                        input: self.function.ethereum.transact.input.clone(),
+                        signature: self.function.ethereum.transact.signature.clone(),
+                    },
+                },
+            },
+        };
+
+        Ok(res)
+    }
+}
+
 #[derive(Serialize, Deserialize)]
 pub struct Ethereum {
     #[serde(rename = "Ethereum")]
@@ -36,6 +64,35 @@ pub struct Ethereum {
 pub struct Transact {
     #[serde(rename = "Transact")]
     pub transact: LegacyTransaction,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct EvmTxResponse {
+    pub function: EthereumResponse,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct EthereumResponse {
+    #[serde(rename = "Ethereum")]
+    pub ethereum: TransactResponse,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct TransactResponse {
+    #[serde(rename = "Transact")]
+    pub transact: LegacyTransactionResponse,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct LegacyTransactionResponse {
+    pub from: String,
+    pub nonce: U256,
+    pub gas_price: U256,
+    pub gas_limit: U256,
+    pub action: TransactionAction,
+    pub value: U256,
+    pub input: Vec<u8>,
+    pub signature: TransactionSignature,
 }
 
 #[derive(Serialize, Deserialize, Debug)]

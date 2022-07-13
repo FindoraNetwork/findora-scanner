@@ -91,12 +91,14 @@ pub async fn get_tx(api: &Api, tx_hash: Path<String>) -> Result<TxResponse> {
     let code: i64 = row.try_get("code")?;
     let log: String = row.try_get("log")?;
     let result: Value = row.try_get("result")?;
-    let value: Value = row.try_get("value")?;
+    let mut value: Value = row.try_get("value")?;
     let mut evm_tx_hash: String = "".to_string();
     if ty == TX_EVM {
         let evm_tx: EvmTx = serde_json::from_value(value.clone()).unwrap();
         let hash = H256::from_slice(Keccak256::digest(&rlp::encode(&evm_tx)).as_slice());
         evm_tx_hash = format!("{:?}", hash);
+        let evm_tx_response = evm_tx.to_evm_tx_response().unwrap();
+        value = serde_json::to_value(&evm_tx_response).unwrap();
     }
     let tx = TransactionResponse {
         tx_hash,
@@ -217,12 +219,14 @@ pub async fn get_txs(
         let code: i64 = row.try_get("code")?;
         let log: String = row.try_get("log")?;
         let result: Value = row.try_get("result")?;
-        let value: Value = row.try_get("value")?;
+        let mut value: Value = row.try_get("value")?;
         let mut evm_tx_hash: String = "".to_string();
         if ty == TX_EVM {
             let evm_tx: EvmTx = serde_json::from_value(value.clone()).unwrap();
             let hash = H256::from_slice(Keccak256::digest(&rlp::encode(&evm_tx)).as_slice());
             evm_tx_hash = format!("{:?}", hash);
+            let evm_tx_response = evm_tx.to_evm_tx_response().unwrap();
+            value = serde_json::to_value(&evm_tx_response).unwrap();
         }
 
         let tx = TransactionResponse {
@@ -343,15 +347,10 @@ pub async fn get_triple_masking_txs(
         let log: String = row.try_get("log")?;
         let result: Value = row.try_get("result")?;
         let value: Value = row.try_get("value")?;
-        let mut evm_tx_hash: String = "".to_string();
-        if ty == TX_EVM {
-            let evm_tx: EvmTx = serde_json::from_value(value.clone()).unwrap();
-            let hash = H256::from_slice(Keccak256::digest(&rlp::encode(&evm_tx)).as_slice());
-            evm_tx_hash = format!("{:?}", hash);
-        }
+
         let tx = TransactionResponse {
             tx_hash,
-            evm_tx_hash,
+            evm_tx_hash: "".to_string(),
             block_hash,
             height,
             timestamp,
@@ -450,15 +449,10 @@ pub async fn get_claim_txs(
         let log: String = row.try_get("log")?;
         let result: Value = row.try_get("result")?;
         let value: Value = row.try_get("value")?;
-        let mut evm_tx_hash: String = "".to_string();
-        if ty == TX_EVM {
-            let evm_tx: EvmTx = serde_json::from_value(value.clone()).unwrap();
-            let hash = H256::from_slice(Keccak256::digest(&rlp::encode(&evm_tx)).as_slice());
-            evm_tx_hash = format!("{:?}", hash);
-        }
+
         let tx = TransactionResponse {
             tx_hash,
-            evm_tx_hash,
+            evm_tx_hash: "".to_string(),
             block_hash,
             height,
             timestamp,
@@ -516,11 +510,6 @@ pub async fn get_prism_tx(
     }
     let page = page.0.unwrap_or(1);
     let page_size = page_size.0.unwrap_or(10);
-    // sql += &format!(
-    //     " ORDER BY timestamp DESC LIMIT {} OFFSET {}",
-    //     page_size,
-    //     (page - 1) * page_size
-    // );
     sql = sql.add(
         format!(
             " ORDER BY timestamp DESC LIMIT {} OFFSET {}",
@@ -587,8 +576,8 @@ pub async fn get_prism_tx(
 mod tests {
     use super::*;
 
-    #[tokio::test]
-    async fn test_evm_tx_hash() -> Result<()> {
+    #[test]
+    fn test_evm_tx_hash() -> Result<()> {
         // eyJzaWduYXR1cmUiOm51bGwsImZ1bmN0aW9uIjp7IkV0aGVyZXVtIjp7IlRyYW5zYWN0Ijp7Im5vbmNlIjoiMHg5IiwiZ2FzX3ByaWNlIjoiMHhlOGQ0YTUxMDAwIiwiZ2FzX2xpbWl0IjoiMHg1MjA4IiwiYWN0aW9uIjp7IkNhbGwiOiIweGE1MjI1Y2JlZTUwNTIxMDBlYzJkMmQ5NGFhNmQyNTg1NTgwNzM3NTcifSwidmFsdWUiOiIweDk4YTdkOWI4MzE0YzAwMDAiLCJpbnB1dCI6W10sInNpZ25hdHVyZSI6eyJ2IjoxMDgyLCJyIjoiMHg4MDBjZjQ5ZTAzMmJhYzY4MjY3MzdhZGJhZDEzN2Y0MTk5OTRjNjgxZWE1ZDUyYjliMGJhZDJmNDAyYjMwMTI0IiwicyI6IjB4Mjk1Mjc3ZWY2NTYzNDAwY2VkNjFiODhkM2ZiNGM3YjMyY2NkNTcwYThiOWJiOGNiYmUyNTkyMTRhYjdkZTI1YSJ9fX19fQ
         let tx_str= "{\"signature\":null,\"function\":{\"Ethereum\":{\"Transact\":{\"nonce\":\"0x9\",\"gas_price\":\"0xe8d4a51000\",\"gas_limit\":\"0x5208\",\"action\":{\"Call\":\"0xa5225cbee5052100ec2d2d94aa6d258558073757\"},\"value\":\"0x98a7d9b8314c0000\",\"input\":[],\"signature\":{\"v\":1082,\"r\":\"0x800cf49e032bac6826737adbad137f419994c681ea5d52b9b0bad2f402b30124\",\"s\":\"0x295277ef6563400ced61b88d3fb4c7b32ccd570a8b9bb8cbbe259214ab7de25a\"}}}}}";
         let evm_tx: EvmTx = serde_json::from_str(tx_str).unwrap();
