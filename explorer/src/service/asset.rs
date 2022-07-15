@@ -71,7 +71,7 @@ pub struct DefineAsset {
 
 pub async fn get_asset(api: &Api, address: Path<String>) -> Result<AssetResponse> {
     let mut conn = api.storage.lock().await.acquire().await?;
-    let code_res = base64::decode(&address.0);
+    let code_res = base64::decode_config(&address.0, base64::URL_SAFE);
     let code = match code_res {
         Ok(code) => code,
         _ => {
