@@ -223,7 +223,7 @@ pub async fn get_txs(
         let mut evm_tx_hash: String = "".to_string();
 
         if ty == TX_EVM {
-            let tx_str: String = serde_json::from_value(value.clone()).unwrap();
+            let tx_str: String = serde_json::to_string(&value).unwrap();
             if tx_str.contains("Ethereum") {
                 let evm_tx: EvmTx = serde_json::from_value(value).unwrap();
                 let hash = H256::from_slice(Keccak256::digest(&rlp::encode(&evm_tx)).as_slice());
