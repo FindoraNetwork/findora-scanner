@@ -71,7 +71,10 @@ pub struct PmtxsData {
 
 pub async fn get_tx(api: &Api, tx_hash: Path<String>) -> Result<TxResponse> {
     let mut conn = api.storage.lock().await.acquire().await?;
-    let str = format!("SELECT * FROM transaction WHERE tx_hash = '{}'", tx_hash.0);
+    let str = format!(
+        "SELECT * FROM transaction WHERE tx_hash = '{}'",
+        tx_hash.0.to_lowercase()
+    );
     let res = sqlx::query(str.as_str()).fetch_one(&mut conn).await;
     let row = match res {
         Ok(row) => row,
@@ -94,11 +97,14 @@ pub async fn get_tx(api: &Api, tx_hash: Path<String>) -> Result<TxResponse> {
     let mut value: Value = row.try_get("value")?;
     let mut evm_tx_hash: String = "".to_string();
     if ty == TX_EVM {
-        let evm_tx: EvmTx = serde_json::from_value(value.clone()).unwrap();
-        let hash = H256::from_slice(Keccak256::digest(&rlp::encode(&evm_tx)).as_slice());
-        evm_tx_hash = format!("{:?}", hash);
-        let evm_tx_response = evm_tx.to_evm_tx_response().unwrap();
-        value = serde_json::to_value(&evm_tx_response).unwrap();
+        let tx_str: String = serde_json::to_string(&value).unwrap();
+        if tx_str.contains("Ethereum") {
+            let evm_tx: EvmTx = serde_json::from_value(value.clone()).unwrap();
+            let hash = H256::from_slice(Keccak256::digest(&rlp::encode(&evm_tx)).as_slice());
+            evm_tx_hash = format!("{:?}", hash);
+            let evm_tx_response = evm_tx.to_evm_tx_response().unwrap();
+            value = serde_json::to_value(&evm_tx_response).unwrap();
+        }
     }
     let tx = TransactionResponse {
         tx_hash,
