@@ -52,7 +52,7 @@ impl Api {
         /// to address.
         to: Query<Option<String>>,
         /// transaction type. 0 is for Findora tx, 1 is for evm tx.
-        ty: Query<Option<i64>>,
+        ty: Query<Option<i32>>,
         /// start timestamp.
         start_time: Query<Option<i64>>,
         /// end timestamp.
@@ -84,7 +84,7 @@ impl Api {
         /// 0: both, default.
         /// 1: AbarToBar.
         /// 2: BarToAbar.
-        bar: Query<Option<i64>>,
+        bar: Query<Option<i32>>,
         /// start timestamp.
         start_time: Query<Option<i64>>,
         /// end timestamp.

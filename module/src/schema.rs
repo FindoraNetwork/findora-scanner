@@ -15,8 +15,18 @@ use std::collections::HashMap;
 use std::fmt;
 use zei::xfr::sig::XfrPublicKey;
 
-pub const TX_UTXO: i32 = 0;
-pub const TX_EVM: i32 = 1;
+pub const NATIVE_TRANSFER: i32 = 0;
+pub const EVM_TRANSFER: i32 = 1;
+pub const NATIVE_HIDE_ASSET_TYPE: i32 = 2;
+pub const NATIVE_HIDE_ASSET_AMOUNT: i32 = 3;
+pub const NATIVE_HIDE_ASSET_TYPE_AND_AMOUNT: i32 = 4;
+pub const ABAR_TO_BAR: i32 = 5;
+pub const ABAR_TO_ABAR: i32 = 6;
+pub const BAR_TO_ABAR: i32 = 7;
+pub const PRISM_NATIVE_TO_EVM: i32 = 8;
+pub const PRISM_EVM_TO_NATIVE: i32 = 9;
+pub const STAKING: i32 = 10;
+pub const CLAIM: i32 = 11;
 
 #[derive(Serialize, Deserialize)]
 pub struct EvmTx {
