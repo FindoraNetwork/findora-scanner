@@ -2,7 +2,11 @@ use crate::service::util::{public_key_from_bech32, public_key_to_base64};
 use crate::Api;
 use anyhow::Result;
 use ethereum_types::H256;
-use module::schema::{EvmTx, PrismTransaction, TransactionResponse, TX_EVM};
+use module::schema::{
+    EvmTx, PrismTransaction, TransactionResponse, ABAR_TO_ABAR, ABAR_TO_BAR, BAR_TO_ABAR, CLAIM,
+    EVM_TRANSFER, NATIVE_HIDE_ASSET_AMOUNT, NATIVE_HIDE_ASSET_TYPE,
+    NATIVE_HIDE_ASSET_TYPE_AND_AMOUNT, PRISM_EVM_TO_NATIVE, STAKING,
+};
 use poem_openapi::param::Query;
 use poem_openapi::{param::Path, payload::Json, ApiResponse, Object};
 use serde::{Deserialize, Serialize};
@@ -10,9 +14,6 @@ use serde_json::Value;
 use sha3::{Digest, Keccak256};
 use sqlx::Row;
 use std::ops::Add;
-
-const ABAR_TO_BAR: i64 = 1;
-const BAR_TO_ABAR: i64 = 2;
 
 #[derive(ApiResponse)]
 pub enum TxResponse {
@@ -92,23 +93,14 @@ pub async fn get_tx(api: &Api, tx_hash: Path<String>) -> Result<TxResponse> {
     let timestamp: i64 = row.try_get("timestamp")?;
     let height: i64 = row.try_get("height")?;
     let code: i64 = row.try_get("code")?;
-    let log: String = row.try_get("log")?;
+    //let log: String = row.try_get("log")?;
+    let log = "".to_string();
     let result: Value = row.try_get("result")?;
-    let mut value: Value = row.try_get("value")?;
-    let mut evm_tx_hash: String = "".to_string();
-    if ty == TX_EVM {
-        let tx_str: String = serde_json::to_string(&value).unwrap();
-        if tx_str.contains("Ethereum") {
-            let evm_tx: EvmTx = serde_json::from_value(value.clone()).unwrap();
-            let hash = H256::from_slice(Keccak256::digest(&rlp::encode(&evm_tx)).as_slice());
-            evm_tx_hash = format!("{:?}", hash);
-            let evm_tx_response = evm_tx.to_evm_tx_response().unwrap();
-            value = serde_json::to_value(&evm_tx_response).unwrap();
-        }
-    }
-    let tx = TransactionResponse {
+    let value: Value = row.try_get("value")?;
+
+    let mut tx = TransactionResponse {
         tx_hash,
-        evm_tx_hash,
+        evm_tx_hash: "".to_string(),
         block_hash,
         height,
         timestamp,
@@ -118,6 +110,8 @@ pub async fn get_tx(api: &Api, tx_hash: Path<String>) -> Result<TxResponse> {
         result,
         value,
     };
+
+    let _ = evm_hash_and_type(&mut tx);
 
     Ok(TxResponse::Ok(Json(TxRes {
         code: 200,
@@ -133,7 +127,7 @@ pub async fn get_txs(
     block_height: Query<Option<i64>>,
     from: Query<Option<String>>,
     to: Query<Option<String>>,
-    ty: Query<Option<i64>>,
+    ty: Query<Option<i32>>,
     start_time: Query<Option<i64>>,
     end_time: Query<Option<i64>>,
     page: Query<Option<i64>>,
@@ -223,25 +217,14 @@ pub async fn get_txs(
         let timestamp: i64 = row.try_get("timestamp")?;
         let height: i64 = row.try_get("height")?;
         let code: i64 = row.try_get("code")?;
-        let log: String = row.try_get("log")?;
+        //let log: String = row.try_get("log")?;
+        let log = "".to_string();
         let result: Value = row.try_get("result")?;
-        let mut value: Value = row.try_get("value")?;
-        let mut evm_tx_hash: String = "".to_string();
+        let value: Value = row.try_get("value")?;
 
-        if ty == TX_EVM {
-            let tx_str: String = serde_json::to_string(&value).unwrap();
-            if tx_str.contains("Ethereum") {
-                let evm_tx: EvmTx = serde_json::from_value(value).unwrap();
-                let hash = H256::from_slice(Keccak256::digest(&rlp::encode(&evm_tx)).as_slice());
-                evm_tx_hash = format!("{:?}", hash);
-                let evm_tx_response = evm_tx.to_evm_tx_response().unwrap();
-                value = serde_json::to_value(&evm_tx_response).unwrap();
-            }
-        }
-
-        let tx = TransactionResponse {
+        let mut tx = TransactionResponse {
             tx_hash,
-            evm_tx_hash,
+            evm_tx_hash: "".to_string(),
             block_hash,
             height,
             timestamp,
@@ -251,7 +234,7 @@ pub async fn get_txs(
             result,
             value,
         };
-
+        let _ = evm_hash_and_type(&mut tx);
         txs.push(tx);
     }
 
@@ -276,7 +259,7 @@ pub async fn get_triple_masking_txs(
     api: &Api,
     block_hash: Query<Option<String>>,
     pub_key: Query<Option<String>>,
-    bar: Query<Option<i64>>,
+    bar: Query<Option<i32>>,
     start_time: Query<Option<i64>>,
     end_time: Query<Option<i64>>,
     page: Query<Option<i64>>,
@@ -354,7 +337,8 @@ pub async fn get_triple_masking_txs(
         let timestamp: i64 = row.try_get("timestamp")?;
         let height: i64 = row.try_get("height")?;
         let code: i64 = row.try_get("code")?;
-        let log: String = row.try_get("log")?;
+        //let log: String = row.try_get("log")?;
+        let log = "".to_string();
         let result: Value = row.try_get("result")?;
         let value: Value = row.try_get("value")?;
 
@@ -456,7 +440,8 @@ pub async fn get_claim_txs(
         let timestamp: i64 = row.try_get("timestamp")?;
         let height: i64 = row.try_get("height")?;
         let code: i64 = row.try_get("code")?;
-        let log: String = row.try_get("log")?;
+        //let log: String = row.try_get("log")?;
+        let log = "".to_string();
         let result: Value = row.try_get("result")?;
         let value: Value = row.try_get("value")?;
 
@@ -551,8 +536,8 @@ pub async fn get_prism_tx(
         let value: Value = row.try_get("value")?;
         let timestamp: i64 = row.try_get("timestamp")?;
         let code: i64 = row.try_get("code")?;
-        let log: String = row.try_get("log")?;
-
+        //let log: String = row.try_get("log")?;
+        let log = "".to_string();
         let tx = PrismTransaction {
             tx_hash,
             block_hash,
@@ -580,6 +565,155 @@ pub async fn get_prism_tx(
             txs,
         }),
     })))
+}
+
+#[derive(Serialize, Deserialize, Debug, Default)]
+struct HideAmount {
+    #[serde(rename = "Confidential")]
+    pub confidential: Vec<String>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default)]
+struct ShowAmount {
+    #[serde(rename = "NonConfidential")]
+    pub non_confidential: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default)]
+struct ShowAssetType {
+    #[serde(rename = "NonConfidential")]
+    pub non_confidential: Vec<i64>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default)]
+struct HideAssetType {
+    #[serde(rename = "Confidential")]
+    pub confidential: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default)]
+struct AssetTypeShowAmountHide {
+    pub amount: HideAmount,
+    pub asset_type: ShowAssetType,
+    pub public_key: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default)]
+struct AssetTypeHideAmountShow {
+    pub amount: ShowAmount,
+    pub asset_type: HideAssetType,
+    pub public_key: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default)]
+struct AssetTypeHideAmountHide {
+    pub amount: HideAmount,
+    pub asset_type: HideAssetType,
+    pub public_key: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default)]
+struct TxData {
+    pub body: TxBody,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default)]
+struct TxBody {
+    pub operations: Vec<Value>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default)]
+#[serde(rename = "operations")]
+struct Opt {
+    #[serde(rename = "TransferAsset")]
+    pub transfer_asset: TransferAsset,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default)]
+struct TransferAsset {
+    pub body: TransferAssetBody,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default)]
+struct TransferAssetBody {
+    pub transfer: Transfer,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default)]
+struct Transfer {
+    pub outputs: Vec<Output>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default)]
+struct Output {
+    pub amount: Value,
+    pub asset_type: Value,
+    pub public_key: Value,
+}
+
+fn evm_hash_and_type(tx: &mut TransactionResponse) -> Result<()> {
+    let tx_str: String = serde_json::to_string(&tx.value).unwrap();
+
+    if tx.ty == EVM_TRANSFER {
+        if tx_str.contains("XHub") {
+            tx.ty = PRISM_EVM_TO_NATIVE;
+            return Ok(());
+        }
+        if tx_str.contains("ConvertAccount") {
+            tx.ty = PRISM_EVM_TO_NATIVE;
+            return Ok(());
+        }
+        // contains "Ethereum"
+        // calc evm tx hash
+        let evm_tx: EvmTx = serde_json::from_value(tx.value.clone()).unwrap();
+        let hash = H256::from_slice(Keccak256::digest(&rlp::encode(&evm_tx)).as_slice());
+        tx.evm_tx_hash = format!("{:?}", hash);
+
+        // tx response
+        let evm_tx_response = evm_tx.to_evm_tx_response().unwrap();
+        tx.value = serde_json::to_value(&evm_tx_response).unwrap();
+    } else if tx_str.contains("AbarToBar") {
+        tx.ty = ABAR_TO_BAR;
+    } else if tx_str.contains("BarToAbar") {
+        tx.ty = BAR_TO_ABAR;
+    } else if tx_str.contains("TransferAnonAsset") {
+        tx.ty = ABAR_TO_ABAR;
+    } else if tx_str.contains("Claim") {
+        tx.ty = CLAIM;
+    } else if tx_str.contains("Delegation") || tx_str.contains("Undelegation") {
+        tx.ty = STAKING;
+    } else {
+        let tx_data: TxData = serde_json::from_value(tx.value.clone()).unwrap();
+        for opt in tx_data.body.operations {
+            let transfer_asset_res: Result<TransferAsset, _> = serde_json::from_value(opt);
+            if let Ok(transfer_asset) = transfer_asset_res {
+                for output in transfer_asset.body.transfer.outputs {
+                    if !output
+                        .public_key
+                        .eq("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=")
+                    {
+                        let hide_amount_res: Result<HideAmount, _> =
+                            serde_json::from_value(output.amount);
+                        let hide_asset_type_res: Result<HideAssetType, _> =
+                            serde_json::from_value(output.asset_type);
+                        if hide_amount_res.is_ok() {
+                            if hide_asset_type_res.is_ok() {
+                                tx.ty = NATIVE_HIDE_ASSET_TYPE_AND_AMOUNT;
+                            } else {
+                                tx.ty = NATIVE_HIDE_ASSET_AMOUNT;
+                            }
+                        } else if hide_asset_type_res.is_ok() {
+                            tx.ty = NATIVE_HIDE_ASSET_TYPE;
+                        }
+
+                        return Ok(());
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(())
 }
 
 #[cfg(test)]
