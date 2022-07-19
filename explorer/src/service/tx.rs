@@ -4,8 +4,8 @@ use anyhow::Result;
 use ethereum_types::H256;
 use module::schema::{
     EvmTx, PrismTransaction, TransactionResponse, ABAR_TO_ABAR, ABAR_TO_BAR, BAR_TO_ABAR, CLAIM,
-    EVM_TRANSFER, NATIVE_HIDE_ASSET_AMOUNT, NATIVE_HIDE_ASSET_TYPE,
-    NATIVE_HIDE_ASSET_TYPE_AND_AMOUNT, PRISM_EVM_TO_NATIVE, STAKING,
+    EVM_TRANSFER, HIDE_ASSET_AMOUNT, HIDE_ASSET_TYPE, HIDE_ASSET_TYPE_AND_AMOUNT,
+    PRISM_EVM_TO_NATIVE, STAKING,
 };
 use poem_openapi::param::Query;
 use poem_openapi::{param::Path, payload::Json, ApiResponse, Object};
@@ -623,7 +623,6 @@ struct TxBody {
 }
 
 #[derive(Serialize, Deserialize, Debug, Default)]
-#[serde(rename = "operations")]
 struct Opt {
     #[serde(rename = "TransferAsset")]
     pub transfer_asset: TransferAsset,
@@ -684,30 +683,28 @@ fn evm_hash_and_type(tx: &mut TransactionResponse) -> Result<()> {
         tx.ty = STAKING;
     } else {
         let tx_data: TxData = serde_json::from_value(tx.value.clone()).unwrap();
-        for opt in tx_data.body.operations {
-            let transfer_asset_res: Result<TransferAsset, _> = serde_json::from_value(opt);
-            if let Ok(transfer_asset) = transfer_asset_res {
-                for output in transfer_asset.body.transfer.outputs {
-                    if !output
-                        .public_key
-                        .eq("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=")
-                    {
-                        let hide_amount_res: Result<HideAmount, _> =
-                            serde_json::from_value(output.amount);
-                        let hide_asset_type_res: Result<HideAssetType, _> =
-                            serde_json::from_value(output.asset_type);
-                        if hide_amount_res.is_ok() {
-                            if hide_asset_type_res.is_ok() {
-                                tx.ty = NATIVE_HIDE_ASSET_TYPE_AND_AMOUNT;
-                            } else {
-                                tx.ty = NATIVE_HIDE_ASSET_AMOUNT;
-                            }
-                        } else if hide_asset_type_res.is_ok() {
-                            tx.ty = NATIVE_HIDE_ASSET_TYPE;
+        for v in tx_data.body.operations {
+            let opt: Opt = serde_json::from_value(v).unwrap();
+            for output in opt.transfer_asset.body.transfer.outputs {
+                if !output
+                    .public_key
+                    .eq("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=")
+                {
+                    let hide_amount_res: Result<HideAmount, _> =
+                        serde_json::from_value(output.amount);
+                    let hide_asset_type_res: Result<HideAssetType, _> =
+                        serde_json::from_value(output.asset_type);
+                    if hide_amount_res.is_ok() {
+                        if hide_asset_type_res.is_ok() {
+                            tx.ty = HIDE_ASSET_TYPE_AND_AMOUNT;
+                        } else {
+                            tx.ty = HIDE_ASSET_AMOUNT;
                         }
-
-                        return Ok(());
+                    } else if hide_asset_type_res.is_ok() {
+                        tx.ty = HIDE_ASSET_TYPE;
                     }
+
+                    return Ok(());
                 }
             }
         }
