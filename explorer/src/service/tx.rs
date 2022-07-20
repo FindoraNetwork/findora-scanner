@@ -658,10 +658,6 @@ fn evm_hash_and_type(tx: &mut TransactionResponse) -> Result<()> {
             tx.ty = PRISM_EVM_TO_NATIVE;
             return Ok(());
         }
-        if tx_str.contains("ConvertAccount") {
-            tx.ty = PRISM_EVM_TO_NATIVE;
-            return Ok(());
-        }
         // contains "Ethereum"
         // calc evm tx hash
         let evm_tx: EvmTx = serde_json::from_value(tx.value.clone()).unwrap();
@@ -671,6 +667,8 @@ fn evm_hash_and_type(tx: &mut TransactionResponse) -> Result<()> {
         // tx response
         let evm_tx_response = evm_tx.to_evm_tx_response().unwrap();
         tx.value = serde_json::to_value(&evm_tx_response).unwrap();
+    } else if tx_str.contains("ConvertAccount") {
+        tx.ty = PRISM_EVM_TO_NATIVE;
     } else if tx_str.contains("AbarToBar") {
         tx.ty = ABAR_TO_BAR;
     } else if tx_str.contains("BarToAbar") {
