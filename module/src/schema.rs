@@ -27,6 +27,7 @@ pub const PRISM_NATIVE_TO_EVM: i32 = 8;
 pub const PRISM_EVM_TO_NATIVE: i32 = 9;
 pub const STAKING: i32 = 10;
 pub const CLAIM: i32 = 11;
+pub const DEFINE_OR_ISSUE_ASSET: i32 = 12;
 
 #[derive(Serialize, Deserialize)]
 pub struct EvmTx {

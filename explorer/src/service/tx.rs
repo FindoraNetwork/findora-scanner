@@ -4,8 +4,8 @@ use anyhow::Result;
 use ethereum_types::H256;
 use module::schema::{
     EvmTx, PrismTransaction, TransactionResponse, ABAR_TO_ABAR, ABAR_TO_BAR, BAR_TO_ABAR, CLAIM,
-    EVM_TRANSFER, HIDE_ASSET_AMOUNT, HIDE_ASSET_TYPE, HIDE_ASSET_TYPE_AND_AMOUNT,
-    PRISM_EVM_TO_NATIVE, STAKING,
+    DEFINE_OR_ISSUE_ASSET, EVM_TRANSFER, HIDE_ASSET_AMOUNT, HIDE_ASSET_TYPE,
+    HIDE_ASSET_TYPE_AND_AMOUNT, PRISM_EVM_TO_NATIVE, STAKING,
 };
 use poem_openapi::param::Query;
 use poem_openapi::{param::Path, payload::Json, ApiResponse, Object};
@@ -679,32 +679,36 @@ fn evm_hash_and_type(tx: &mut TransactionResponse) -> Result<()> {
         tx.ty = ABAR_TO_ABAR;
     } else if tx_str.contains("Claim") {
         tx.ty = CLAIM;
-    } else if tx_str.contains("Delegation") || tx_str.contains("Undelegation") {
+    } else if tx_str.contains("Delegation") || tx_str.contains("UnDelegation") {
         tx.ty = STAKING;
+    } else if tx_str.contains("DefineAsset") || tx_str.contains("IssueAsset") {
+        tx.ty = DEFINE_OR_ISSUE_ASSET;
     } else {
         let tx_data: TxData = serde_json::from_value(tx.value.clone()).unwrap();
         for v in tx_data.body.operations {
-            let opt: Opt = serde_json::from_value(v).unwrap();
-            for output in opt.transfer_asset.body.transfer.outputs {
-                if !output
-                    .public_key
-                    .eq("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=")
-                {
-                    let hide_amount_res: Result<HideAmount, _> =
-                        serde_json::from_value(output.amount);
-                    let hide_asset_type_res: Result<HideAssetType, _> =
-                        serde_json::from_value(output.asset_type);
-                    if hide_amount_res.is_ok() {
-                        if hide_asset_type_res.is_ok() {
-                            tx.ty = HIDE_ASSET_TYPE_AND_AMOUNT;
-                        } else {
-                            tx.ty = HIDE_ASSET_AMOUNT;
+            let opt_res: Result<Opt, _> = serde_json::from_value(v);
+            if let Ok(opt) = opt_res {
+                for output in opt.transfer_asset.body.transfer.outputs {
+                    if !output
+                        .public_key
+                        .eq("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=")
+                    {
+                        let hide_amount_res: Result<HideAmount, _> =
+                            serde_json::from_value(output.amount);
+                        let hide_asset_type_res: Result<HideAssetType, _> =
+                            serde_json::from_value(output.asset_type);
+                        if hide_amount_res.is_ok() {
+                            if hide_asset_type_res.is_ok() {
+                                tx.ty = HIDE_ASSET_TYPE_AND_AMOUNT;
+                            } else {
+                                tx.ty = HIDE_ASSET_AMOUNT;
+                            }
+                        } else if hide_asset_type_res.is_ok() {
+                            tx.ty = HIDE_ASSET_TYPE;
                         }
-                    } else if hide_asset_type_res.is_ok() {
-                        tx.ty = HIDE_ASSET_TYPE;
-                    }
 
-                    return Ok(());
+                        return Ok(());
+                    }
                 }
             }
         }
