@@ -5,6 +5,7 @@ use crate::service::address::AddressResponse;
 use crate::service::asset::AssetResponse;
 use crate::service::block::{BlockResponse, BlocksResponse, FullBlockResponse};
 use crate::service::chain::{ChainStatisticsResponse, StakingResponse};
+use crate::service::price::{MarketChartResponse, SimplePriceResponse};
 use crate::service::tx::{TxResponse, TxsResponse};
 use crate::service::validator::{
     CirculatingSupplyResponse, DelegatorListResponse, ValidatorDetailResponse,
@@ -325,6 +326,30 @@ impl Api {
             .await
             .map_err(utils::handle_fetch_one_err)
     }
+
+    #[oai(path = "/simple/price", method = "get", tag = "ApiTags::Price")]
+    async fn simple_price(
+        &self,
+        ids: Query<String>,
+        vs_currencies: Query<String>,
+    ) -> SimplePriceResponse {
+        service::price::simple_price(self, ids, vs_currencies).await
+    }
+
+    #[oai(
+        path = "/coins/:id/market_chart",
+        method = "get",
+        tag = "ApiTags::Price"
+    )]
+    async fn market_chart(
+        &self,
+        id: Path<String>,
+        vs_currency: Query<String>,
+        interval: Query<Option<String>>,
+        days: Query<i32>,
+    ) -> MarketChartResponse {
+        service::price::market_chat(self, id, vs_currency, interval, days).await
+    }
 }
 
 #[derive(Tags)]
@@ -339,6 +364,8 @@ enum ApiTags {
     Asset,
     /// Operations about Chain
     BlockChain,
+    /// Operations about Price
+    Price,
 }
 
 #[tokio::main]
