@@ -1,0 +1,91 @@
+use crate::Api;
+use poem_openapi::param::{Path, Query};
+use poem_openapi::types::Type;
+use poem_openapi::{payload::Json, ApiResponse, Object};
+use serde::{Deserialize, Serialize};
+use serde_json::Value;
+
+#[derive(ApiResponse)]
+pub enum SimplePriceResponse {
+    #[oai(status = 200)]
+    Ok(Json<SimplePriceResult>),
+    #[oai(status = 400)]
+    BadRequest,
+    #[oai(status = 404)]
+    NotFound,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, Object)]
+pub struct SimplePriceResult {
+    pub code: i32,
+    pub message: String,
+    pub data: Value,
+}
+
+#[derive(ApiResponse)]
+pub enum MarketChartResponse {
+    #[oai(status = 200)]
+    Ok(Json<MarketChartResult>),
+    #[oai(status = 400)]
+    BadRequest,
+    #[oai(status = 404)]
+    NotFound,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, Object)]
+pub struct MarketChartResult {
+    pub code: i32,
+    pub message: String,
+    pub data: Value,
+}
+
+pub async fn simple_price(
+    _api: &Api,
+    ids: Query<String>,
+    vs_currencies: Query<String>,
+) -> SimplePriceResponse {
+    if ids.is_empty() || vs_currencies.is_empty() {
+        return SimplePriceResponse::BadRequest;
+    }
+
+    let url = format!(
+        "https://api.coingecko.com/api/v3/simple/price?ids={}&vs_currencies={}",
+        ids.0, vs_currencies.0
+    );
+    let resp = reqwest::get(url).await.unwrap().text().await.unwrap();
+    let v: Value = serde_json::from_str(&resp).unwrap();
+
+    SimplePriceResponse::Ok(Json(SimplePriceResult {
+        code: 200,
+        message: "".to_string(),
+        data: v,
+    }))
+}
+
+pub async fn market_chat(
+    _api: &Api,
+    id: Path<String>,
+    vs_currency: Query<String>,
+    interval: Query<Option<String>>,
+    days: Query<i32>,
+) -> MarketChartResponse {
+    if id.is_empty() || vs_currency.is_empty() || days.is_empty() {
+        return MarketChartResponse::BadRequest;
+    }
+
+    let mut url = format!(
+        "https://api.coingecko.com/api/v3/coins/{}/market_chart?vs_currency={}&days={}",
+        id.0, vs_currency.0, days.0
+    );
+    if let Some(itv) = interval.0 {
+        url = format!("https://api.coingecko.com/api/v3/coins/{}/market_chart?vs_currency={}&days={}&interval={}", id.0, vs_currency.0, days.0, itv);
+    }
+    let resp = reqwest::get(url).await.unwrap().text().await.unwrap();
+    let v: Value = serde_json::from_str(&resp).unwrap();
+
+    MarketChartResponse::Ok(Json(MarketChartResult {
+        code: 0,
+        message: "".to_string(),
+        data: v,
+    }))
+}
