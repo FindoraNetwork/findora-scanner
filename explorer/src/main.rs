@@ -3,7 +3,7 @@ mod utils;
 
 use crate::service::address::AddressResponse;
 use crate::service::asset::AssetResponse;
-use crate::service::block::{BlockResponse, BlocksResponse, FullBlockResponse};
+use crate::service::block::{BlocksResponse, FullBlockResponse, SimpleBlockResponse};
 use crate::service::chain::{ChainStatisticsResponse, StakingResponse};
 use crate::service::price::{MarketChartResponse, SimplePriceResponse};
 use crate::service::tx::{TxResponse, TxsResponse};
@@ -152,7 +152,7 @@ impl Api {
         &self,
         /// block height.
         height: Path<i64>,
-    ) -> poem::Result<BlockResponse> {
+    ) -> poem::Result<SimpleBlockResponse> {
         service::block::get_block_by_height(self, height)
             .await
             .map_err(utils::handle_fetch_one_err)
@@ -178,7 +178,7 @@ impl Api {
         &self,
         /// block hash.
         hash: Path<String>,
-    ) -> poem::Result<BlockResponse> {
+    ) -> poem::Result<SimpleBlockResponse> {
         service::block::get_block_by_hash(self, hash)
             .await
             .map_err(utils::handle_fetch_one_err)

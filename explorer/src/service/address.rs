@@ -11,11 +11,17 @@ use sqlx::Row;
 #[derive(ApiResponse)]
 pub enum AddressResponse {
     #[oai(status = 200)]
-    Ok(Json<AddressRes>),
+    Ok(Json<AddressResult>),
+    #[oai(status = 400)]
+    BadRequest(Json<AddressResult>),
+    #[oai(status = 404)]
+    NotFound(Json<AddressResult>),
+    #[oai(status = 500)]
+    InternalError(Json<AddressResult>),
 }
 
 #[derive(Serialize, Deserialize, Debug, Default, Object)]
-pub struct AddressRes {
+pub struct AddressResult {
     pub code: i32,
     pub message: String,
     pub data: Option<AddressData>,
@@ -38,12 +44,13 @@ pub async fn get_address(
     let mut conn = api.storage.lock().await.acquire().await?;
     let pk = public_key_from_bech32(address.0.as_str());
     if pk.is_err() {
-        return Ok(AddressResponse::Ok(Json(AddressRes {
+        return Ok(AddressResponse::BadRequest(Json(AddressResult {
             code: 400,
-            message: "invalid address".to_string(),
+            message: "invalid bech32 address".to_string(),
             data: None,
         })));
     }
+
     let pk_b64 = public_key_to_base64(&pk.unwrap());
     let page = page.0.unwrap_or(1);
     let page_size = page_size.0.unwrap_or(10);
@@ -53,23 +60,20 @@ pub async fn get_address(
         (value @? '$.body.operations[*].TransferAsset.body.transfer.outputs[*].public_key ? (@ == \"{}\")') \
         or (value @? '$.body.operations[*].TransferAsset.body.transfer.inputs[*].public_key ? (@ == \"{}\")') \
         ORDER BY timestamp DESC LIMIT {} OFFSET {}", pk_b64, pk_b64, page_size, (page - 1) * page_size);
-    let sql_total = format!(
-        "SELECT count(*) as total FROM transaction WHERE \
-        (value @? '$.body.operations[*].TransferAsset.body.transfer.outputs[*].public_key ? (@ == \"{}\")') \
-        or (value @? '$.body.operations[*].TransferAsset.body.transfer.inputs[*].public_key ? (@ == \"{}\")')", pk_b64, pk_b64);
 
     let res = sqlx::query(sql_str.as_str()).fetch_all(&mut conn).await;
-    let mut txs: Vec<Transaction> = vec![];
     let rows = match res {
         Ok(rows) => rows,
         _ => {
-            return Ok(AddressResponse::Ok(Json(AddressRes {
+            return Ok(AddressResponse::InternalError(Json(AddressResult {
                 code: 500,
                 message: "internal error".to_string(),
                 data: None,
             })));
         }
     };
+
+    let mut txs: Vec<Transaction> = vec![];
     for row in rows {
         let tx_hash: String = row.try_get("tx_hash")?;
         let block_hash: String = row.try_get("block_hash")?;
@@ -95,10 +99,14 @@ pub async fn get_address(
     }
 
     // total items
-    let res = sqlx::query(sql_total.as_str()).fetch_all(&mut conn).await;
-    let total: i64 = res.unwrap()[0].try_get("total")?;
+    let sql_total = format!(
+        "SELECT count(*) as total FROM transaction WHERE \
+        (value @? '$.body.operations[*].TransferAsset.body.transfer.outputs[*].public_key ? (@ == \"{}\")') \
+        or (value @? '$.body.operations[*].TransferAsset.body.transfer.inputs[*].public_key ? (@ == \"{}\")')", pk_b64, pk_b64);
+    let res = sqlx::query(sql_total.as_str()).fetch_one(&mut conn).await;
+    let total: i64 = res.unwrap().try_get("total")?;
 
-    Ok(AddressResponse::Ok(Json(AddressRes {
+    Ok(AddressResponse::Ok(Json(AddressResult {
         code: 200,
         message: "".to_string(),
         data: Some(AddressData {
