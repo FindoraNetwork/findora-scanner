@@ -12,11 +12,17 @@ use zei::xfr::sig::XfrPublicKey;
 #[derive(ApiResponse)]
 pub enum AssetResponse {
     #[oai(status = 200)]
-    Ok(Json<AssetRes>),
+    Ok(Json<AssetResult>),
+    #[oai(status = 400)]
+    BadRequest(Json<AssetResult>),
+    #[oai(status = 404)]
+    NotFound(Json<AssetResult>),
+    #[oai(status = 500)]
+    InternalError(Json<AssetResult>),
 }
 
 #[derive(Serialize, Deserialize, Debug, Default, Object)]
-pub struct AssetRes {
+pub struct AssetResult {
     pub code: i32,
     pub message: String,
     pub data: Option<AssetDisplay>,
@@ -75,9 +81,9 @@ pub async fn get_asset(api: &Api, address: Path<String>) -> Result<AssetResponse
     let code = match code_res {
         Ok(code) => code,
         _ => {
-            return Ok(AssetResponse::Ok(Json(AssetRes {
+            return Ok(AssetResponse::BadRequest(Json(AssetResult {
                 code: 400,
-                message: "invalid asset code".to_string(),
+                message: "invalid base64 asset code".to_string(),
                 data: None,
             })));
         }
@@ -87,12 +93,19 @@ pub async fn get_asset(api: &Api, address: Path<String>) -> Result<AssetResponse
     let res = sqlx::query(str.as_str()).fetch_all(&mut conn).await;
     let rows = match res {
         Ok(rows) => rows,
-        _ => {
-            return Ok(AssetResponse::Ok(Json(AssetRes {
-                code: 500,
-                message: "internal error".to_string(),
-                data: None,
-            })));
+        Err(e) => {
+            return match e {
+                sqlx::Error::RowNotFound => Ok(AssetResponse::Ok(Json(AssetResult {
+                    code: 404,
+                    message: "not found".to_string(),
+                    data: None,
+                }))),
+                _ => Ok(AssetResponse::InternalError(Json(AssetResult {
+                    code: 500,
+                    message: "internal error".to_string(),
+                    data: None,
+                }))),
+            }
         }
     };
 
@@ -115,7 +128,7 @@ pub async fn get_asset(api: &Api, address: Path<String>) -> Result<AssetResponse
         }
     }
 
-    Ok(AssetResponse::Ok(Json(AssetRes {
+    Ok(AssetResponse::Ok(Json(AssetResult {
         code: 200,
         message: "".to_string(),
         data: Some(asset),
