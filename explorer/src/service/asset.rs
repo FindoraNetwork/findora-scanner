@@ -93,19 +93,12 @@ pub async fn get_asset(api: &Api, address: Path<String>) -> Result<AssetResponse
     let res = sqlx::query(str.as_str()).fetch_all(&mut conn).await;
     let rows = match res {
         Ok(rows) => rows,
-        Err(e) => {
-            return match e {
-                sqlx::Error::RowNotFound => Ok(AssetResponse::Ok(Json(AssetResult {
-                    code: 404,
-                    message: "not found".to_string(),
-                    data: None,
-                }))),
-                _ => Ok(AssetResponse::InternalError(Json(AssetResult {
-                    code: 500,
-                    message: "internal error".to_string(),
-                    data: None,
-                }))),
-            }
+        _ => {
+            return Ok(AssetResponse::InternalError(Json(AssetResult {
+                code: 500,
+                message: "internal error".to_string(),
+                data: None,
+            })));
         }
     };
 

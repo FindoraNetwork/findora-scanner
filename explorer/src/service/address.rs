@@ -60,27 +60,16 @@ pub async fn get_address(
         (value @? '$.body.operations[*].TransferAsset.body.transfer.outputs[*].public_key ? (@ == \"{}\")') \
         or (value @? '$.body.operations[*].TransferAsset.body.transfer.inputs[*].public_key ? (@ == \"{}\")') \
         ORDER BY timestamp DESC LIMIT {} OFFSET {}", pk_b64, pk_b64, page_size, (page - 1) * page_size);
-    let sql_total = format!(
-        "SELECT count(*) as total FROM transaction WHERE \
-        (value @? '$.body.operations[*].TransferAsset.body.transfer.outputs[*].public_key ? (@ == \"{}\")') \
-        or (value @? '$.body.operations[*].TransferAsset.body.transfer.inputs[*].public_key ? (@ == \"{}\")')", pk_b64, pk_b64);
 
     let res = sqlx::query(sql_str.as_str()).fetch_all(&mut conn).await;
     let rows = match res {
         Ok(rows) => rows,
-        Err(e) => {
-            return match e {
-                sqlx::Error::RowNotFound => Ok(AddressResponse::NotFound(Json(AddressResult {
-                    code: 404,
-                    message: "not found".to_string(),
-                    data: None,
-                }))),
-                _ => Ok(AddressResponse::InternalError(Json(AddressResult {
-                    code: 500,
-                    message: "internal error".to_string(),
-                    data: None,
-                }))),
-            }
+        _ => {
+            return Ok(AddressResponse::InternalError(Json(AddressResult {
+                code: 500,
+                message: "internal error".to_string(),
+                data: None,
+            })));
         }
     };
 
@@ -110,8 +99,12 @@ pub async fn get_address(
     }
 
     // total items
-    let res = sqlx::query(sql_total.as_str()).fetch_all(&mut conn).await;
-    let total: i64 = res.unwrap()[0].try_get("total")?;
+    let sql_total = format!(
+        "SELECT count(*) as total FROM transaction WHERE \
+        (value @? '$.body.operations[*].TransferAsset.body.transfer.outputs[*].public_key ? (@ == \"{}\")') \
+        or (value @? '$.body.operations[*].TransferAsset.body.transfer.inputs[*].public_key ? (@ == \"{}\")')", pk_b64, pk_b64);
+    let res = sqlx::query(sql_total.as_str()).fetch_one(&mut conn).await;
+    let total: i64 = res.unwrap().try_get("total")?;
 
     Ok(AddressResponse::Ok(Json(AddressResult {
         code: 200,
