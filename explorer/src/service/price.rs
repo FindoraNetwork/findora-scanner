@@ -43,9 +43,9 @@ pub async fn simple_price(
     _api: &Api,
     ids: Query<String>,
     vs_currencies: Query<String>,
-) -> SimplePriceResponse {
+) -> poem::Result<SimplePriceResponse> {
     if ids.is_empty() || vs_currencies.is_empty() {
-        return SimplePriceResponse::BadRequest;
+        return Ok(SimplePriceResponse::BadRequest);
     }
 
     let url = format!(
@@ -55,11 +55,11 @@ pub async fn simple_price(
     let resp = reqwest::get(url).await.unwrap().text().await.unwrap();
     let v: Value = serde_json::from_str(&resp).unwrap();
 
-    SimplePriceResponse::Ok(Json(SimplePriceResult {
+    Ok(SimplePriceResponse::Ok(Json(SimplePriceResult {
         code: 200,
         message: "".to_string(),
         data: v,
-    }))
+    })))
 }
 
 pub async fn market_chat(
@@ -68,9 +68,9 @@ pub async fn market_chat(
     vs_currency: Query<String>,
     interval: Query<Option<String>>,
     days: Query<i32>,
-) -> MarketChartResponse {
+) -> poem::Result<MarketChartResponse> {
     if id.is_empty() || vs_currency.is_empty() || days.is_empty() {
-        return MarketChartResponse::BadRequest;
+        return Ok(MarketChartResponse::BadRequest);
     }
 
     let mut url = format!(
@@ -83,9 +83,9 @@ pub async fn market_chat(
     let resp = reqwest::get(url).await.unwrap().text().await.unwrap();
     let v: Value = serde_json::from_str(&resp).unwrap();
 
-    MarketChartResponse::Ok(Json(MarketChartResult {
+    Ok(MarketChartResponse::Ok(Json(MarketChartResult {
         code: 0,
         message: "".to_string(),
         data: v,
-    }))
+    })))
 }
