@@ -75,10 +75,10 @@ pub async fn statistics(api: &Api, ty: Query<Option<i64>>) -> Result<ChainStatis
 
     // total address
     let sql_str = if let Some(ty) = ty.0 {
-        format!("SELECT jsonb_path_query(value,'$.body.operations[*].TransferAsset.body.transfer.outputs[*].public_key') \
+        format!("SELECT jsonb_path_query(value,'$.body.operations[*].TransferAsset.body.transfer.*.public_key') \
         as addr FROM transaction WHERE ty={}", ty)
     } else {
-        "SELECT jsonb_path_query(value,'$.body.operations[*].TransferAsset.body.transfer.outputs[*].public_key') \
+        "SELECT jsonb_path_query(value,'$.body.operations[*].TransferAsset.body.transfer.*.public_key') \
         as addr FROM transaction".to_string()
     };
     let active_addresses_res = sqlx::query(sql_str.as_str()).fetch_all(&mut conn).await;
@@ -206,5 +206,83 @@ pub async fn staking_info(api: &Api, height: Query<Option<i64>>) -> Result<Staki
         code: 200,
         message: "".to_string(),
         data: Some(data),
+    })))
+}
+
+#[derive(ApiResponse)]
+pub enum DistributeResponse {
+    #[oai(status = 200)]
+    Ok(Json<DistributeResult>),
+    #[oai(status = 500)]
+    InternalError(Json<DistributeResult>),
+}
+
+#[derive(Serialize, Deserialize, Default, Debug, Object)]
+pub struct DistributeResult {
+    pub code: i32,
+    pub message: String,
+    pub data: Option<StakingData>,
+}
+
+pub async fn distribute(_api: &Api) -> Result<DistributeResponse> {
+    Ok(DistributeResponse::Ok(Json(DistributeResult::default())))
+}
+
+#[derive(ApiResponse)]
+pub enum AddressCountResponse {
+    #[oai(status = 200)]
+    Ok(Json<AddressCountResult>),
+    #[oai(status = 200)]
+    InternalError(Json<AddressCountResult>),
+}
+
+#[derive(Serialize, Deserialize, Default, Debug, Object)]
+pub struct AddressCountResult {
+    pub code: i32,
+    pub message: String,
+    pub data: Option<AddressCount>,
+}
+
+#[derive(Serialize, Deserialize, Default, Debug, Object)]
+pub struct AddressCount {
+    pub address_count: i64,
+}
+
+pub async fn address_count(
+    api: &Api,
+    start_time: Query<i64>,
+    end_time: Query<i64>,
+) -> Result<AddressCountResponse> {
+    let mut conn = api.storage.lock().await.acquire().await?;
+
+    let address_count_sql = format!("SELECT jsonb_path_query(value,'$.body.operations[*].TransferAsset.body.transfer.*.public_key') \
+        as addr FROM transaction WHERE timestamp >= {} AND timestamp <= {}", start_time.0, end_time.0);
+    let res = sqlx::query(address_count_sql.as_str())
+        .fetch_all(&mut conn)
+        .await;
+    if res.is_err() {
+        return Ok(AddressCountResponse::InternalError(Json(
+            AddressCountResult {
+                code: 500,
+                message: "internal error".to_string(),
+                data: None,
+            },
+        )));
+    }
+
+    let mut addrs: Vec<String> = vec![];
+    for row in res.unwrap() {
+        let v: Value = row.try_get("addr").unwrap();
+        let addr = serde_json::from_value(v).unwrap();
+        addrs.push(addr);
+    }
+    addrs.dedup();
+
+    Ok(AddressCountResponse::Ok(Json(AddressCountResult {
+        code: 200,
+        message: "".to_string(),
+        data: Some(AddressCount {
+            address_count: addrs.len() as i64,
+        }),
     })))
 }

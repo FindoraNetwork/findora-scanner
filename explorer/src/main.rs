@@ -4,7 +4,9 @@ mod utils;
 use crate::service::address::AddressResponse;
 use crate::service::asset::AssetResponse;
 use crate::service::block::{BlocksResponse, FullBlockResponse, SimpleBlockResponse};
-use crate::service::chain::{ChainStatisticsResponse, StakingResponse};
+use crate::service::chain::{
+    AddressCountResponse, ChainStatisticsResponse, DistributeResponse, StakingResponse,
+};
 use crate::service::price::{MarketChartResponse, SimplePriceResponse};
 use crate::service::tx::{TxResponse, TxsResponse};
 use crate::service::validator::{
@@ -332,7 +334,7 @@ impl Api {
         &self,
         ids: Query<String>,
         vs_currencies: Query<String>,
-    ) -> SimplePriceResponse {
+    ) -> poem::Result<SimplePriceResponse> {
         service::price::simple_price(self, ids, vs_currencies).await
     }
 
@@ -347,8 +349,26 @@ impl Api {
         vs_currency: Query<String>,
         interval: Query<Option<String>>,
         days: Query<i32>,
-    ) -> MarketChartResponse {
+    ) -> poem::Result<MarketChartResponse> {
         service::price::market_chat(self, id, vs_currency, interval, days).await
+    }
+
+    #[oai(path = "/address/count", method = "get", tag = "ApiTags::BlockChain")]
+    async fn address_count(
+        &self,
+        start_time: Query<i64>,
+        end_time: Query<i64>,
+    ) -> poem::Result<AddressCountResponse> {
+        service::chain::address_count(self, start_time, end_time)
+            .await
+            .map_err(utils::handle_fetch_one_err)
+    }
+
+    #[oai(path = "/distribute", method = "get", tag = "ApiTags::BlockChain")]
+    async fn distribute(&self) -> poem::Result<DistributeResponse> {
+        service::chain::distribute(self)
+            .await
+            .map_err(utils::handle_fetch_one_err)
     }
 }
 
