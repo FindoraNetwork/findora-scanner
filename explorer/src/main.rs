@@ -353,7 +353,7 @@ impl Api {
         service::price::market_chat(self, id, vs_currency, interval, days).await
     }
 
-    #[oai(path = "/address/count", method = "get", tag = "ApiTags::BlockChain")]
+    #[oai(path = "/address/count", method = "get", tag = "ApiTags::Address")]
     async fn address_count(
         &self,
         start_time: Query<i64>,
