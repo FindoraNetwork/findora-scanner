@@ -84,7 +84,7 @@ pub async fn market_chat(
     let v: Value = serde_json::from_str(&resp).unwrap();
 
     Ok(MarketChartResponse::Ok(Json(MarketChartResult {
-        code: 0,
+        code: 200,
         message: "".to_string(),
         data: v,
     })))

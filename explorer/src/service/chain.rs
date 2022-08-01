@@ -291,7 +291,7 @@ pub async fn distribute(api: &Api) -> Result<DistributeResponse> {
         .try_get("cnt")?;
 
     Ok(DistributeResponse::Ok(Json(DistributeResult {
-        code: 0,
+        code: 200,
         message: "".to_string(),
         data: Some(TxsDistribute {
             transparent: non_evm - convert_account - bar - hide,
