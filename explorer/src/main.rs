@@ -364,7 +364,7 @@ impl Api {
             .map_err(utils::handle_fetch_one_err)
     }
 
-    #[oai(path = "/distribute", method = "get", tag = "ApiTags::BlockChain")]
+    #[oai(path = "/txs/distribute", method = "get", tag = "ApiTags::Transaction")]
     async fn distribute(&self) -> poem::Result<DistributeResponse> {
         service::chain::distribute(self)
             .await
