@@ -13,6 +13,8 @@ use std::collections::{HashMap, HashSet};
 pub enum ChainStatisticsResponse {
     #[oai(status = 200)]
     Ok(Json<ChainStatisticsRes>),
+    #[oai(status = 500)]
+    InternalError(Json<ChainStatisticsRes>),
 }
 
 #[derive(Serialize, Deserialize, Debug, Default, Object)]
@@ -33,6 +35,8 @@ pub struct StatisticsData {
 pub enum StakingResponse {
     #[oai(status = 200)]
     Ok(Json<StakingRes>),
+    #[oai(status = 200)]
+    InternalError(Json<StakingRes>),
 }
 
 #[derive(Serialize, Deserialize, Debug, Default, Object)]
@@ -64,11 +68,13 @@ pub async fn statistics(api: &Api, ty: Query<Option<i64>>) -> Result<ChainStatis
     let row = match total_txs_res {
         Ok(row) => row,
         _ => {
-            return Ok(ChainStatisticsResponse::Ok(Json(ChainStatisticsRes {
-                code: 500,
-                message: "internal error, querying total txs.".to_string(),
-                data: None,
-            })));
+            return Ok(ChainStatisticsResponse::InternalError(Json(
+                ChainStatisticsRes {
+                    code: 500,
+                    message: "internal error while querying total txs.".to_string(),
+                    data: None,
+                },
+            )));
         }
     };
     let total_txs = row.try_get("cnt")?;
@@ -85,11 +91,13 @@ pub async fn statistics(api: &Api, ty: Query<Option<i64>>) -> Result<ChainStatis
     let rows = match active_addresses_res {
         Ok(rows) => rows,
         _ => {
-            return Ok(ChainStatisticsResponse::Ok(Json(ChainStatisticsRes {
-                code: 500,
-                message: "internal error, querying total addresses.".to_string(),
-                data: None,
-            })));
+            return Ok(ChainStatisticsResponse::InternalError(Json(
+                ChainStatisticsRes {
+                    code: 500,
+                    message: "internal error while querying total addresses.".to_string(),
+                    data: None,
+                },
+            )));
         }
     };
 
@@ -119,11 +127,13 @@ pub async fn statistics(api: &Api, ty: Query<Option<i64>>) -> Result<ChainStatis
     let row = match daily_txs_res {
         Ok(row) => row,
         _ => {
-            return Ok(ChainStatisticsResponse::Ok(Json(ChainStatisticsRes {
-                code: 500,
-                message: "internal error, querying daily txs.".to_string(),
-                data: None,
-            })));
+            return Ok(ChainStatisticsResponse::InternalError(Json(
+                ChainStatisticsRes {
+                    code: 500,
+                    message: "internal error while querying daily txs.".to_string(),
+                    data: None,
+                },
+            )));
         }
     };
     let daily_txs = row.try_get("cnt")?;
@@ -156,7 +166,7 @@ pub async fn staking_info(api: &Api, height: Query<Option<i64>>) -> Result<Staki
     let row = match delegation_res {
         Ok(row) => row,
         _ => {
-            return Ok(StakingResponse::Ok(Json(StakingRes {
+            return Ok(StakingResponse::InternalError(Json(StakingRes {
                 code: 500,
                 message: "internal error.".to_string(),
                 data: None,
@@ -221,11 +231,75 @@ pub enum DistributeResponse {
 pub struct DistributeResult {
     pub code: i32,
     pub message: String,
-    pub data: Option<StakingData>,
+    pub data: Option<TxsDistribute>,
 }
 
-pub async fn distribute(_api: &Api) -> Result<DistributeResponse> {
-    Ok(DistributeResponse::Ok(Json(DistributeResult::default())))
+#[derive(Serialize, Deserialize, Default, Debug, Object)]
+pub struct TxsDistribute {
+    pub transparent: i64,
+    pub privacy: i64,
+    pub prism: i64,
+    pub evm_compatible: i64,
+}
+
+pub async fn distribute(api: &Api) -> Result<DistributeResponse> {
+    let mut conn = api.storage.lock().await.acquire().await?;
+    // xhub
+    let xhub: i64 =
+        sqlx::query("SELECT count(*) as cnt FROM transaction WHERE value @? '$.function.XHub'")
+            .fetch_one(&mut conn)
+            .await?
+            .try_get("cnt")?;
+
+    // evm
+    let evm: i64 = sqlx::query("SELECT count(*) as cnt FROM transaction WHERE ty=1")
+        .fetch_one(&mut conn)
+        .await?
+        .try_get("cnt")?;
+
+    let convert_account_sql = "SELECT count(*) as cnt FROM transaction WHERE value @? '$.body.operations[*].ConvertAccount'";
+    let bar_sql = "SELECT count(*) as cnt FROM transaction WHERE (value @? '$.body.operations[*].AbarToBar') OR (value @? '$.body.operations[*].BarToAbar') OR (value @? '$.body.operations[*].TransferAnonAsset')";
+    let hide_amount_sql = "SELECT count(*) as cnt FROM transaction WHERE value @? '$.body.operations[*].TransferAsset.body.transfer.outputs[*].amount.Confidential'";
+    let hide_type_sql = "SELECT count(*) as cnt FROM transaction WHERE value @? '$.body.operations[*].TransferAsset.body.transfer.outputs[*].asset_type.Confidential'";
+    let hide_amount_and_type_sql = "SELECT count(*) as cnt FROM transaction WHERE (value @? '$.body.operations[*].TransferAsset.body.transfer.outputs[*].asset_type.Confidential') AND (value @? '$.body.operations[*].TransferAsset.body.transfer.outputs[*].amount.Confidential')";
+
+    let convert_account: i64 = sqlx::query(convert_account_sql)
+        .fetch_one(&mut conn)
+        .await?
+        .try_get("cnt")?;
+    let bar: i64 = sqlx::query(bar_sql)
+        .fetch_one(&mut conn)
+        .await?
+        .try_get("cnt")?;
+    let hide_amount: i64 = sqlx::query(hide_amount_sql)
+        .fetch_one(&mut conn)
+        .await?
+        .try_get("cnt")?;
+    let hide_type: i64 = sqlx::query(hide_type_sql)
+        .fetch_one(&mut conn)
+        .await?
+        .try_get("cnt")?;
+    let hide_amount_and_type: i64 = sqlx::query(hide_amount_and_type_sql)
+        .fetch_one(&mut conn)
+        .await?
+        .try_get("cnt")?;
+    let hide = hide_amount + hide_type - hide_amount_and_type;
+
+    let non_evm: i64 = sqlx::query("SELECT count(*) as cnt FROM transaction where ty=0")
+        .fetch_one(&mut conn)
+        .await?
+        .try_get("cnt")?;
+
+    Ok(DistributeResponse::Ok(Json(DistributeResult {
+        code: 0,
+        message: "".to_string(),
+        data: Some(TxsDistribute {
+            transparent: non_evm - convert_account - bar - hide,
+            privacy: bar + hide,
+            prism: xhub + convert_account,
+            evm_compatible: evm - xhub,
+        }),
+    })))
 }
 
 #[derive(ApiResponse)]
