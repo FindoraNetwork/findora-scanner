@@ -7,7 +7,7 @@ use std::io::Read;
 pub struct Config {
     pub server: ServerConfig,
     pub postgres: PostgresConfig,
-    pub tendermint: TendermintConfig,
+    pub rpc: TendermintConfig,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -26,7 +26,8 @@ pub struct PostgresConfig {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct TendermintConfig {
-    pub rpc: String,
+    pub platform: String,
+    pub tendermint: String,
 }
 
 impl Config {

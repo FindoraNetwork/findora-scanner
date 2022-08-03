@@ -8,6 +8,8 @@
     addr = "localhost"
     database = "test"
 
-[tendermint]
-    rpc = "https://prod-mainnet.prod.findora.org:26657"
+[rpc]
+    tendermint = "https://prod-forge.prod.findora.org:26657/"
+    platform = "https://prod-forge.prod.findora.org:8667/"
+
 

@@ -25,7 +25,8 @@ use std::time::Duration;
 use tokio::sync::Mutex;
 
 pub struct Api {
-    rpc: TendermintRPC,
+    platform: TendermintRPC,
+    tendermint: TendermintRPC,
     storage: Mutex<Pool<Postgres>>,
 }
 
@@ -405,13 +406,17 @@ async fn main() -> Result<()> {
     let pool = sqlx::PgPool::connect(&postgres_config).await.unwrap();
 
     // tendermint rpc
-    let rpc_client = TendermintRPC::new(
+    let tendermint_rpc_client = TendermintRPC::new(
         Duration::from_secs(10),
-        config.tendermint.rpc.to_string().parse().unwrap(),
+        config.rpc.tendermint.to_string().parse().unwrap(),
     );
-
+    let platform_rpc_client = TendermintRPC::new(
+        Duration::from_secs(10),
+        config.rpc.platform.to_string().parse().unwrap(),
+    );
     let api = Api {
-        rpc: rpc_client,
+        platform: platform_rpc_client,
+        tendermint: tendermint_rpc_client,
         storage: Mutex::new(pool),
     };
 
