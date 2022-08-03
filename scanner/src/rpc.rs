@@ -19,8 +19,8 @@ use module::rpc::block::BlockSizeRPC;
 use reqwest::{Client, ClientBuilder, Url};
 
 pub struct TendermintRPC {
-    rpc: Url,
-    client: Client,
+    pub rpc: Url,
+    pub client: Client,
 }
 
 impl TendermintRPC {

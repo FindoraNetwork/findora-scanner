@@ -1,6 +1,7 @@
 use crate::Api;
 use anyhow::Result;
-use module::schema::{DelegationInfo, DelegationOpt, Memo};
+use log::debug;
+use module::schema::{DelegationOpt, Memo};
 use poem_openapi::param::Path;
 use poem_openapi::{payload::Json, ApiResponse, Object};
 use serde::{Deserialize, Serialize};
@@ -264,34 +265,23 @@ pub async fn validator_detail(api: &Api, address: Path<String>) -> Result<Valida
 }
 
 pub async fn circulating_supply(api: &Api) -> Result<CirculatingSupplyResponse> {
-    let mut conn = api.storage.lock().await.acquire().await?;
-    let sql = "SELECT info FROM delegations ORDER BY height DESC LIMIT 1".to_string();
-    let dl_res = sqlx::query(sql.as_str()).fetch_one(&mut conn).await;
+    let circulating_supply_url = api.platform.rpc.join("circulating_supply").unwrap();
+    debug!("circulating_supply_url: {}", circulating_supply_url);
 
-    let row = match dl_res {
-        Ok(row) => row,
-        _ => {
-            return Ok(CirculatingSupplyResponse::Ok(Json(
-                CirculatingSupplyResult {
-                    code: 500,
-                    message: "".to_string(),
-                    data: None,
-                },
-            )))
-        }
-    };
-    let info: Value = row.try_get("info")?;
-    let delegation_info: DelegationInfo = serde_json::from_value(info).unwrap();
+    let res = api
+        .platform
+        .client
+        .get(circulating_supply_url)
+        .send()
+        .await?
+        .json::<CirculatingSupply>()
+        .await?;
 
     Ok(CirculatingSupplyResponse::Ok(Json(
         CirculatingSupplyResult {
             code: 200,
             message: "".to_string(),
-            data: Some(CirculatingSupply {
-                global_circulating_supply: 0.0,
-                global_delegation_amount: 0.0,
-                global_return_rate: delegation_info.return_rate.value,
-            }),
+            data: Some(res),
         },
     )))
 }
