@@ -121,7 +121,7 @@ pub async fn validator_list(api: &Api) -> Result<ValidatorListResponse> {
         .fetch_one(&mut conn)
         .await?;
     let height: i64 = row.try_get("height")?;
-    let sql = format!("SELECT jsonb_path_query(value->'body', '$.operations[*].Delegation') as d FROM transaction WHERE code=0 AND height={}", height);
+    let sql = format!("SELECT jsonb_path_query(value->'body', '$.operations[*].Delegation') as d FROM transaction WHERE code=0 AND height<{}", height);
     let res = sqlx::query(sql.as_str()).fetch_all(&mut conn).await;
     let rows = match res {
         Ok(rows) => rows,
@@ -192,7 +192,7 @@ pub async fn validator_detail(api: &Api, address: Path<String>) -> Result<Valida
         .await?;
     let proposed_cnt: i64 = row.try_get("cnt")?;
 
-    let sql_update = format!("SELECT jsonb_path_query(value->'body', '$.operations[*].UpdateStaker ? (@.body.validator==\"{}\")') as d FROM transaction WHERE code=0 AND height={} ORDER BY height LIMIT 1", address.0, height);
+    let sql_update = format!("SELECT jsonb_path_query(value->'body', '$.operations[*].UpdateStaker ? (@.body.validator==\"{}\")') as d FROM transaction WHERE code=0 AND height<{} ORDER BY height LIMIT 1", address.0, height);
     let update_res = sqlx::query(sql_update.as_str()).fetch_one(&mut conn).await;
 
     if let Ok(r) = update_res {
@@ -223,7 +223,7 @@ pub async fn validator_detail(api: &Api, address: Path<String>) -> Result<Valida
             data: Some(detail),
         })))
     } else {
-        let sql_delegation = format!("SELECT jsonb_path_query(value->'body', '$.operations[*].Delegation ? (@.body.validator==\"{}\")') as d FROM transaction WHERE code=0 AND height={} ORDER BY height LIMIT 1", address.0, height);
+        let sql_delegation = format!("SELECT jsonb_path_query(value->'body', '$.operations[*].Delegation ? (@.body.validator==\"{}\")') as d FROM transaction WHERE code=0 AND height<{} ORDER BY height LIMIT 1", address.0, height);
         let delegate_res = sqlx::query(sql_delegation.as_str())
             .fetch_one(&mut conn)
             .await;

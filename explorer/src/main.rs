@@ -295,7 +295,7 @@ impl Api {
     }
 
     #[oai(
-        path = "/chain/validator_detail",
+        path = "/chain/validator_detail/:address",
         method = "get",
         tag = "ApiTags::BlockChain"
     )]
@@ -320,7 +320,7 @@ impl Api {
     }
 
     #[oai(
-        path = "/chain/delegator_list",
+        path = "/chain/delegator_list/:address",
         method = "get",
         tag = "ApiTags::BlockChain"
     )]
