@@ -4,9 +4,7 @@ mod utils;
 use crate::service::address::AddressResponse;
 use crate::service::asset::AssetResponse;
 use crate::service::block::{BlocksResponse, FullBlockResponse, SimpleBlockResponse};
-use crate::service::chain::{
-    AddressCountResponse, ChainStatisticsResponse, DistributeResponse, StakingResponse,
-};
+use crate::service::chain::{AddressCountResponse, DistributeResponse};
 use crate::service::price::{MarketChartResponse, SimplePriceResponse};
 use crate::service::tx::{TxResponse, TxsResponse};
 use crate::service::validator::{
@@ -24,6 +22,7 @@ use sqlx::{Pool, Postgres};
 use std::time::Duration;
 use tokio::sync::Mutex;
 
+#[allow(dead_code)]
 pub struct Api {
     platform: TendermintRPC,
     tendermint: TendermintRPC,
