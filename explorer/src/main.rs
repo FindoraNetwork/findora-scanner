@@ -257,31 +257,31 @@ impl Api {
             .map_err(utils::handle_fetch_one_err)
     }
 
-    #[oai(
-        path = "/chain/statistics",
-        method = "get",
-        tag = "ApiTags::BlockChain"
-    )]
-    async fn statistics(
-        &self,
-        /// ty: tx type, 0 - Findora tx, 1 - EVM tx.
-        ty: Query<Option<i64>>,
-    ) -> poem::Result<ChainStatisticsResponse> {
-        service::chain::statistics(self, ty)
-            .await
-            .map_err(utils::handle_fetch_one_err)
-    }
-
-    #[oai(path = "/chain/staking", method = "get", tag = "ApiTags::BlockChain")]
-    async fn staking(
-        &self,
-        /// block height
-        height: Query<Option<i64>>,
-    ) -> poem::Result<StakingResponse> {
-        service::chain::staking_info(self, height)
-            .await
-            .map_err(utils::handle_fetch_one_err)
-    }
+    // #[oai(
+    //     path = "/chain/statistics",
+    //     method = "get",
+    //     tag = "ApiTags::BlockChain"
+    // )]
+    // async fn statistics(
+    //     &self,
+    //     /// ty: tx type, 0 - Findora tx, 1 - EVM tx.
+    //     ty: Query<Option<i64>>,
+    // ) -> poem::Result<ChainStatisticsResponse> {
+    //     service::chain::statistics(self, ty)
+    //         .await
+    //         .map_err(utils::handle_fetch_one_err)
+    // }
+    //
+    // #[oai(path = "/chain/staking", method = "get", tag = "ApiTags::BlockChain")]
+    // async fn staking(
+    //     &self,
+    //     /// block height
+    //     height: Query<Option<i64>>,
+    // ) -> poem::Result<StakingResponse> {
+    //     service::chain::staking_info(self, height)
+    //         .await
+    //         .map_err(utils::handle_fetch_one_err)
+    // }
 
     #[oai(
         path = "/chain/validator_list",
