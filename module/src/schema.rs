@@ -25,9 +25,10 @@ pub const ABAR_TO_ABAR: i32 = 6;
 pub const BAR_TO_ABAR: i32 = 7;
 pub const PRISM_NATIVE_TO_EVM: i32 = 8;
 pub const PRISM_EVM_TO_NATIVE: i32 = 9;
-pub const STAKING: i32 = 10;
-pub const CLAIM: i32 = 11;
-pub const DEFINE_OR_ISSUE_ASSET: i32 = 12;
+pub const STAKING: i32 = 9;
+pub const UNSTAKING: i32 = 11;
+pub const CLAIM: i32 = 12;
+pub const DEFINE_OR_ISSUE_ASSET: i32 = 13;
 
 #[derive(Serialize, Deserialize)]
 pub struct EvmTx {
