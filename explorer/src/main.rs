@@ -4,7 +4,7 @@ mod utils;
 use crate::service::address::AddressResponse;
 use crate::service::asset::AssetResponse;
 use crate::service::block::{BlocksResponse, FullBlockResponse, SimpleBlockResponse};
-use crate::service::chain::{AddressCountResponse, DistributeResponse};
+use crate::service::chain::{AddressCountResponse, ChainStatisticsResponse, DistributeResponse};
 use crate::service::price::{MarketChartResponse, SimplePriceResponse};
 use crate::service::tx::{TxResponse, TxsResponse};
 use crate::service::validator::{
@@ -256,31 +256,20 @@ impl Api {
             .map_err(utils::handle_fetch_one_err)
     }
 
-    // #[oai(
-    //     path = "/chain/statistics",
-    //     method = "get",
-    //     tag = "ApiTags::BlockChain"
-    // )]
-    // async fn statistics(
-    //     &self,
-    //     /// ty: tx type, 0 - Findora tx, 1 - EVM tx.
-    //     ty: Query<Option<i64>>,
-    // ) -> poem::Result<ChainStatisticsResponse> {
-    //     service::chain::statistics(self, ty)
-    //         .await
-    //         .map_err(utils::handle_fetch_one_err)
-    // }
-    //
-    // #[oai(path = "/chain/staking", method = "get", tag = "ApiTags::BlockChain")]
-    // async fn staking(
-    //     &self,
-    //     /// block height
-    //     height: Query<Option<i64>>,
-    // ) -> poem::Result<StakingResponse> {
-    //     service::chain::staking_info(self, height)
-    //         .await
-    //         .map_err(utils::handle_fetch_one_err)
-    // }
+    #[oai(
+        path = "/chain/statistics",
+        method = "get",
+        tag = "ApiTags::BlockChain"
+    )]
+    async fn statistics(
+        &self,
+        /// ty: tx type, 0 - Findora tx, 1 - EVM tx.
+        ty: Query<Option<i32>>,
+    ) -> poem::Result<ChainStatisticsResponse> {
+        service::chain::statistics(self, ty)
+            .await
+            .map_err(utils::handle_fetch_one_err)
+    }
 
     #[oai(
         path = "/chain/validator_list",
