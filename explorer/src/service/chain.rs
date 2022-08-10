@@ -4,18 +4,21 @@ use poem_openapi::param::Query;
 use poem_openapi::{payload::Json, ApiResponse, Object};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use sqlx::types::chrono::Local;
 use sqlx::Row;
 
 #[derive(ApiResponse)]
 pub enum ChainStatisticsResponse {
     #[oai(status = 200)]
-    Ok(Json<ChainStatisticsRes>),
+    Ok(Json<ChainStatisticsResult>),
+    #[oai(status = 404)]
+    NotFound(Json<ChainStatisticsResult>),
     #[oai(status = 500)]
-    InternalError(Json<ChainStatisticsRes>),
+    InternalError(Json<ChainStatisticsResult>),
 }
 
 #[derive(Serialize, Deserialize, Debug, Default, Object)]
-pub struct ChainStatisticsRes {
+pub struct ChainStatisticsResult {
     pub code: i32,
     pub message: String,
     pub data: Option<StatisticsData>,
@@ -191,5 +194,101 @@ pub async fn address_count(
         data: Some(AddressCount {
             address_count: addrs.len() as i64,
         }),
+    })))
+}
+
+pub async fn statistics(api: &Api, ty: Query<Option<i32>>) -> Result<ChainStatisticsResponse> {
+    let mut conn = api.storage.lock().await.acquire().await?;
+
+    // total txs
+    let sql_str = if let Some(ty) = ty.0 {
+        format!("SELECT COUNT(*) as cnt FROM transaction WHERE ty={}", ty)
+    } else {
+        "SELECT COUNT(*) as cnt FROM transaction".to_string()
+    };
+    let total_txs_res = sqlx::query(sql_str.as_str()).fetch_one(&mut conn).await;
+    let row = match total_txs_res {
+        Ok(row) => row,
+        _ => {
+            return Ok(ChainStatisticsResponse::InternalError(Json(
+                ChainStatisticsResult {
+                    code: 500,
+                    message: "internal error while querying total txs.".to_string(),
+                    data: None,
+                },
+            )));
+        }
+    };
+    let total_txs = row.try_get("cnt")?;
+
+    // total address
+    let sql_str = if let Some(ty) = ty.0 {
+        format!("SELECT jsonb_path_query(value,'$.body.operations[*].TransferAsset.body.transfer.*.public_key') \
+        as addr FROM transaction WHERE ty={}", ty)
+    } else {
+        "SELECT jsonb_path_query(value,'$.body.operations[*].TransferAsset.body.transfer.*.public_key') \
+        as addr FROM transaction".to_string()
+    };
+    let active_addresses_res = sqlx::query(sql_str.as_str()).fetch_all(&mut conn).await;
+    let rows = match active_addresses_res {
+        Ok(rows) => rows,
+        _ => {
+            return Ok(ChainStatisticsResponse::InternalError(Json(
+                ChainStatisticsResult {
+                    code: 500,
+                    message: "internal error while querying total addresses.".to_string(),
+                    data: None,
+                },
+            )));
+        }
+    };
+
+    let mut addrs: Vec<String> = vec![];
+    for row in rows {
+        let value: Value = row.try_get("addr")?;
+        let addr: String = serde_json::from_value(value).unwrap();
+        addrs.push(addr);
+    }
+    addrs.dedup();
+
+    // daily txs
+    let now = Local::now().date().and_hms(0, 0, 0);
+    let sql_str = if let Some(ty) = ty.0 {
+        format!(
+            "SELECT COUNT(*) as cnt FROM transaction WHERE ty={} AND timestamp>={}",
+            ty,
+            now.timestamp()
+        )
+    } else {
+        format!(
+            "SELECT COUNT(*) as cnt FROM transaction where timestamp>={}",
+            now.timestamp()
+        )
+    };
+    let daily_txs_res = sqlx::query(sql_str.as_str()).fetch_one(&mut conn).await;
+    let row = match daily_txs_res {
+        Ok(row) => row,
+        _ => {
+            return Ok(ChainStatisticsResponse::InternalError(Json(
+                ChainStatisticsResult {
+                    code: 500,
+                    message: "internal error while querying daily txs.".to_string(),
+                    data: None,
+                },
+            )));
+        }
+    };
+    let daily_txs = row.try_get("cnt")?;
+
+    let res_data = StatisticsData {
+        active_addresses: addrs.len() as i64,
+        total_txs,
+        daily_txs,
+    };
+
+    Ok(ChainStatisticsResponse::Ok(Json(ChainStatisticsResult {
+        code: 200,
+        message: "".to_string(),
+        data: Some(res_data),
     })))
 }
