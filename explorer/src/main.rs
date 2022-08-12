@@ -8,8 +8,8 @@ use crate::service::chain::{AddressCountResponse, ChainStatisticsResponse, Distr
 use crate::service::price::{MarketChartResponse, SimplePriceResponse};
 use crate::service::tx::{TxResponse, TxsResponse};
 use crate::service::validator::{
-    CirculatingSupplyResponse, DelegatorListResponse, ValidatorDetailResponse,
-    ValidatorListResponse,
+    CirculatingSupplyResponse, DelegatorListResponse, ValidatorDelegationResponse,
+    ValidatorDetailResponse, ValidatorListResponse,
 };
 use anyhow::Result;
 use poem::middleware::Cors;
@@ -356,6 +356,20 @@ impl Api {
     #[oai(path = "/txs/distribute", method = "get", tag = "ApiTags::Transaction")]
     async fn distribute(&self) -> poem::Result<DistributeResponse> {
         service::chain::distribute(self)
+            .await
+            .map_err(utils::handle_fetch_one_err)
+    }
+
+    #[oai(
+        path = "/chain/validator_delegation",
+        method = "get",
+        tag = "ApiTags::BlockChain"
+    )]
+    async fn validator_delegation(
+        &self,
+        address: Query<String>,
+    ) -> poem::Result<ValidatorDelegationResponse> {
+        service::validator::validator_delegation(self, address)
             .await
             .map_err(utils::handle_fetch_one_err)
     }
