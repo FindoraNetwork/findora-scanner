@@ -125,6 +125,7 @@ pub async fn get_txs(
     api: &Api,
     block_hash: Query<Option<String>>,
     block_height: Query<Option<i64>>,
+    address: Query<Option<String>>,
     from: Query<Option<String>>,
     to: Query<Option<String>>,
     ty: Query<Option<i32>>,
@@ -138,11 +139,28 @@ pub async fn get_txs(
     let mut sql_total = String::from("SELECT count(*) as total FROM transaction ");
     let mut params: Vec<String> = vec![];
     if let Some(block_hash) = block_hash.0 {
-        params.push(format!(" block_hash='{}' ", block_hash));
+        params.push(format!("block_hash='{}' ", block_hash));
     }
     if let Some(height) = block_height.0 {
-        params.push(format!(" height={} ", height));
+        params.push(format!("height={} ", height));
     }
+
+    if let Some(addr) = address.0 {
+        let pk = public_key_from_bech32(addr.as_str());
+        if pk.is_err() {
+            return Ok(TxsResponse::Ok(Json(TxsRes {
+                code: 400,
+                message: "invalid from address".to_string(),
+                data: None,
+            })));
+        }
+        let pk = pk.unwrap();
+        let native_addr = public_key_to_base64(&pk);
+        params.push(format!(
+            "((value @? '$.body.operations[*].TransferAsset.body.transfer.inputs[*].public_key ? (@==\"{}\")') OR (value @? '$.body.operations[*].TransferAsset.body.transfer.outputs[*].public_key ? (@==\"{}\")')) ",
+            native_addr, native_addr));
+    }
+
     if let Some(from_address) = from.0 {
         let pk = public_key_from_bech32(from_address.as_str());
         if pk.is_err() {
@@ -154,7 +172,7 @@ pub async fn get_txs(
         }
         let pk = pk.unwrap();
         params.push(format!(
-            " (value @? '$.body.operations[*].TransferAsset.body.transfer.inputs[*].public_key ? (@==\"{}\")') ",
+            "(value @? '$.body.operations[*].TransferAsset.body.transfer.inputs[*].public_key ? (@==\"{}\")') ",
             public_key_to_base64(&pk)));
     }
     if let Some(to_address) = to.0 {
@@ -168,29 +186,29 @@ pub async fn get_txs(
         }
         let pk = pk.unwrap();
         params.push(format!(
-            " (value @? '$.body.operations[*].TransferAsset.body.transfer.outputs[*].public_key ? (@==\"{}\")') ",
+            "(value @? '$.body.operations[*].TransferAsset.body.transfer.outputs[*].public_key ? (@==\"{}\")') ",
             public_key_to_base64(&pk)));
     }
     if let Some(ty) = ty.0 {
-        params.push(format!(" ty={} ", ty));
+        params.push(format!("ty={} ", ty));
     }
     if let Some(start_time) = start_time.0 {
-        params.push(format!(" timestamp>={} ", start_time));
+        params.push(format!("timestamp>={} ", start_time));
     }
     if let Some(end_time) = end_time.0 {
-        params.push(format!(" timestamp<={} ", end_time));
+        params.push(format!("timestamp<={} ", end_time));
     }
     let page = page.0.unwrap_or(1);
     let page_size = page_size.0.unwrap_or(10);
 
     if !params.is_empty() {
-        sql_str = sql_str.add(" WHERE ").add(params.join(" AND ").as_str());
-        sql_total = sql_total.add(" WHERE ").add(params.join(" AND ").as_str());
+        sql_str = sql_str.add("WHERE ").add(params.join("AND ").as_str());
+        sql_total = sql_total.add("WHERE ").add(params.join("AND ").as_str());
     }
 
     sql_str = sql_str.add(
         format!(
-            " ORDER BY timestamp DESC LIMIT {} OFFSET {}",
+            "ORDER BY timestamp DESC LIMIT {} OFFSET {} ",
             page_size,
             (page - 1) * page_size
         )
@@ -217,7 +235,6 @@ pub async fn get_txs(
         let timestamp: i64 = row.try_get("timestamp")?;
         let height: i64 = row.try_get("height")?;
         let code: i64 = row.try_get("code")?;
-        //let log: String = row.try_get("log")?;
         let log = "".to_string();
         let result: Value = row.try_get("result")?;
         let value: Value = row.try_get("value")?;
@@ -275,43 +292,43 @@ pub async fn get_triple_masking_txs(
     if let Some(bar) = bar.0 {
         if bar == ABAR_TO_BAR {
             if let Some(pk) = pub_key.0 {
-                params.push(format!(" (value @? '$.body.operations[*].AbarToBar.note.body.output.public_key ? (@==\"{}\")') ", pk));
+                params.push(format!("(value @? '$.body.operations[*].AbarToBar.note.body.output.public_key ? (@==\"{}\")') ", pk));
             } else {
-                params.push(" (value @? '$.body.operations[*].AbarToBar.note.body.output.public_key ? (@!=\"\")') ".to_string());
+                params.push("(value @? '$.body.operations[*].AbarToBar.note.body.output.public_key ? (@!=\"\")') ".to_string());
             }
         } else if bar == BAR_TO_ABAR {
             if let Some(pk) = pub_key.0 {
-                params.push(format!(" (value @? '$.body.operations[*].BarToAbar.note.body.output.commitment ? (@==\"{}\")') ", pk));
+                params.push(format!("(value @? '$.body.operations[*].BarToAbar.note.body.output.commitment ? (@==\"{}\")') ", pk));
             } else {
-                params.push(" (value @? '$.body.operations[*].BarToAbar.note.body.output.commitment ? (@!=\"\")') ".to_string());
+                params.push("(value @? '$.body.operations[*].BarToAbar.note.body.output.commitment ? (@!=\"\")') ".to_string());
             }
         }
     } else if let Some(pk) = pub_key.0 {
-        params.push(format!(" (value @? '$.body.operations[*].AbarToBar.note.body.output.public_key ? (@==\"{}\")') OR (value @? '$.body.operations[*].BarToAbar.note.body.output.commitment ? (@==\"{}\")')", pk, pk));
+        params.push(format!("(value @? '$.body.operations[*].AbarToBar.note.body.output.public_key ? (@==\"{}\")') OR (value @? '$.body.operations[*].BarToAbar.note.body.output.commitment ? (@==\"{}\")') ", pk, pk));
     }
 
     if let Some(start_time) = start_time.0 {
-        params.push(format!(" timestamp>={} ", start_time));
+        params.push(format!("timestamp>={} ", start_time));
     }
     if let Some(end_time) = end_time.0 {
-        params.push(format!(" timestamp<={} ", end_time));
+        params.push(format!("timestamp<={} ", end_time));
     }
     let page = page.0.unwrap_or(1);
     let page_size = page_size.0.unwrap_or(10);
 
     if !params.is_empty() {
-        sql_str = sql_str.add(" WHERE ").add(params.join(" AND ").as_str());
-        sql_total = sql_total.add(" WHERE ").add(params.join(" AND ").as_str());
+        sql_str = sql_str.add("WHERE ").add(params.join("AND ").as_str());
+        sql_total = sql_total.add("WHERE ").add(params.join("AND ").as_str());
     } else {
         sql_str += &String::from(
-            " WHERE (value @? '$.body.operations[*].AbarToBar.note.body.output.public_key ? (@!=\"\")') \
-            OR (value @? '$.body.operations[*].BarToAbar.note.body.output.commitment ? (@!=\"\")')",
+            "WHERE (value @? '$.body.operations[*].AbarToBar.note.body.output.public_key ? (@!=\"\")') \
+            OR (value @? '$.body.operations[*].BarToAbar.note.body.output.commitment ? (@!=\"\")') ",
         );
     }
 
     sql_str = sql_str.add(
         format!(
-            " ORDER BY timestamp DESC LIMIT {} OFFSET {}",
+            "ORDER BY timestamp DESC LIMIT {} OFFSET {}",
             page_size,
             (page - 1) * page_size
         )
