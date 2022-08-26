@@ -50,9 +50,14 @@ impl Api {
         block_id: Query<Option<String>>,
         /// block height
         height: Query<Option<i64>>,
-        /// from address, e.g. 'fra1p4vy5n9mlkdys7xczegj398xtyvw2nawz00nnfh4yr7fpjh297cqsxfv7v'.
+        /// account address, querying the txs sent and received by this address.
+        /// e.g. 'fra1p4vy5n9mlkdys7xczegj398xtyvw2nawz00nnfh4yr7fpjh297cqsxfv7v'.
+        address: Query<Option<String>>,
+        /// from address, querying the txs sent by this address.
+        /// e.g. 'fra1p4vy5n9mlkdys7xczegj398xtyvw2nawz00nnfh4yr7fpjh297cqsxfv7v'.
         from: Query<Option<String>>,
-        /// to address.
+        /// to address, querying the txs received by this address.
+        /// e.g. 'fra1p4vy5n9mlkdys7xczegj398xtyvw2nawz00nnfh4yr7fpjh297cqsxfv7v'.
         to: Query<Option<String>>,
         /// transaction type. 0 is for Findora tx, 1 is for evm tx.
         ty: Query<Option<i32>>,
@@ -66,7 +71,7 @@ impl Api {
         page_size: Query<Option<i64>>,
     ) -> poem::Result<TxsResponse> {
         service::tx::get_txs(
-            self, block_id, height, from, to, ty, start_time, end_time, page, page_size,
+            self, block_id, height, address, from, to, ty, start_time, end_time, page, page_size,
         )
         .await
         .map_err(utils::handle_fetch_one_err)
