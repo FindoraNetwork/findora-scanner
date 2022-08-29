@@ -2,6 +2,7 @@ use crate::Api;
 use poem_openapi::param::{Path, Query};
 use poem_openapi::types::Type;
 use poem_openapi::{payload::Json, ApiResponse, Object};
+use redis::Commands;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
@@ -39,13 +40,25 @@ pub struct MarketChartResult {
     pub data: Value,
 }
 
+#[allow(clippy::let_unit_value)]
 pub async fn simple_price(
-    _api: &Api,
+    api: &Api,
     ids: Query<String>,
     vs_currencies: Query<String>,
 ) -> poem::Result<SimplePriceResponse> {
     if ids.is_empty() || vs_currencies.is_empty() {
         return Ok(SimplePriceResponse::BadRequest);
+    }
+    let mut rds_conn = api.redis_client.get_connection().unwrap();
+    let res = rds_conn.get("simple_price");
+    if res.is_ok() {
+        let price_data: String = res.unwrap();
+        let v: Value = serde_json::from_str(price_data.as_str()).unwrap();
+        return Ok(SimplePriceResponse::Ok(Json(SimplePriceResult {
+            code: 200,
+            message: "".to_string(),
+            data: v,
+        })));
     }
 
     let url = format!(
@@ -55,6 +68,9 @@ pub async fn simple_price(
     let resp = reqwest::get(url).await.unwrap().text().await.unwrap();
     let v: Value = serde_json::from_str(&resp).unwrap();
 
+    let _: () = rds_conn.set("simple_price", resp).unwrap();
+    let _: () = rds_conn.expire("simple_price", 5).unwrap();
+
     Ok(SimplePriceResponse::Ok(Json(SimplePriceResult {
         code: 200,
         message: "".to_string(),
@@ -62,8 +78,9 @@ pub async fn simple_price(
     })))
 }
 
-pub async fn market_chat(
-    _api: &Api,
+#[allow(clippy::let_unit_value)]
+pub async fn market_chart(
+    api: &Api,
     id: Path<String>,
     vs_currency: Query<String>,
     interval: Query<Option<String>>,
@@ -71,6 +88,17 @@ pub async fn market_chat(
 ) -> poem::Result<MarketChartResponse> {
     if id.is_empty() || vs_currency.is_empty() || days.is_empty() {
         return Ok(MarketChartResponse::BadRequest);
+    }
+    let mut rds_conn = api.redis_client.get_connection().unwrap();
+    let res = rds_conn.get("market_chart");
+    if res.is_ok() {
+        let market_data: String = res.unwrap();
+        let v: Value = serde_json::from_str(market_data.as_str()).unwrap();
+        return Ok(MarketChartResponse::Ok(Json(MarketChartResult {
+            code: 200,
+            message: "".to_string(),
+            data: v,
+        })));
     }
 
     let mut url = format!(
@@ -82,6 +110,9 @@ pub async fn market_chat(
     }
     let resp = reqwest::get(url).await.unwrap().text().await.unwrap();
     let v: Value = serde_json::from_str(&resp).unwrap();
+
+    let _: () = rds_conn.set("market_chart", resp).unwrap();
+    let _: () = rds_conn.expire("market_chart", 5).unwrap();
 
     Ok(MarketChartResponse::Ok(Json(MarketChartResult {
         code: 200,
