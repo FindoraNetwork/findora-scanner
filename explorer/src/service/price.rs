@@ -69,7 +69,7 @@ pub async fn simple_price(
     let v: Value = serde_json::from_str(&resp).unwrap();
 
     let _: () = rds_conn.set("simple_price", resp).unwrap();
-    let _: () = rds_conn.expire("simple_price", 5).unwrap();
+    let _: () = rds_conn.expire("simple_price", 5 * 60).unwrap();
 
     Ok(SimplePriceResponse::Ok(Json(SimplePriceResult {
         code: 200,
@@ -112,7 +112,7 @@ pub async fn market_chart(
     let v: Value = serde_json::from_str(&resp).unwrap();
 
     let _: () = rds_conn.set("market_chart", resp).unwrap();
-    let _: () = rds_conn.expire("market_chart", 5).unwrap();
+    let _: () = rds_conn.expire("market_chart", 5 * 60).unwrap();
 
     Ok(MarketChartResponse::Ok(Json(MarketChartResult {
         code: 200,
