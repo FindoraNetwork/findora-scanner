@@ -694,10 +694,10 @@ fn evm_hash_and_type(tx: &mut TransactionResponse) -> Result<()> {
         tx.ty = ABAR_TO_ABAR;
     } else if tx_str.contains("Claim") {
         tx.ty = CLAIM;
-    } else if tx_str.contains("Delegation") {
-        tx.ty = STAKING;
     } else if tx_str.contains("UnDelegation") {
         tx.ty = UNSTAKING;
+    } else if tx_str.contains("Delegation") {
+        tx.ty = STAKING;
     } else if tx_str.contains("DefineAsset") || tx_str.contains("IssueAsset") {
         tx.ty = DEFINE_OR_ISSUE_ASSET;
     } else {
