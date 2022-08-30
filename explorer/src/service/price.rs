@@ -66,7 +66,7 @@ pub async fn simple_price(
         ids.0, vs_currencies.0
     );
     let resp = reqwest::get(url).await.unwrap().text().await.unwrap();
-    let v: Value = serde_json::from_str(&resp).unwrap();
+    let v: Value = serde_json::from_str(resp.as_str()).unwrap();
 
     let _: () = rds_conn.set("simple_price", resp).unwrap();
     let _: () = rds_conn.expire("simple_price", 5 * 60).unwrap();
@@ -109,7 +109,7 @@ pub async fn market_chart(
         url = format!("https://api.coingecko.com/api/v3/coins/{}/market_chart?vs_currency={}&days={}&interval={}", id.0, vs_currency.0, days.0, itv);
     }
     let resp = reqwest::get(url).await.unwrap().text().await.unwrap();
-    let v: Value = serde_json::from_str(&resp).unwrap();
+    let v: Value = serde_json::from_str(resp.as_str()).unwrap();
 
     let _: () = rds_conn.set("market_chart", resp).unwrap();
     let _: () = rds_conn.expire("market_chart", 5 * 60).unwrap();
