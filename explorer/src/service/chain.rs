@@ -93,10 +93,15 @@ pub async fn distribute(api: &Api) -> Result<DistributeResponse> {
         .await?
         .try_get("cnt")?;
 
+    // not evm
+    let not_evm: i64 = sqlx::query("SELECT count(*) as cnt FROM transaction WHERE ty=0")
+        .fetch_one(&mut conn)
+        .await?
+        .try_get("cnt")?;
+
     let convert_account_sql = "SELECT count(*) as cnt FROM transaction WHERE value @? '$.body.operations[*].ConvertAccount'";
     let bar_sql = "SELECT count(*) as cnt FROM transaction WHERE (value @? '$.body.operations[*].AbarToBar') OR (value @? '$.body.operations[*].BarToAbar') OR (value @? '$.body.operations[*].TransferAnonAsset')";
-    let hide_amount_sql = "SELECT count(*) as cnt FROM transaction WHERE value @? '$.body.operations[*].TransferAsset.body.transfer.outputs[*].amount.Confidential'";
-    let hide_type_sql = "SELECT count(*) as cnt FROM transaction WHERE value @? '$.body.operations[*].TransferAsset.body.transfer.outputs[*].asset_type.Confidential'";
+    let hide_amount_or_type_sql =  "SELECT count(*) as cnt FROM transaction WHERE (value @? '$.body.operations[*].TransferAsset.body.transfer.outputs[*].asset_type.Confidential') OR (value @? '$.body.operations[*].TransferAsset.body.transfer.outputs[*].amount.Confidential')";
     let hide_amount_and_type_sql = "SELECT count(*) as cnt FROM transaction WHERE (value @? '$.body.operations[*].TransferAsset.body.transfer.outputs[*].asset_type.Confidential') AND (value @? '$.body.operations[*].TransferAsset.body.transfer.outputs[*].amount.Confidential')";
 
     let convert_account: i64 = sqlx::query(convert_account_sql)
@@ -107,11 +112,7 @@ pub async fn distribute(api: &Api) -> Result<DistributeResponse> {
         .fetch_one(&mut conn)
         .await?
         .try_get("cnt")?;
-    let hide_amount: i64 = sqlx::query(hide_amount_sql)
-        .fetch_one(&mut conn)
-        .await?
-        .try_get("cnt")?;
-    let hide_type: i64 = sqlx::query(hide_type_sql)
+    let hide_type_or_amount: i64 = sqlx::query(hide_amount_or_type_sql)
         .fetch_one(&mut conn)
         .await?
         .try_get("cnt")?;
@@ -119,18 +120,13 @@ pub async fn distribute(api: &Api) -> Result<DistributeResponse> {
         .fetch_one(&mut conn)
         .await?
         .try_get("cnt")?;
-    let hide = hide_amount + hide_type - hide_amount_and_type;
-
-    let non_evm: i64 = sqlx::query("SELECT count(*) as cnt FROM transaction where ty=0")
-        .fetch_one(&mut conn)
-        .await?
-        .try_get("cnt")?;
+    let hide = hide_type_or_amount - hide_amount_and_type;
 
     Ok(DistributeResponse::Ok(Json(DistributeResult {
         code: 200,
         message: "".to_string(),
         data: Some(TxsDistribute {
-            transparent: non_evm - convert_account - bar - hide,
+            transparent: not_evm - convert_account - bar - hide,
             privacy: bar + hide,
             prism: xhub + convert_account,
             evm_compatible: evm - xhub,
