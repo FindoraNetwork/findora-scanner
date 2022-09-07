@@ -18,9 +18,9 @@ use poem_openapi::param::{Path, Query};
 use poem_openapi::{OpenApi, OpenApiService, Tags};
 use scanner::rpc::TendermintRPC;
 use service::tx::PmtxsResponse;
+use sqlx::pool::PoolOptions;
 use sqlx::{Pool, Postgres};
 use std::time::Duration;
-use sqlx::pool::PoolOptions;
 use tokio::sync::Mutex;
 
 #[allow(dead_code)]
@@ -412,7 +412,7 @@ async fn main() -> Result<()> {
     );
     //let postgres_config=format!("host={} user={} password={}",config.postgres.addr, config.postgres.account, config.postgres.password);
     // std::env::set_var("DATABASE_URL", postgres_config);
-    let mut opt= PoolOptions::new();
+    let mut opt = PoolOptions::new();
     opt = opt.max_connections(1000);
     let pool = opt.connect(&postgres_config).await.unwrap();
 
