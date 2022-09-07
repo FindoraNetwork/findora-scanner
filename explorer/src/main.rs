@@ -412,6 +412,7 @@ async fn main() -> Result<()> {
     //let postgres_config=format!("host={} user={} password={}",config.postgres.addr, config.postgres.account, config.postgres.password);
     // std::env::set_var("DATABASE_URL", postgres_config);
     let pool = sqlx::PgPool::connect(&postgres_config).await.unwrap();
+    pool.options().max_connections(1000);
 
     // tendermint rpc
     let tendermint_rpc_client = TendermintRPC::new(
