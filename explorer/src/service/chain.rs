@@ -213,7 +213,25 @@ pub async fn address_count(
     })))
 }
 
+#[allow(clippy::let_unit_value)]
 pub async fn statistics(api: &Api, ty: Query<Option<i32>>) -> Result<ChainStatisticsResponse> {
+    let key = if let Some(ty) = ty.0 {
+        format!("stat{}", ty)
+    } else {
+        "stat".to_string()
+    };
+    let mut rds_conn = api.redis_client.get_connection().unwrap();
+    let res = rds_conn.get(key.clone());
+    if res.is_ok() {
+        let stat_data: String = res.unwrap();
+        let v: StatisticsData = serde_json::from_str(stat_data.as_str()).unwrap();
+        return Ok(ChainStatisticsResponse::Ok(Json(ChainStatisticsResult {
+            code: 200,
+            message: "".to_string(),
+            data: Some(v),
+        })));
+    }
+
     let mut conn = api.storage.lock().await.acquire().await?;
 
     // total txs
@@ -268,17 +286,17 @@ pub async fn statistics(api: &Api, ty: Query<Option<i32>>) -> Result<ChainStatis
     addrs.dedup();
 
     // daily txs
-    let now = Local::now().date().and_hms(0, 0, 0);
+    let start_time = Local::now().date().and_hms(0, 0, 0);
     let sql_str = if let Some(ty) = ty.0 {
         format!(
             "SELECT COUNT(*) as cnt FROM transaction WHERE ty={} AND timestamp>={}",
             ty,
-            now.timestamp()
+            start_time.timestamp()
         )
     } else {
         format!(
-            "SELECT COUNT(*) as cnt FROM transaction where timestamp>={}",
-            now.timestamp()
+            "SELECT COUNT(*) as cnt FROM transaction WHERE timestamp>={}",
+            start_time.timestamp()
         )
     };
     let daily_txs_res = sqlx::query(sql_str.as_str()).fetch_one(&mut conn).await;
@@ -301,6 +319,10 @@ pub async fn statistics(api: &Api, ty: Query<Option<i32>>) -> Result<ChainStatis
         total_txs,
         daily_txs,
     };
+
+    let v = serde_json::to_string(&res_data).unwrap();
+    let _: () = rds_conn.set(key.clone(), v).unwrap();
+    let _: () = rds_conn.expire(key, 60 * 60 * 24).unwrap();
 
     Ok(ChainStatisticsResponse::Ok(Json(ChainStatisticsResult {
         code: 200,
