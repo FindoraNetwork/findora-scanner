@@ -2,6 +2,7 @@ use crate::Api;
 use anyhow::Result;
 use poem_openapi::param::Query;
 use poem_openapi::{payload::Json, ApiResponse, Object};
+use redis::Commands;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sqlx::types::chrono::Local;
@@ -78,7 +79,20 @@ pub struct TxsDistribute {
     pub evm_compatible: i64,
 }
 
+#[allow(clippy::let_unit_value)]
 pub async fn distribute(api: &Api) -> Result<DistributeResponse> {
+    let mut rds_conn = api.redis_client.get_connection().unwrap();
+    let res = rds_conn.get("tx_distribute");
+    if res.is_ok() {
+        let distribute_data: String = res.unwrap();
+        let v: TxsDistribute = serde_json::from_str(distribute_data.as_str()).unwrap();
+        return Ok(DistributeResponse::Ok(Json(DistributeResult {
+            code: 200,
+            message: "".to_string(),
+            data: Some(v),
+        })));
+    }
+
     let mut conn = api.storage.lock().await.acquire().await?;
     // xhub
     let xhub: i64 =
@@ -122,15 +136,21 @@ pub async fn distribute(api: &Api) -> Result<DistributeResponse> {
         .try_get("cnt")?;
     let hide = hide_type_or_amount - hide_amount_and_type;
 
+    let res_data = TxsDistribute {
+        transparent: not_evm - convert_account - bar - hide,
+        privacy: bar + hide,
+        prism: xhub + convert_account,
+        evm_compatible: evm - xhub,
+    };
+
+    let v = serde_json::to_string(&res_data).unwrap();
+    let _: () = rds_conn.set("tx_distribute", v).unwrap();
+    let _: () = rds_conn.expire("tx_distribute", 60 * 60 * 24).unwrap();
+
     Ok(DistributeResponse::Ok(Json(DistributeResult {
         code: 200,
         message: "".to_string(),
-        data: Some(TxsDistribute {
-            transparent: not_evm - convert_account - bar - hide,
-            privacy: bar + hide,
-            prism: xhub + convert_account,
-            evm_compatible: evm - xhub,
-        }),
+        data: Some(res_data),
     })))
 }
 
