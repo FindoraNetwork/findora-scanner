@@ -1,7 +1,11 @@
 # Findora Scanner
 
 A scanner for findora. This tool will generate all data and cache into db.
-
+## Dependencies
+```
+# ubuntu
+sudo apt install -y postgresql redis-server
+```
 ## Usage of Scanner.
 
 Before use scanner, you should set environment variable `DATABASE_URL` correctly. The format of it is `postgres://<Owner>:<Password>@<Host>/<DatabaseName>`.
