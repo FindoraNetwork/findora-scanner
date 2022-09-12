@@ -6,7 +6,7 @@ use crate::service::asset::AssetResponse;
 use crate::service::block::{BlocksResponse, FullBlockResponse, SimpleBlockResponse};
 use crate::service::chain::{AddressCountResponse, ChainStatisticsResponse, DistributeResponse};
 use crate::service::price::{MarketChartResponse, SimplePriceResponse};
-use crate::service::tx::{TxResponse, TxsResponse};
+use crate::service::tx::{PrismRecordResponse, TxResponse, TxsResponse};
 use crate::service::validator::{
     CirculatingSupplyResponse, DelegatorListResponse, ValidatorDelegationResponse,
     ValidatorDetailResponse, ValidatorListResponse,
@@ -377,6 +377,17 @@ impl Api {
         address: Query<String>,
     ) -> poem::Result<ValidatorDelegationResponse> {
         service::validator::validator_delegation(self, address)
+            .await
+            .map_err(utils::handle_fetch_one_err)
+    }
+
+    #[oai(
+        path = "/tx/prism/records/:address",
+        method = "get",
+        tag = "ApiTags::Transaction"
+    )]
+    async fn get_prism_records(&self, address: Path<String>) -> poem::Result<PrismRecordResponse> {
+        service::tx::get_prism_records(self, address)
             .await
             .map_err(utils::handle_fetch_one_err)
     }

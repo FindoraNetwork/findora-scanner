@@ -1,7 +1,9 @@
-use crate::service::util::{public_key_from_bech32, public_key_to_base64};
+use crate::service::util::{
+    public_key_from_base64, public_key_from_bech32, public_key_to_base64, public_key_to_bech32,
+};
 use crate::Api;
 use anyhow::Result;
-use ethereum_types::H256;
+use ethereum_types::{H160, H256};
 use module::schema::{
     EvmTx, PrismTransaction, TransactionResponse, ABAR_TO_ABAR, ABAR_TO_BAR, BAR_TO_ABAR, CLAIM,
     DEFINE_OR_ISSUE_ASSET, EVM_TRANSFER, HIDE_ASSET_AMOUNT, HIDE_ASSET_TYPE,
@@ -19,6 +21,10 @@ use std::ops::Add;
 pub enum TxResponse {
     #[oai(status = 200)]
     Ok(Json<TxRes>),
+    #[oai(status = 404)]
+    NotFound(Json<TxRes>),
+    #[oai(status = 500)]
+    InternalError(Json<TxRes>),
 }
 
 #[derive(Serialize, Deserialize, Debug, Default, Object)]
@@ -32,6 +38,8 @@ pub struct TxRes {
 pub enum TxsResponse {
     #[oai(status = 200)]
     Ok(Json<TxsRes>),
+    #[oai(status = 500)]
+    InternalError(Json<TxRes>),
 }
 
 #[derive(Serialize, Deserialize, Debug, Default, Object)]
@@ -70,6 +78,141 @@ pub struct PmtxsData {
     txs: Vec<PrismTransaction>,
 }
 
+#[derive(ApiResponse)]
+pub enum PrismRecordResponse {
+    #[oai(status = 200)]
+    Ok(Json<PrismRecordResult>),
+    #[oai(status = 500)]
+    InternalError(Json<PrismRecordResult>),
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, Object)]
+pub struct PrismRecordResult {
+    pub code: i32,
+    pub message: String,
+    pub data: Option<PrismRecord>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, Object)]
+pub struct PrismRecord {
+    pub receive_from: Vec<PrismItem>,
+    pub send_to: Vec<PrismItem>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, Object)]
+pub struct PrismItem {
+    pub tx_hash: String,
+    pub address: String,
+    pub amount: u64,
+}
+
+pub async fn get_prism_records(api: &Api, address: Path<String>) -> Result<PrismRecordResponse> {
+    let mut conn = api.storage.lock().await.acquire().await?;
+    let addr_bytes = address.0.as_bytes();
+
+    let mut receive_from: Vec<PrismItem> = vec![];
+    let mut send_to: Vec<PrismItem> = vec![];
+
+    match "fra".as_bytes().eq(&addr_bytes[..3]) {
+        true => {
+            // native: fra...
+            let pk = public_key_from_bech32(address.0.as_str()).unwrap();
+            let base64_addr = public_key_to_base64(&pk);
+
+            let to_sql = format!("SELECT tx_hash, jsonb_path_query(value,'$.body.operations[*].ConvertAccount.receiver.Ethereum') AS to, jsonb_path_query(value, '$.body.operations[*].ConvertAccount.value') AS amount FROM transaction WHERE value @? '$.body.operations[*].ConvertAccount.signer ? (@==\"{}\")'", base64_addr);
+            let from_sql = format!("SELECT tx_hash, jsonb_path_query(value, '$.function.XHub.NonConfidentialTransfer.outputs[*].amount') AS amount, jsonb_path_query(value, '$.signature[0]') as pk FROM transaction WHERE value @? '$.function.XHub.NonConfidentialTransfer.outputs[*].target ? (@==\"{}\")'", base64_addr);
+
+            let from_acc_result = sqlx::query(from_sql.as_str()).fetch_all(&mut conn).await?;
+            for row in from_acc_result {
+                let tx_hash: String = row.try_get("tx_hash")?;
+                let amount_val: Value = row.try_get("amount")?;
+                let pk_val: Value = row.try_get("pk")?;
+
+                let amount: u64 = serde_json::from_value(amount_val).unwrap();
+                let pk: [u8; 32] = serde_json::from_value(pk_val).unwrap();
+                let from: String = format!("{:?}", H160::from_slice(&pk[4..24]));
+
+                receive_from.push(PrismItem {
+                    tx_hash,
+                    address: from,
+                    amount,
+                });
+            }
+
+            let to_acc_result = sqlx::query(to_sql.as_str()).fetch_all(&mut conn).await?;
+            for row in to_acc_result {
+                let tx_hash: String = row.try_get("tx_hash")?;
+                let to_val: Value = row.try_get("to")?;
+                let amount_val: Value = row.try_get("amount")?;
+
+                let amount_str: String = serde_json::from_value(amount_val).unwrap();
+                let amount: u64 = amount_str.parse::<u64>().unwrap();
+                let to: String = serde_json::from_value(to_val).unwrap();
+
+                send_to.push(PrismItem {
+                    tx_hash,
+                    address: to,
+                    amount,
+                })
+            }
+        }
+        _ => {
+            // evm: 0x...
+            let from_sql = format!("SELECT tx_hash, jsonb_path_query(value, '$.body.operations[*].ConvertAccount.value') AS amount, jsonb_path_query(value, '$.body.operations[*].ConvertAccount.signer') AS signer FROM transaction WHERE value @? '$.body.operations[*].ConvertAccount.receiver.Ethereum ? (@==\"{}\")'", address.0);
+            let to_sql = "SELECT tx_hash, jsonb_path_query(value, '$.function.XHub.NonConfidentialTransfer.outputs[*].amount') AS amount, jsonb_path_query(value, '$.signature[0]') AS sig FROM transaction WHERE value @? '$.function.XHub.NonConfidentialTransfer.outputs[*].amount ? (@ > 0)'";
+
+            let from_acc_result = sqlx::query(from_sql.as_str()).fetch_all(&mut conn).await?;
+            for row in from_acc_result {
+                let tx_hash: String = row.try_get("tx_hash")?;
+                let amount_val: Value = row.try_get("amount")?;
+                let signer_val: Value = row.try_get("signer")?;
+
+                let amount_str: String = serde_json::from_value(amount_val).unwrap();
+                let amount: u64 = amount_str.parse::<u64>().unwrap();
+                let signer: String = serde_json::from_value(signer_val).unwrap();
+                let pk = public_key_from_base64(&signer).unwrap();
+
+                receive_from.push(PrismItem {
+                    tx_hash,
+                    address: public_key_to_bech32(&pk),
+                    amount,
+                });
+            }
+
+            let to_acc_result = sqlx::query(to_sql).fetch_all(&mut conn).await?;
+            for row in to_acc_result {
+                let sig_val: Value = row.try_get("sig")?;
+                let pk: [u8; 32] = serde_json::from_value(sig_val).unwrap();
+
+                let signer = format!("{:?}", H160::from_slice(&pk[4..24]));
+                if !signer.eq(&address.0) {
+                    continue;
+                }
+
+                let address: String = format!("{:?}", H160::from_slice(&pk[4..24]));
+                let tx_hash: String = row.try_get("tx_hash")?;
+                let amount_val: Value = row.try_get("amount")?;
+                let amount: u64 = serde_json::from_value(amount_val).unwrap();
+
+                send_to.push(PrismItem {
+                    tx_hash,
+                    address,
+                    amount,
+                })
+            }
+        }
+    };
+
+    Ok(PrismRecordResponse::Ok(Json(PrismRecordResult {
+        code: 200,
+        message: "".to_string(),
+        data: Some(PrismRecord {
+            receive_from,
+            send_to,
+        }),
+    })))
+}
+
 pub async fn get_tx(api: &Api, tx_hash: Path<String>) -> Result<TxResponse> {
     let mut conn = api.storage.lock().await.acquire().await?;
     let str = format!(
@@ -79,12 +222,19 @@ pub async fn get_tx(api: &Api, tx_hash: Path<String>) -> Result<TxResponse> {
     let res = sqlx::query(str.as_str()).fetch_one(&mut conn).await;
     let row = match res {
         Ok(row) => row,
-        _ => {
-            return Ok(TxResponse::Ok(Json(TxRes {
-                code: 500,
-                message: "internal error".to_string(),
-                data: None,
-            })));
+        Err(e) => {
+            return match e {
+                sqlx::Error::RowNotFound => Ok(TxResponse::NotFound(Json(TxRes {
+                    code: 404,
+                    message: "not found".to_string(),
+                    data: None,
+                }))),
+                _ => Ok(TxResponse::InternalError(Json(TxRes {
+                    code: 500,
+                    message: "internal error".to_string(),
+                    data: None,
+                }))),
+            }
         }
     };
     let tx_hash: String = row.try_get("tx_hash")?;
@@ -93,7 +243,6 @@ pub async fn get_tx(api: &Api, tx_hash: Path<String>) -> Result<TxResponse> {
     let timestamp: i64 = row.try_get("timestamp")?;
     let height: i64 = row.try_get("height")?;
     let code: i64 = row.try_get("code")?;
-    //let log: String = row.try_get("log")?;
     let log = "".to_string();
     let result: Value = row.try_get("result")?;
     let value: Value = row.try_get("value")?;
