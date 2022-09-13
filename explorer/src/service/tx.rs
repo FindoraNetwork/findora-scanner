@@ -119,8 +119,8 @@ pub async fn get_prism_records(api: &Api, address: Path<String>) -> Result<Prism
             let pk = public_key_from_bech32(address.0.as_str()).unwrap();
             let base64_addr = public_key_to_base64(&pk);
 
-            let to_sql = format!("SELECT tx_hash, jsonb_path_query(value,'$.body.operations[*].ConvertAccount.receiver.Ethereum') AS to, jsonb_path_query(value, '$.body.operations[*].ConvertAccount.value') AS amount FROM transaction WHERE value @? '$.body.operations[*].ConvertAccount.signer ? (@==\"{}\")'", base64_addr);
-            let from_sql = format!("SELECT tx_hash, jsonb_path_query(value, '$.function.XHub.NonConfidentialTransfer.outputs[*].amount') AS amount, jsonb_path_query(value, '$.signature[0]') as pk FROM transaction WHERE value @? '$.function.XHub.NonConfidentialTransfer.outputs[*].target ? (@==\"{}\")'", base64_addr);
+            let to_sql = format!("SELECT tx_hash, jsonb_path_query(value,'$.body.operations[*].ConvertAccount.receiver.Ethereum') AS to, jsonb_path_query(value, '$.body.operations[*].ConvertAccount.value') AS amount FROM transaction WHERE value @? '$.body.operations[*].ConvertAccount.signer ? (@==\"{}\")' ORDER BY height DESC", base64_addr);
+            let from_sql = format!("SELECT tx_hash, jsonb_path_query(value, '$.function.XHub.NonConfidentialTransfer.outputs[*].amount') AS amount, jsonb_path_query(value, '$.signature[0]') as pk FROM transaction WHERE value @? '$.function.XHub.NonConfidentialTransfer.outputs[*].target ? (@==\"{}\")' ORDER BY height DESC", base64_addr);
 
             let from_acc_result = sqlx::query(from_sql.as_str()).fetch_all(&mut conn).await?;
             for row in from_acc_result {
@@ -158,8 +158,8 @@ pub async fn get_prism_records(api: &Api, address: Path<String>) -> Result<Prism
         }
         _ => {
             // evm: 0x...
-            let from_sql = format!("SELECT tx_hash, jsonb_path_query(value, '$.body.operations[*].ConvertAccount.value') AS amount, jsonb_path_query(value, '$.body.operations[*].ConvertAccount.signer') AS signer FROM transaction WHERE value @? '$.body.operations[*].ConvertAccount.receiver.Ethereum ? (@==\"{}\")'", address.0);
-            let to_sql = "SELECT tx_hash, jsonb_path_query(value, '$.function.XHub.NonConfidentialTransfer.outputs[*].amount') AS amount, jsonb_path_query(value, '$.signature[0]') AS sig FROM transaction WHERE value @? '$.function.XHub.NonConfidentialTransfer.outputs[*].amount ? (@ > 0)'";
+            let from_sql = format!("SELECT tx_hash, jsonb_path_query(value, '$.body.operations[*].ConvertAccount.value') AS amount, jsonb_path_query(value, '$.body.operations[*].ConvertAccount.signer') AS signer FROM transaction WHERE value @? '$.body.operations[*].ConvertAccount.receiver.Ethereum ? (@==\"{}\")' ORDER BY height DESC", address.0);
+            let to_sql = "SELECT tx_hash, jsonb_path_query(value, '$.function.XHub.NonConfidentialTransfer.outputs[*].amount') AS amount, jsonb_path_query(value, '$.signature[0]') AS sig FROM transaction WHERE value @? '$.function.XHub.NonConfidentialTransfer.outputs[*].amount ? (@ > 0)' ORDER BY height DESC";
 
             let from_acc_result = sqlx::query(from_sql.as_str()).fetch_all(&mut conn).await?;
             for row in from_acc_result {
