@@ -386,7 +386,13 @@ impl Api {
         method = "get",
         tag = "ApiTags::Transaction"
     )]
-    async fn get_prism_records(&self, address: Path<String>) -> poem::Result<PrismRecordResponse> {
+    async fn get_prism_records(
+        &self,
+        /// account address
+        /// native: fra...
+        /// evm: 0x...
+        address: Path<String>,
+    ) -> poem::Result<PrismRecordResponse> {
         service::tx::get_prism_records(self, address)
             .await
             .map_err(utils::handle_fetch_one_err)
