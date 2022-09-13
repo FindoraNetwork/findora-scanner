@@ -104,6 +104,7 @@ pub struct PrismItem {
     pub tx_hash: String,
     pub address: String,
     pub amount: u64,
+    pub timestamp: i64,
 }
 
 pub async fn get_prism_records(api: &Api, address: Path<String>) -> Result<PrismRecordResponse> {
@@ -119,11 +120,12 @@ pub async fn get_prism_records(api: &Api, address: Path<String>) -> Result<Prism
             let pk = public_key_from_bech32(address.0.as_str()).unwrap();
             let base64_addr = public_key_to_base64(&pk);
 
-            let to_sql = format!("SELECT tx_hash, jsonb_path_query(value,'$.body.operations[*].ConvertAccount.receiver.Ethereum') AS to, jsonb_path_query(value, '$.body.operations[*].ConvertAccount.value') AS amount FROM transaction WHERE value @? '$.body.operations[*].ConvertAccount.signer ? (@==\"{}\")' ORDER BY height DESC", base64_addr);
-            let from_sql = format!("SELECT tx_hash, jsonb_path_query(value, '$.function.XHub.NonConfidentialTransfer.outputs[*].amount') AS amount, jsonb_path_query(value, '$.signature[0]') as pk FROM transaction WHERE value @? '$.function.XHub.NonConfidentialTransfer.outputs[*].target ? (@==\"{}\")' ORDER BY height DESC", base64_addr);
+            let to_sql = format!("SELECT tx_hash, timestamp, jsonb_path_query(value,'$.body.operations[*].ConvertAccount.receiver.Ethereum') AS to, jsonb_path_query(value, '$.body.operations[*].ConvertAccount.value') AS amount FROM transaction WHERE value @? '$.body.operations[*].ConvertAccount.signer ? (@==\"{}\")' ORDER BY timestamp DESC", base64_addr);
+            let from_sql = format!("SELECT tx_hash, timestamp, jsonb_path_query(value, '$.function.XHub.NonConfidentialTransfer.outputs[*].amount') AS amount, jsonb_path_query(value, '$.signature[0]') as pk FROM transaction WHERE value @? '$.function.XHub.NonConfidentialTransfer.outputs[*].target ? (@==\"{}\")' ORDER BY timestamp DESC", base64_addr);
 
             let from_acc_result = sqlx::query(from_sql.as_str()).fetch_all(&mut conn).await?;
             for row in from_acc_result {
+                let timestamp: i64 = row.try_get("timestamp")?;
                 let tx_hash: String = row.try_get("tx_hash")?;
                 let amount_val: Value = row.try_get("amount")?;
                 let pk_val: Value = row.try_get("pk")?;
@@ -136,11 +138,13 @@ pub async fn get_prism_records(api: &Api, address: Path<String>) -> Result<Prism
                     tx_hash,
                     address: from,
                     amount,
+                    timestamp,
                 });
             }
 
             let to_acc_result = sqlx::query(to_sql.as_str()).fetch_all(&mut conn).await?;
             for row in to_acc_result {
+                let timestamp: i64 = row.try_get("timestamp")?;
                 let tx_hash: String = row.try_get("tx_hash")?;
                 let to_val: Value = row.try_get("to")?;
                 let amount_val: Value = row.try_get("amount")?;
@@ -153,16 +157,18 @@ pub async fn get_prism_records(api: &Api, address: Path<String>) -> Result<Prism
                     tx_hash,
                     address: to,
                     amount,
+                    timestamp,
                 })
             }
         }
         _ => {
             // evm: 0x...
-            let from_sql = format!("SELECT tx_hash, jsonb_path_query(value, '$.body.operations[*].ConvertAccount.value') AS amount, jsonb_path_query(value, '$.body.operations[*].ConvertAccount.signer') AS signer FROM transaction WHERE value @? '$.body.operations[*].ConvertAccount.receiver.Ethereum ? (@==\"{}\")' ORDER BY height DESC", address.0);
-            let to_sql = "SELECT tx_hash, jsonb_path_query(value, '$.function.XHub.NonConfidentialTransfer.outputs[*].amount') AS amount, jsonb_path_query(value, '$.signature[0]') AS sig FROM transaction WHERE value @? '$.function.XHub.NonConfidentialTransfer.outputs[*].amount ? (@ > 0)' ORDER BY height DESC";
+            let from_sql = format!("SELECT tx_hash, timestamp, jsonb_path_query(value, '$.body.operations[*].ConvertAccount.value') AS amount, jsonb_path_query(value, '$.body.operations[*].ConvertAccount.signer') AS signer FROM transaction WHERE value @? '$.body.operations[*].ConvertAccount.receiver.Ethereum ? (@==\"{}\")' ORDER BY timestamp DESC", address.0);
+            let to_sql = "SELECT tx_hash, timestamp, jsonb_path_query(value, '$.function.XHub.NonConfidentialTransfer.outputs[*].amount') AS amount, jsonb_path_query(value, '$.signature[0]') AS sig FROM transaction WHERE value @? '$.function.XHub.NonConfidentialTransfer.outputs[*].amount ? (@ > 0)' ORDER BY timestamp DESC";
 
             let from_acc_result = sqlx::query(from_sql.as_str()).fetch_all(&mut conn).await?;
             for row in from_acc_result {
+                let timestamp: i64 = row.try_get("timestamp")?;
                 let tx_hash: String = row.try_get("tx_hash")?;
                 let amount_val: Value = row.try_get("amount")?;
                 let signer_val: Value = row.try_get("signer")?;
@@ -176,6 +182,7 @@ pub async fn get_prism_records(api: &Api, address: Path<String>) -> Result<Prism
                     tx_hash,
                     address: public_key_to_bech32(&pk),
                     amount,
+                    timestamp,
                 });
             }
 
@@ -190,6 +197,7 @@ pub async fn get_prism_records(api: &Api, address: Path<String>) -> Result<Prism
                 }
 
                 let address: String = format!("{:?}", H160::from_slice(&pk[4..24]));
+                let timestamp: i64 = row.try_get("timestamp")?;
                 let tx_hash: String = row.try_get("tx_hash")?;
                 let amount_val: Value = row.try_get("amount")?;
                 let amount: u64 = serde_json::from_value(amount_val).unwrap();
@@ -198,6 +206,7 @@ pub async fn get_prism_records(api: &Api, address: Path<String>) -> Result<Prism
                     tx_hash,
                     address,
                     amount,
+                    timestamp,
                 })
             }
         }
