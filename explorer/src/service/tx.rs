@@ -82,6 +82,8 @@ pub struct PmtxsData {
 pub enum PrismRecordResponse {
     #[oai(status = 200)]
     Ok(Json<PrismRecordResult>),
+    #[oai(status = 400)]
+    BadRequest(Json<PrismRecordResult>),
     #[oai(status = 500)]
     InternalError(Json<PrismRecordResult>),
 }
@@ -117,7 +119,15 @@ pub async fn get_prism_records(api: &Api, address: Path<String>) -> Result<Prism
     match "fra".as_bytes().eq(&addr_bytes[..3]) {
         true => {
             // native: fra...
-            let pk = public_key_from_bech32(address.0.as_str()).unwrap();
+            let pk_result = public_key_from_bech32(address.0.as_str());
+            if pk_result.is_err() {
+                return Ok(PrismRecordResponse::BadRequest(Json(PrismRecordResult {
+                    code: 400,
+                    message: "invalid fra address".to_string(),
+                    data: None,
+                })));
+            }
+            let pk = pk_result.unwrap();
             let base64_addr = public_key_to_base64(&pk);
 
             let to_sql = format!("SELECT tx_hash, timestamp, jsonb_path_query(value,'$.body.operations[*].ConvertAccount.receiver.Ethereum') AS to, jsonb_path_query(value, '$.body.operations[*].ConvertAccount.value') AS amount FROM transaction WHERE value @? '$.body.operations[*].ConvertAccount.signer ? (@==\"{}\")' ORDER BY timestamp DESC", base64_addr);

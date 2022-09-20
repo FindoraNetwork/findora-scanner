@@ -15,7 +15,7 @@ use crate::{Error, Result};
 const DEFAULT_TIMEOUT_SECS: u64 = 32;
 const DEFAULT_RETIES: usize = 3;
 const DEFAULT_CONCURRENCY: usize = 8;
-const DEFAULT_INTERVAL: Duration = Duration::from_secs(10);
+const DEFAULT_INTERVAL: Duration = Duration::from_secs(5);
 
 /// load block at specific height.
 #[derive(Parser, Debug)]
