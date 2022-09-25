@@ -33,30 +33,6 @@ pub struct StatisticsData {
 }
 
 #[derive(ApiResponse)]
-pub enum StakingResponse {
-    #[oai(status = 200)]
-    Ok(Json<StakingRes>),
-    #[oai(status = 200)]
-    InternalError(Json<StakingRes>),
-}
-
-#[derive(Serialize, Deserialize, Debug, Default, Object)]
-pub struct StakingRes {
-    pub code: i32,
-    pub message: String,
-    pub data: Option<StakingData>,
-}
-
-#[derive(Serialize, Deserialize, Default, Debug, Object)]
-pub struct StakingData {
-    pub block_reward: u64,
-    pub stake_ratio: f64,
-    pub apy: f64,
-    pub active_validators: Vec<String>,
-    pub nonactive_validators: Vec<String>,
-}
-
-#[derive(ApiResponse)]
 pub enum DistributeResponse {
     #[oai(status = 200)]
     Ok(Json<DistributeResult>),

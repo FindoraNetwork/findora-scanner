@@ -163,6 +163,24 @@ pub struct PrismTransaction {
 }
 
 #[derive(Serialize, Deserialize, Debug, Default)]
+pub struct TdValidator {
+    pub addr: String,
+    pub memo: Memo,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default)]
+pub struct ClaimOpt {
+    pub body: ClaimBody,
+    pub pubkey: String,
+    pub signature: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default)]
+pub struct ClaimBody {
+    pub amount: i64,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default)]
 pub struct DelegationOpt {
     pub body: DelegationOptBody,
     pub pubkey: String,
@@ -171,14 +189,14 @@ pub struct DelegationOpt {
 }
 
 #[derive(Serialize, Deserialize, Debug, Default)]
-pub struct UndelegationOpt {
-    pub body: UndelegationOptBody,
+pub struct UnDelegationOpt {
+    pub body: UnDelegationOptBody,
     pub pubkey: String,
     pub signature: String,
 }
 
 #[derive(Serialize, Deserialize, Debug, Default)]
-pub struct UndelegationOptBody {
+pub struct UnDelegationOptBody {
     pub pu: Pu,
 }
 
@@ -186,7 +204,7 @@ pub struct UndelegationOptBody {
 pub struct Pu {
     pub am: i64,
     pub new_delegator_id: String,
-    pub target_validator: Vec<i64>,
+    pub target_validator: [u8; 20],
 }
 
 #[derive(Serialize, Deserialize, Debug, Default)]

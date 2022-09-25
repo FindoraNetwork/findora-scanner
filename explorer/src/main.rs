@@ -6,6 +6,7 @@ use crate::service::asset::AssetResponse;
 use crate::service::block::{BlocksResponse, FullBlockResponse, SimpleBlockResponse};
 use crate::service::chain::{AddressCountResponse, ChainStatisticsResponse, DistributeResponse};
 use crate::service::price::{MarketChartResponse, SimplePriceResponse};
+use crate::service::staking::{ClaimResponse, DelegationResponse, UnDelegationResponse};
 use crate::service::tx::{PrismRecordResponse, TxResponse, TxsResponse};
 use crate::service::validator::{
     CirculatingSupplyResponse, DelegatorListResponse, ValidatorDelegationResponse,
@@ -397,6 +398,46 @@ impl Api {
             .await
             .map_err(utils::handle_fetch_one_err)
     }
+
+    #[oai(path = "/staking/delegation", method = "get", tag = "ApiTags::Staking")]
+    async fn get_delegation(
+        &self,
+        address: Query<String>,
+        page: Query<Option<i64>>,
+        page_size: Query<Option<i64>>,
+    ) -> poem::Result<DelegationResponse> {
+        service::staking::get_delegation(self, address, page, page_size)
+            .await
+            .map_err(utils::handle_fetch_one_err)
+    }
+
+    #[oai(
+        path = "/staking/undelegation",
+        method = "get",
+        tag = "ApiTags::Staking"
+    )]
+    async fn get_undelegation(
+        &self,
+        address: Query<String>,
+        page: Query<Option<i64>>,
+        page_size: Query<Option<i64>>,
+    ) -> poem::Result<UnDelegationResponse> {
+        service::staking::get_undelegation(self, address, page, page_size)
+            .await
+            .map_err(utils::handle_fetch_one_err)
+    }
+
+    #[oai(path = "/staking/claim", method = "get", tag = "ApiTags::Staking")]
+    async fn get_claim(
+        &self,
+        address: Query<String>,
+        page: Query<Option<i64>>,
+        page_size: Query<Option<i64>>,
+    ) -> poem::Result<ClaimResponse> {
+        service::staking::get_claim(self, address, page, page_size)
+            .await
+            .map_err(utils::handle_fetch_one_err)
+    }
 }
 
 #[derive(Tags)]
@@ -413,6 +454,8 @@ enum ApiTags {
     BlockChain,
     /// Operations about Price
     Price,
+    /// Operations about staking
+    Staking,
 }
 
 #[tokio::main]
