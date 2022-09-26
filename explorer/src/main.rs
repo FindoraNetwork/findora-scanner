@@ -7,7 +7,7 @@ use crate::service::block::{BlocksResponse, FullBlockResponse, SimpleBlockRespon
 use crate::service::chain::{AddressCountResponse, ChainStatisticsResponse, DistributeResponse};
 use crate::service::price::{MarketChartResponse, SimplePriceResponse};
 use crate::service::staking::{ClaimResponse, DelegationResponse, UnDelegationResponse};
-use crate::service::tx::{PrismRecordResponse, TxResponse, TxsResponse};
+use crate::service::tx::{PrismRecordResponse, PrismRecordResponseNew, TxResponse, TxsResponse};
 use crate::service::validator::{
     CirculatingSupplyResponse, DelegatorListResponse, ValidatorDelegationResponse,
     ValidatorDetailResponse, ValidatorListResponse,
@@ -395,6 +395,38 @@ impl Api {
         address: Path<String>,
     ) -> poem::Result<PrismRecordResponse> {
         service::tx::get_prism_records(self, address)
+            .await
+            .map_err(utils::handle_fetch_one_err)
+    }
+
+    #[oai(
+        path = "/tx/prism/records/receive",
+        method = "get",
+        tag = "ApiTags::Transaction"
+    )]
+    async fn get_prism_records_receive(
+        &self,
+        address: Query<String>,
+        page: Query<Option<i64>>,
+        page_size: Query<Option<i64>>,
+    ) -> poem::Result<PrismRecordResponseNew> {
+        service::tx::get_prism_records_receive_from(self, address, page, page_size)
+            .await
+            .map_err(utils::handle_fetch_one_err)
+    }
+
+    #[oai(
+        path = "/tx/prism/records/send",
+        method = "get",
+        tag = "ApiTags::Transaction"
+    )]
+    async fn get_prism_records_send(
+        &self,
+        address: Query<String>,
+        page: Query<Option<i64>>,
+        page_size: Query<Option<i64>>,
+    ) -> poem::Result<PrismRecordResponseNew> {
+        service::tx::get_prism_records_send_to(self, address, page, page_size)
             .await
             .map_err(utils::handle_fetch_one_err)
     }
