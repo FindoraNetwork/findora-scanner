@@ -123,8 +123,7 @@ pub struct PrismRecordNew {
     pub total: i64,
     pub page: i64,
     pub page_size: i64,
-    pub receive_from: Vec<PrismItem>,
-    pub send_to: Vec<PrismItem>,
+    pub items: Vec<PrismItem>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Default, Clone, Object)]
@@ -227,8 +226,7 @@ pub async fn get_prism_records_receive_from(
             total,
             page,
             page_size,
-            receive_from,
-            send_to: vec![],
+            items: receive_from,
         }),
     })))
 }
@@ -337,8 +335,7 @@ pub async fn get_prism_records_send_to(
             total,
             page,
             page_size,
-            receive_from: vec![],
-            send_to,
+            items: send_to,
         }),
     })))
 }
