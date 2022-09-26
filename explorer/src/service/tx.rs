@@ -163,7 +163,7 @@ pub async fn get_prism_records_receive_from(
             let base64_addr = public_key_to_base64(&pk);
 
             let sql_from_count = format!("SELECT count(*) AS cnt FROM transaction WHERE value @? '$.function.XHub.NonConfidentialTransfer.outputs[*].target ? (@==\"{}\")'", base64_addr);
-            let sql_from = format!("SELECT tx_hash, timestamp, jsonb_path_query(value, '$.function.XHub.NonConfidentialTransfer.outputs[*].amount') AS amount, jsonb_path_query(value, '$.signature[0]') as pk FROM transaction WHERE value @? '$.function.XHub.NonConfidentialTransfer.outputs[*].target ? (@==\"{}\")' ORDER BY timestamp DESC LIMIT {} OFFSET {}", base64_addr, page, (page-1)*page_size);
+            let sql_from = format!("SELECT tx_hash, timestamp, jsonb_path_query(value, '$.function.XHub.NonConfidentialTransfer.outputs[*].amount') AS amount, jsonb_path_query(value, '$.signature[0]') as pk FROM transaction WHERE value @? '$.function.XHub.NonConfidentialTransfer.outputs[*].target ? (@==\"{}\")' ORDER BY timestamp DESC LIMIT {} OFFSET {}", base64_addr, page_size, (page-1)*page_size);
             let row_from = sqlx::query(sql_from_count.as_str())
                 .fetch_one(&mut conn)
                 .await?;
