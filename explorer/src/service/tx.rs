@@ -162,15 +162,17 @@ pub async fn get_prism_records_receive_from(
             let pk = pk_result.unwrap();
             let base64_addr = public_key_to_base64(&pk);
 
-            let sql_from_count = format!("SELECT count(*) AS cnt FROM transaction WHERE value @? '$.function.XHub.NonConfidentialTransfer.outputs[*].target ? (@==\"{}\")'", base64_addr);
-            let sql_from = format!("SELECT tx_hash, timestamp, jsonb_path_query(value, '$.function.XHub.NonConfidentialTransfer.outputs[*].amount') AS amount, jsonb_path_query(value, '$.signature[0]') as pk FROM transaction WHERE value @? '$.function.XHub.NonConfidentialTransfer.outputs[*].target ? (@==\"{}\")' ORDER BY timestamp DESC LIMIT {} OFFSET {}", base64_addr, page_size, (page-1)*page_size);
-            let row_from = sqlx::query(sql_from_count.as_str())
+            let sql_receive_count = format!("SELECT count(*) AS cnt FROM transaction WHERE value @? '$.function.XHub.NonConfidentialTransfer.outputs[*].target ? (@==\"{}\")'", base64_addr);
+            let sql_receive = format!("SELECT tx_hash, timestamp, jsonb_path_query(value, '$.function.XHub.NonConfidentialTransfer.outputs[*].amount') AS amount, jsonb_path_query(value, '$.signature[0]') as pk FROM transaction WHERE value @? '$.function.XHub.NonConfidentialTransfer.outputs[*].target ? (@==\"{}\")' ORDER BY timestamp DESC LIMIT {} OFFSET {}", base64_addr, page_size, (page-1)*page_size);
+            let row_receive_count = sqlx::query(sql_receive_count.as_str())
                 .fetch_one(&mut conn)
                 .await?;
-            total = row_from.try_get("cnt")?;
+            total = row_receive_count.try_get("cnt")?;
 
-            let from_acc_result = sqlx::query(sql_from.as_str()).fetch_all(&mut conn).await?;
-            for row in from_acc_result {
+            let rows_receive = sqlx::query(sql_receive.as_str())
+                .fetch_all(&mut conn)
+                .await?;
+            for row in rows_receive {
                 let timestamp: i64 = row.try_get("timestamp")?;
                 let tx_hash: String = row.try_get("tx_hash")?;
                 let amount_val: Value = row.try_get("amount")?;
@@ -189,16 +191,18 @@ pub async fn get_prism_records_receive_from(
             }
         }
         _ => {
-            let sql_from_count = format!("SELECT count(*) FROM transaction AS cnt WHERE value @? '$.body.operations[*].ConvertAccount.receiver.Ethereum ? (@==\"{}\")'", address.0);
-            let sql_from = format!("SELECT tx_hash, timestamp, jsonb_path_query(value, '$.body.operations[*].ConvertAccount.value') AS amount, jsonb_path_query(value, '$.body.operations[*].ConvertAccount.signer') AS signer FROM transaction WHERE value @? '$.body.operations[*].ConvertAccount.receiver.Ethereum ? (@==\"{}\")' ORDER BY timestamp DESC LIMIT {} OFFSET {}", address.0, page_size, (page-1)*page_size);
-            let row_from = sqlx::query(sql_from_count.as_str())
+            let sql_receive_count = format!("SELECT count(*) AS cnt FROM transaction WHERE value @? '$.body.operations[*].ConvertAccount.receiver.Ethereum ? (@==\"{}\")'", address.0);
+            let sql_receive = format!("SELECT tx_hash, timestamp, jsonb_path_query(value, '$.body.operations[*].ConvertAccount.value') AS amount, jsonb_path_query(value, '$.body.operations[*].ConvertAccount.signer') AS signer FROM transaction WHERE value @? '$.body.operations[*].ConvertAccount.receiver.Ethereum ? (@==\"{}\")' ORDER BY timestamp DESC LIMIT {} OFFSET {}", address.0, page_size, (page-1)*page_size);
+            let row_receive_count = sqlx::query(sql_receive_count.as_str())
                 .fetch_one(&mut conn)
                 .await?;
-            total = row_from.try_get("cnt")?;
+            total = row_receive_count.try_get("cnt")?;
 
             // from
-            let from_acc_result = sqlx::query(sql_from.as_str()).fetch_all(&mut conn).await?;
-            for row in from_acc_result {
+            let rows_receive = sqlx::query(sql_receive.as_str())
+                .fetch_all(&mut conn)
+                .await?;
+            for row in rows_receive {
                 let timestamp: i64 = row.try_get("timestamp")?;
                 let tx_hash: String = row.try_get("tx_hash")?;
                 let amount_val: Value = row.try_get("amount")?;
@@ -260,13 +264,13 @@ pub async fn get_prism_records_send_to(
             let base64_addr = public_key_to_base64(&pk);
             let sql_to_count = format!("SELECT count(*) AS cnt FROM transaction WHERE value @? '$.body.operations[*].ConvertAccount.signer ? (@==\"{}\")'", base64_addr);
             let sql_to = format!("SELECT tx_hash, timestamp, jsonb_path_query(value,'$.body.operations[*].ConvertAccount.receiver.Ethereum') AS to, jsonb_path_query(value, '$.body.operations[*].ConvertAccount.value') AS amount FROM transaction WHERE value @? '$.body.operations[*].ConvertAccount.signer ? (@==\"{}\")' ORDER BY timestamp DESC LIMIT {} OFFSET {}", base64_addr, page_size, (page-1)*page_size);
-            let row_to = sqlx::query(sql_to_count.as_str())
+            let row_to_count = sqlx::query(sql_to_count.as_str())
                 .fetch_one(&mut conn)
                 .await?;
-            total = row_to.try_get("cnt")?;
+            total = row_to_count.try_get("cnt")?;
 
-            let to_acc_result = sqlx::query(sql_to.as_str()).fetch_all(&mut conn).await?;
-            for row in to_acc_result {
+            let rows_send_to = sqlx::query(sql_to.as_str()).fetch_all(&mut conn).await?;
+            for row in rows_send_to {
                 let timestamp: i64 = row.try_get("timestamp")?;
                 let tx_hash: String = row.try_get("tx_hash")?;
                 let to_val: Value = row.try_get("to")?;
@@ -287,8 +291,8 @@ pub async fn get_prism_records_send_to(
         _ => {
             let sql_to = "SELECT tx_hash, timestamp, jsonb_path_query(value, '$.function.XHub.NonConfidentialTransfer.outputs[*].amount') AS amount, jsonb_path_query(value, '$.signature[0]') AS sig FROM transaction WHERE value @? '$.function.XHub.NonConfidentialTransfer.outputs[*].amount ? (@ > 0)' ORDER BY timestamp DESC";
             let mut send_to_tmp: Vec<PrismItem> = vec![];
-            let to_acc_result = sqlx::query(sql_to).fetch_all(&mut conn).await?;
-            for row in to_acc_result {
+            let rows_send_to = sqlx::query(sql_to).fetch_all(&mut conn).await?;
+            for row in rows_send_to {
                 let sig_val: Value = row.try_get("sig")?;
                 let pk: [u8; 32] = serde_json::from_value(sig_val).unwrap();
 
