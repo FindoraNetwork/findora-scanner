@@ -221,7 +221,7 @@ pub async fn get_prism_records_receive_from(
     }
 
     Ok(PrismRecordResponseNew::Ok(Json(PrismRecordResultNew {
-        code: 0,
+        code: 200,
         message: "".to_string(),
         data: Some(PrismRecordNew {
             total,
@@ -313,7 +313,7 @@ pub async fn get_prism_records_send_to(
                 })
             }
 
-            total = send_to.len() as i64;
+            total = send_to_tmp.len() as i64;
             let offset = page_size * (page - 1);
 
             if offset >= total {
@@ -331,7 +331,7 @@ pub async fn get_prism_records_send_to(
     }
 
     Ok(PrismRecordResponseNew::Ok(Json(PrismRecordResultNew {
-        code: 0,
+        code: 200,
         message: "".to_string(),
         data: Some(PrismRecordNew {
             total,
