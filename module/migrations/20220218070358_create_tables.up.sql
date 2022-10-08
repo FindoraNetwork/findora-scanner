@@ -50,3 +50,11 @@ CREATE TABLE delegations (
     height BIGINT NOT NULL PRIMARY KEY,
     info JSONB
 );
+
+CREATE INDEX block_height_index ON block (height);
+CREATE INDEX block_time_index ON block (time);
+CREATE INDEX block_proposer_index ON block (proposer);
+CREATE INDEX tx_block_index ON transaction (block_hash);
+CREATE INDEX tx_height_index ON transaction (height);
+CREATE INDEX tx_timestamp_index ON transaction (timestamp);
+CREATE INDEX tx_ty_index ON transaction (ty);
