@@ -146,7 +146,7 @@ pub struct UnDelegationItem {
     pub timestamp: i64,
     pub expected_arrival_time: i64,
 }
-//fra18fnyetvs2kc035xz78kyfcygmej8pk5h2kwczy03w6uewdphzfxsk74dym
+
 pub async fn get_undelegation(
     api: &Api,
     address: Query<String>,
