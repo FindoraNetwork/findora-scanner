@@ -10,7 +10,7 @@ use crate::service::staking::{ClaimResponse, DelegationResponse, UnDelegationRes
 use crate::service::tx::{PrismRecordResponse, PrismRecordResponseNew, TxResponse, TxsResponse};
 use crate::service::validator::{
     CirculatingSupplyResponse, DelegatorListResponse, ValidatorDelegationResponse,
-    ValidatorDetailResponse, ValidatorListResponse,
+    ValidatorDetailResponse, ValidatorHistoryResponse, ValidatorListResponse,
 };
 use anyhow::Result;
 use poem::middleware::Cors;
@@ -467,6 +467,22 @@ impl Api {
         page_size: Query<Option<i64>>,
     ) -> poem::Result<ClaimResponse> {
         service::staking::get_claim(self, address, page, page_size)
+            .await
+            .map_err(utils::handle_fetch_one_err)
+    }
+
+    #[oai(
+        path = "/chain/validator/history",
+        method = "get",
+        tag = "ApiTags::BlockChain"
+    )]
+    async fn get_validator_history(
+        &self,
+        address: Query<String>,
+        page: Query<Option<i64>>,
+        page_size: Query<Option<i64>>,
+    ) -> poem::Result<ValidatorHistoryResponse> {
+        service::validator::validator_history(self, address, page, page_size)
             .await
             .map_err(utils::handle_fetch_one_err)
     }

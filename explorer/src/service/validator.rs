@@ -1,7 +1,8 @@
+use crate::service::util::{public_key_from_base64, public_key_to_bech32};
 use crate::Api;
 use anyhow::Result;
 use log::debug;
-use module::schema::Memo;
+use module::schema::{DelegationOpt, Memo, UnDelegationOpt};
 use poem_openapi::param::{Path, Query};
 use poem_openapi::{payload::Json, ApiResponse, Object};
 use serde::{Deserialize, Serialize};
@@ -288,4 +289,123 @@ pub async fn circulating_supply(api: &Api) -> Result<CirculatingSupplyResponse> 
             data: Some(res),
         },
     )))
+}
+
+const VALIDATOR_DELEGATION: i8 = 0;
+const VALIDATOR_UN_DELEGATION: i8 = 2;
+
+#[derive(ApiResponse)]
+pub enum ValidatorHistoryResponse {
+    #[oai(status = 200)]
+    Ok(Json<ValidatorHistoryResult>),
+    #[oai(status = 400)]
+    BadRequest(Json<ValidatorHistoryResult>),
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, Object)]
+pub struct ValidatorHistoryResult {
+    pub code: i32,
+    pub message: String,
+    pub data: Option<ValidatorHistoryData>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, Object)]
+pub struct ValidatorHistoryData {
+    pub total: i64,
+    pub page: i64,
+    pub page_size: i64,
+    pub items: Vec<ValidatorHistoryItem>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, Clone, Object)]
+pub struct ValidatorHistoryItem {
+    pub tx_hash: String,
+    pub account: String,
+    pub operation: i8,
+    pub amount: i64,
+    pub timestamp: i64,
+}
+
+pub async fn validator_history(
+    api: &Api,
+    address: Query<String>,
+    page: Query<Option<i64>>,
+    page_size: Query<Option<i64>>,
+) -> Result<ValidatorHistoryResponse> {
+    let mut conn = api.storage.lock().await.acquire().await?;
+    let addr = address.0.to_uppercase();
+    let page = page.unwrap_or(1);
+    let page_size = page_size.unwrap_or(10);
+
+    let sql_delegation = format!("SELECT tx_hash,timestamp,jsonb_path_query(value, '$.body.operations[*].Delegation') AS delegation FROM transaction WHERE value @? '$.body.operations[*].Delegation.body.validator ? (@==\"{}\")'", addr);
+    let sql_undelegation = "SELECT tx_hash,timestamp,jsonb_path_query(value,'$.body.operations[*].UnDelegation') AS undelegation FROM transaction";
+
+    let mut tmp_items: Vec<ValidatorHistoryItem> = vec![];
+
+    let delegation_rows = sqlx::query(sql_delegation.as_str())
+        .fetch_all(&mut conn)
+        .await?;
+    for row in delegation_rows {
+        let timestamp: i64 = row.try_get("timestamp")?;
+        let tx_hash: String = row.try_get("tx_hash")?;
+        let val: Value = row.try_get("delegation")?;
+        let opt: DelegationOpt = serde_json::from_value(val).unwrap();
+
+        let pubkey = public_key_from_base64(&opt.pubkey).unwrap();
+        tmp_items.push(ValidatorHistoryItem {
+            tx_hash,
+            account: public_key_to_bech32(&pubkey),
+            operation: VALIDATOR_DELEGATION,
+            amount: opt.body.amount,
+            timestamp,
+        })
+    }
+
+    let undelegation_rows = sqlx::query(sql_undelegation).fetch_all(&mut conn).await?;
+    for row in undelegation_rows {
+        let timestamp: i64 = row.try_get("timestamp")?;
+        let tx_hash: String = row.try_get("tx_hash")?;
+        let val: Value = row.try_get("undelegation")?;
+        let opt: UnDelegationOpt = serde_json::from_value(val).unwrap();
+
+        let vaddr = hex::encode(opt.body.pu.target_validator).to_uppercase();
+        if addr.eq(&vaddr) {
+            let pubkey = public_key_from_base64(&opt.pubkey).unwrap();
+            tmp_items.push(ValidatorHistoryItem {
+                tx_hash,
+                account: public_key_to_bech32(&pubkey),
+                operation: VALIDATOR_UN_DELEGATION,
+                amount: opt.body.pu.am,
+                timestamp,
+            })
+        }
+    }
+
+    tmp_items.sort_by(|a, b| b.timestamp.cmp(&a.timestamp));
+
+    let items;
+    let total = tmp_items.len() as i64;
+    let offset = page_size * (page - 1);
+    if offset >= total {
+        items = vec![];
+    } else {
+        let start = offset as usize;
+        if offset + page_size <= total {
+            let end = (offset + page_size) as usize;
+            items = Vec::from(&tmp_items[start..end]);
+        } else {
+            items = Vec::from(&tmp_items[start..]);
+        }
+    }
+
+    Ok(ValidatorHistoryResponse::Ok(Json(ValidatorHistoryResult {
+        code: 200,
+        message: "".to_string(),
+        data: Some(ValidatorHistoryData {
+            total,
+            page,
+            page_size,
+            items,
+        }),
+    })))
 }
