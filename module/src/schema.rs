@@ -197,7 +197,7 @@ pub struct UnDelegationOpt {
 
 #[derive(Serialize, Deserialize, Debug, Default)]
 pub struct UnDelegationOptBody {
-    pub pu: Pu,
+    pub pu: Option<Pu>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Default)]

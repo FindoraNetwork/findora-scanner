@@ -367,15 +367,17 @@ pub async fn validator_history(
         let tx_hash: String = row.try_get("tx_hash")?;
         let val: Value = row.try_get("undelegation")?;
         let opt: UnDelegationOpt = serde_json::from_value(val).unwrap();
-
-        let vaddr = hex::encode(opt.body.pu.target_validator).to_uppercase();
+        if opt.body.pu.is_none() {
+            continue;
+        }
+        let vaddr = hex::encode(opt.body.pu.as_ref().unwrap().target_validator).to_uppercase();
         if addr.eq(&vaddr) {
             let pubkey = public_key_from_base64(&opt.pubkey).unwrap();
             tmp_items.push(ValidatorHistoryItem {
                 tx_hash,
                 account: public_key_to_bech32(&pubkey),
                 operation: VALIDATOR_UN_DELEGATION,
-                amount: opt.body.pu.am,
+                amount: opt.body.pu.unwrap().am,
                 timestamp,
             })
         }
