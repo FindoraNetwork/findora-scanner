@@ -180,8 +180,11 @@ pub async fn get_undelegation(
         let tx_hash: String = row.try_get("tx_hash")?;
         let val: Value = row.try_get("undelegation")?;
         let opt: UnDelegationOpt = serde_json::from_value(val).unwrap();
-
-        let validator_address = hex::encode(opt.body.pu.target_validator).to_uppercase();
+        if opt.body.pu.is_none() {
+            continue;
+        }
+        let validator_address =
+            hex::encode(opt.body.pu.as_ref().unwrap().target_validator).to_uppercase();
         let validator_detail_url = api
             .platform
             .rpc
@@ -195,7 +198,7 @@ pub async fn get_undelegation(
             node_address: validator.addr,
             node_name: validator.memo.name,
             node_logo: validator.memo.logo,
-            amount: opt.body.pu.am,
+            amount: opt.body.pu.unwrap().am,
             timestamp,
             expected_arrival_time: timestamp + 21 * 24 * 60 * 60,
         });
