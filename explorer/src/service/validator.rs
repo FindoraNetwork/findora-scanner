@@ -192,7 +192,7 @@ pub async fn validator_list(api: &Api) -> Result<ValidatorListResponse> {
     let validator_data: ValidatorListData = serde_json::from_value(res).unwrap();
 
     let sql = format!(
-        "SELECT address FROM block_generation WHERE height={}",
+        "SELECT address FROM block_generation WHERE height={} AND signature is not null",
         validator_data.cur_height.clone()
     );
 
