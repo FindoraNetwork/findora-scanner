@@ -337,8 +337,8 @@ pub async fn validator_history(
     let page = page.unwrap_or(1);
     let page_size = page_size.unwrap_or(10);
 
-    let sql_delegation = format!("SELECT tx_hash,timestamp,jsonb_path_query(value, '$.body.operations[*].Delegation') AS delegation FROM transaction WHERE value @? '$.body.operations[*].Delegation.body.validator ? (@==\"{}\")'", addr);
-    let sql_undelegation = "SELECT tx_hash,timestamp,jsonb_path_query(value,'$.body.operations[*].UnDelegation') AS undelegation FROM transaction";
+    let sql_delegation = format!("SELECT tx_hash,timestamp,jsonb_path_query(value, '$.body.operations[*].Delegation') AS delegation FROM transaction WHERE code=0 AND (value @? '$.body.operations[*].Delegation.body.validator ? (@==\"{}\")')", addr);
+    let sql_undelegation = "SELECT tx_hash,timestamp,jsonb_path_query(value,'$.body.operations[*].UnDelegation') AS undelegation FROM transaction WHERE code=0";
 
     let mut tmp_items: Vec<ValidatorHistoryItem> = vec![];
 
