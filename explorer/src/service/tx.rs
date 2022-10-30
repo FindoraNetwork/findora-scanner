@@ -467,6 +467,55 @@ pub async fn get_prism_records(api: &Api, address: Path<String>) -> Result<Prism
     })))
 }
 
+pub async fn get_evm_tx(api: &Api, tx_hash: Path<String>) -> Result<TxResponse> {
+    let mut conn = api.storage.lock().await.acquire().await?;
+    let sql_query = "SELECT * FROM transaction WHERE ty = 1";
+
+    let rows = sqlx::query(sql_query).fetch_all(&mut conn).await?;
+    for row in rows {
+        let value: Value = row.try_get("value")?;
+        let evm_tx: EvmTx = serde_json::from_value(value.clone()).unwrap();
+        let hash = H256::from_slice(Keccak256::digest(&rlp::encode(&evm_tx)).as_slice());
+
+        let evm_tx_hash = hash.to_string();
+        if evm_tx_hash.eq(&tx_hash.0.to_lowercase()) {
+            let tx_hash: String = row.try_get("tx_hash")?;
+            let block_hash: String = row.try_get("block_hash")?;
+            let ty: i32 = row.try_get("ty")?;
+            let timestamp: i64 = row.try_get("timestamp")?;
+            let height: i64 = row.try_get("height")?;
+            let code: i64 = row.try_get("code")?;
+            let log = "".to_string();
+            let result: Value = row.try_get("result")?;
+
+            let tx = TransactionResponse {
+                tx_hash,
+                evm_tx_hash,
+                block_hash,
+                height,
+                timestamp,
+                code,
+                ty,
+                log,
+                result,
+                value,
+            };
+
+            return Ok(TxResponse::Ok(Json(TxRes {
+                code: 200,
+                message: "".to_string(),
+                data: Some(tx),
+            })));
+        }
+    }
+
+    Ok(TxResponse::NotFound(Json(TxRes {
+        code: 404,
+        message: "not found".to_string(),
+        data: None,
+    })))
+}
+
 pub async fn get_tx(api: &Api, tx_hash: Path<String>) -> Result<TxResponse> {
     let mut conn = api.storage.lock().await.acquire().await?;
     let str = format!(
@@ -1078,13 +1127,11 @@ fn evm_hash_and_type(tx: &mut TransactionResponse) -> Result<()> {
             tx.ty = PRISM_EVM_TO_NATIVE;
             return Ok(());
         }
-        // contains "Ethereum"
+
         // calc evm tx hash
         let evm_tx: EvmTx = serde_json::from_value(tx.value.clone()).unwrap();
         let hash = H256::from_slice(Keccak256::digest(&rlp::encode(&evm_tx)).as_slice());
         tx.evm_tx_hash = format!("{:?}", hash);
-
-        // tx response
         let evm_tx_response = evm_tx.to_evm_tx_response().unwrap();
         tx.value = serde_json::to_value(&evm_tx_response).unwrap();
     } else if tx_str.contains("ConvertAccount") {

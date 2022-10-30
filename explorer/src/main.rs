@@ -34,13 +34,28 @@ pub struct Api {
 
 #[OpenApi]
 impl Api {
-    #[oai(path = "/tx/:tx_id", method = "get", tag = "ApiTags::Transaction")]
+    #[oai(path = "/tx/:tx_hash", method = "get", tag = "ApiTags::Transaction")]
     async fn get_tx(
         &self,
         /// transaction hash, e.g. 'c19fc22beb61030607367b42d4898a26ede1e6aa6b400330804c95b241f29bd0'.
-        tx_id: Path<String>,
+        tx_hash: Path<String>,
     ) -> poem::Result<TxResponse> {
-        service::tx::get_tx(self, tx_id)
+        service::tx::get_tx(self, tx_hash)
+            .await
+            .map_err(utils::handle_fetch_one_err)
+    }
+
+    #[oai(
+        path = "/tx/evm/:tx_hash",
+        method = "get",
+        tag = "ApiTags::Transaction"
+    )]
+    async fn get_evm_tx(
+        &self,
+        /// evm transaction hash, e.g. '0x697c0492b64b8e786061818c12af46e9b62b9ee20e573d7549e7a82e94ef13cf'.
+        tx_hash: Path<String>,
+    ) -> poem::Result<TxResponse> {
+        service::tx::get_evm_tx(self, tx_hash)
             .await
             .map_err(utils::handle_fetch_one_err)
     }
