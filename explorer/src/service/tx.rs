@@ -477,7 +477,7 @@ pub async fn get_evm_tx(api: &Api, tx_hash: Path<String>) -> Result<TxResponse> 
         let evm_tx: EvmTx = serde_json::from_value(value.clone()).unwrap();
         let hash = H256::from_slice(Keccak256::digest(&rlp::encode(&evm_tx)).as_slice());
 
-        let evm_tx_hash = hash.to_string();
+        let evm_tx_hash = format!("{:?}", hash);
         if evm_tx_hash.eq(&tx_hash.0.to_lowercase()) {
             let tx_hash: String = row.try_get("tx_hash")?;
             let block_hash: String = row.try_get("block_hash")?;
