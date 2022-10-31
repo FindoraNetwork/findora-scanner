@@ -58,3 +58,6 @@ CREATE INDEX tx_block_index ON transaction (block_hash);
 CREATE INDEX tx_height_index ON transaction (height);
 CREATE INDEX tx_timestamp_index ON transaction (timestamp);
 CREATE INDEX tx_ty_index ON transaction (ty);
+CREATE INDEX bg_height_address_index ON block_generation(height, address);
+CREATE INDEX bg_signature_index ON block_generation(signature);
+CREATE INDEX bg_time_index ON block_generation(time);
