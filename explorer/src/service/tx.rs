@@ -469,7 +469,7 @@ pub async fn get_prism_records(api: &Api, address: Path<String>) -> Result<Prism
 
 pub async fn get_evm_tx(api: &Api, tx_hash: Path<String>) -> Result<TxResponse> {
     let mut conn = api.storage.lock().await.acquire().await?;
-    let sql_query = "SELECT * FROM transaction WHERE ty = 1 AND (value @? '$.function.Ethereum')";
+    let sql_query = "SELECT * FROM transaction WHERE value @? '$.function.Ethereum'";
 
     let rows = sqlx::query(sql_query).fetch_all(&mut conn).await?;
     for row in rows {

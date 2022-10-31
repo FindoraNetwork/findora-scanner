@@ -11,6 +11,7 @@ use crate::service::tx::{PrismRecordResponse, PrismRecordResponseNew, TxResponse
 use crate::service::validator::{
     CirculatingSupplyResponse, DelegatorListResponse, ValidatorDelegationResponse,
     ValidatorDetailResponse, ValidatorHistoryResponse, ValidatorListResponse,
+    ValidatorSignedCountResponse,
 };
 use anyhow::Result;
 use poem::middleware::Cors;
@@ -326,6 +327,20 @@ impl Api {
     )]
     async fn circulating_supply(&self) -> poem::Result<CirculatingSupplyResponse> {
         service::validator::circulating_supply(self)
+            .await
+            .map_err(utils::handle_fetch_one_err)
+    }
+
+    #[oai(
+        path = "/chain/validator/signed_count/:address",
+        method = "get",
+        tag = "ApiTags::BlockChain"
+    )]
+    async fn validator_signed_count(
+        &self,
+        address: Path<String>,
+    ) -> poem::Result<ValidatorSignedCountResponse> {
+        service::validator::validator_signed_info(self, address)
             .await
             .map_err(utils::handle_fetch_one_err)
     }

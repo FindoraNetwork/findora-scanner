@@ -7,6 +7,7 @@ use poem_openapi::param::{Path, Query};
 use poem_openapi::{payload::Json, ApiResponse, Object};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use sqlx::types::chrono::{Local, NaiveDateTime};
 use sqlx::Row;
 
 #[derive(ApiResponse)]
@@ -410,4 +411,70 @@ pub async fn validator_history(
             items,
         }),
     })))
+}
+
+#[derive(ApiResponse)]
+pub enum ValidatorSignedCountResponse {
+    #[oai(status = 200)]
+    Ok(Json<ValidatorSignedCountResult>),
+    #[oai(status = 500)]
+    InternalError(Json<ValidatorSignedCountResult>),
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, Object)]
+pub struct ValidatorSignedCountResult {
+    pub code: i32,
+    pub message: String,
+    pub data: Option<SignedCountData>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, Object)]
+pub struct SignedCountData {
+    pub signed_count: i64,
+    pub miss_count: i64,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct ValidatorDetail {
+    pub addr: String,
+    pub start_height: i64,
+    pub cur_height: i64,
+}
+
+pub async fn validator_signed_info(
+    api: &Api,
+    address: Path<String>,
+) -> Result<ValidatorSignedCountResponse> {
+    let mut conn = api.storage.lock().await.acquire().await?;
+
+    let nt = Local::now().timestamp();
+    let start_time = NaiveDateTime::from_timestamp(nt - 60 * 60 * 24, 0);
+    let end_time = NaiveDateTime::from_timestamp(nt, 0);
+
+    let sql = format!("SELECT count(*) as cnt FROM block_generation WHERE address='{}' AND time >= '{}' AND time <= '{}' AND signature is not null", address.0.to_uppercase(), start_time, end_time);
+    let res = sqlx::query(sql.as_str()).fetch_one(&mut conn).await;
+    let row = match res {
+        Ok(_) => res.unwrap(),
+        _ => {
+            return Ok(ValidatorSignedCountResponse::InternalError(Json(
+                ValidatorSignedCountResult {
+                    code: 500,
+                    message: "internal error".to_string(),
+                    data: None,
+                },
+            )))
+        }
+    };
+    let cnt: i64 = row.try_get("cnt")?;
+
+    Ok(ValidatorSignedCountResponse::Ok(Json(
+        ValidatorSignedCountResult {
+            code: 200,
+            message: "".to_string(),
+            data: Some(SignedCountData {
+                signed_count: cnt,
+                miss_count: 60 * 60 * 24 / 15 - cnt,
+            }),
+        },
+    )))
 }
