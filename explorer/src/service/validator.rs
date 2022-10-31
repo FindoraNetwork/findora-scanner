@@ -455,11 +455,11 @@ pub async fn validator_signed_info(
     let res = sqlx::query(sql.as_str()).fetch_one(&mut conn).await;
     let row = match res {
         Ok(_) => res.unwrap(),
-        _ => {
+        Err(e) => {
             return Ok(ValidatorSignedCountResponse::InternalError(Json(
                 ValidatorSignedCountResult {
                     code: 500,
-                    message: "internal error".to_string(),
+                    message: format!("internal error, {:?}", e.to_string()),
                     data: None,
                 },
             )))
