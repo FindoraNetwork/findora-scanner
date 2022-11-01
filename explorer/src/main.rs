@@ -340,7 +340,7 @@ impl Api {
         &self,
         address: Path<String>,
     ) -> poem::Result<ValidatorSignedCountResponse> {
-        service::validator::validator_signed_info(self, address)
+        service::validator::validator_signed_count(self, address)
             .await
             .map_err(utils::handle_fetch_one_err)
     }
