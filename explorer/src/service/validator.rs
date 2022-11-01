@@ -441,7 +441,7 @@ pub struct ValidatorDetail {
     pub cur_height: i64,
 }
 
-pub async fn validator_signed_info(
+pub async fn validator_signed_count(
     api: &Api,
     address: Path<String>,
 ) -> Result<ValidatorSignedCountResponse> {
@@ -450,30 +450,28 @@ pub async fn validator_signed_info(
     let nt = Local::now().timestamp();
     let start_time = NaiveDateTime::from_timestamp(nt - 60 * 60 * 24, 0);
     let end_time = NaiveDateTime::from_timestamp(nt, 0);
+    let sql_block_cnt = format!(
+        "SELECT count(*) as cnt FROM block WHERE time >= '{}' AND time <= '{}'",
+        start_time, end_time
+    );
+    let row_blk_cnt = sqlx::query(sql_block_cnt.as_str())
+        .fetch_one(&mut conn)
+        .await?;
+    let blk_cnt: i64 = row_blk_cnt.try_get("cnt")?;
 
-    let sql = format!("SELECT count(*) as cnt FROM block_generation WHERE address='{}' AND time >= '{}' AND time <= '{}' AND signature is not null", address.0.to_uppercase(), start_time, end_time);
-    let res = sqlx::query(sql.as_str()).fetch_one(&mut conn).await;
-    let row = match res {
-        Ok(_) => res.unwrap(),
-        Err(e) => {
-            return Ok(ValidatorSignedCountResponse::InternalError(Json(
-                ValidatorSignedCountResult {
-                    code: 500,
-                    message: format!("internal error, {:?}", e.to_string()),
-                    data: None,
-                },
-            )))
-        }
-    };
-    let cnt: i64 = row.try_get("cnt")?;
+    let sql_signed_cnt = format!("SELECT count(*) as cnt FROM block_generation WHERE address='{}' AND time >= '{}' AND time <= '{}' AND signature is not null", address.0.to_uppercase(), start_time, end_time);
+    let row_signed_cnt = sqlx::query(sql_signed_cnt.as_str())
+        .fetch_one(&mut conn)
+        .await?;
+    let signed_cnt: i64 = row_signed_cnt.try_get("cnt")?;
 
     Ok(ValidatorSignedCountResponse::Ok(Json(
         ValidatorSignedCountResult {
             code: 200,
             message: "".to_string(),
             data: Some(SignedCountData {
-                signed_count: cnt,
-                miss_count: 60 * 60 * 24 / 15 - cnt,
+                signed_count: signed_cnt,
+                miss_count: blk_cnt - signed_cnt,
             }),
         },
     )))
