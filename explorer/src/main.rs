@@ -332,15 +332,17 @@ impl Api {
     }
 
     #[oai(
-        path = "/chain/validator/signed_count/:address",
+        path = "/chain/validator/signed_count",
         method = "get",
         tag = "ApiTags::BlockChain"
     )]
     async fn validator_signed_count(
         &self,
-        address: Path<String>,
+        address: Query<String>,
+        page: Query<Option<i64>>,
+        page_size: Query<Option<i64>>,
     ) -> poem::Result<ValidatorSignedCountResponse> {
-        service::validator::validator_signed_count(self, address)
+        service::validator::validator_signed_count(self, address, page, page_size)
             .await
             .map_err(utils::handle_fetch_one_err)
     }
