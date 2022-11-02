@@ -430,8 +430,16 @@ pub struct ValidatorSignedCountResult {
 
 #[derive(Serialize, Deserialize, Debug, Default, Object)]
 pub struct SignedCountData {
+    pub page: i64,
+    pub page_size: i64,
+    pub items: Vec<SignedCountItem>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, Object)]
+pub struct SignedCountItem {
     pub signed_count: i64,
     pub miss_count: i64,
+    pub timestamp: i64,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -443,35 +451,54 @@ pub struct ValidatorDetail {
 
 pub async fn validator_signed_count(
     api: &Api,
-    address: Path<String>,
+    address: Query<String>,
+    page: Query<Option<i64>>,
+    page_size: Query<Option<i64>>,
 ) -> Result<ValidatorSignedCountResponse> {
     let mut conn = api.storage.lock().await.acquire().await?;
+    let page = page.0.unwrap_or(1);
+    let page_size = page_size.0.unwrap_or(10);
 
-    let nt = Local::now().timestamp();
-    let start_time = NaiveDateTime::from_timestamp(nt - 60 * 60 * 24, 0);
-    let end_time = NaiveDateTime::from_timestamp(nt, 0);
-    let sql_block_cnt = format!(
-        "SELECT count(*) as cnt FROM block WHERE time >= '{}' AND time <= '{}'",
-        start_time, end_time
-    );
-    let row_blk_cnt = sqlx::query(sql_block_cnt.as_str())
-        .fetch_one(&mut conn)
-        .await?;
-    let blk_cnt: i64 = row_blk_cnt.try_get("cnt")?;
+    let day_secs = 60 * 60 * 24;
+    let nt = Local::today().and_hms(0, 0, 0).timestamp() - (page - 1) * page_size * day_secs;
 
-    let sql_signed_cnt = format!("SELECT count(*) as cnt FROM block_generation WHERE address='{}' AND time >= '{}' AND time <= '{}' AND signature is not null", address.0.to_uppercase(), start_time, end_time);
-    let row_signed_cnt = sqlx::query(sql_signed_cnt.as_str())
-        .fetch_one(&mut conn)
-        .await?;
-    let signed_cnt: i64 = row_signed_cnt.try_get("cnt")?;
+    let mut v: Vec<SignedCountItem> = vec![];
+    for i in 0..page_size {
+        let start_secs = nt - i * day_secs;
+        let end_secs = nt - i * day_secs + day_secs;
+        let start_time = NaiveDateTime::from_timestamp(start_secs, 0);
+        let end_time = NaiveDateTime::from_timestamp(end_secs, 0);
+
+        let sql_block_cnt = format!(
+            "SELECT count(*) as cnt FROM block WHERE time>='{}' AND time<'{}'",
+            start_time, end_time
+        );
+        let row_blk_cnt = sqlx::query(sql_block_cnt.as_str())
+            .fetch_one(&mut conn)
+            .await?;
+        let blk_cnt: i64 = row_blk_cnt.try_get("cnt")?;
+
+        let sql_signed_cnt = format!("SELECT count(*) as cnt FROM block_generation WHERE address='{}' AND time>='{}' AND time<'{}' AND signature is not null", address.0.to_uppercase(), start_time, end_time);
+        let row_signed_cnt = sqlx::query(sql_signed_cnt.as_str())
+            .fetch_one(&mut conn)
+            .await?;
+        let signed_cnt: i64 = row_signed_cnt.try_get("cnt")?;
+
+        v.push(SignedCountItem {
+            signed_count: signed_cnt,
+            miss_count: blk_cnt - signed_cnt,
+            timestamp: start_secs,
+        })
+    }
 
     Ok(ValidatorSignedCountResponse::Ok(Json(
         ValidatorSignedCountResult {
             code: 200,
             message: "".to_string(),
             data: Some(SignedCountData {
-                signed_count: signed_cnt,
-                miss_count: blk_cnt - signed_cnt,
+                page,
+                page_size,
+                items: v,
             }),
         },
     )))
