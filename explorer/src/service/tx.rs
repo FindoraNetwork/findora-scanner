@@ -5,8 +5,8 @@ use crate::Api;
 use anyhow::Result;
 use ethereum_types::{H160, H256};
 use module::schema::{
-    EvmTx, PrismTransaction, TransactionResponse, ABAR_TO_ABAR, ABAR_TO_BAR, BAR_TO_ABAR, CLAIM,
-    DEFINE_OR_ISSUE_ASSET, EVM_TRANSFER, HIDE_ASSET_AMOUNT, HIDE_ASSET_TYPE,
+    EvmTx, PrismTransaction, TransactionResponse, UnDelegationValue, ABAR_TO_ABAR, ABAR_TO_BAR,
+    BAR_TO_ABAR, CLAIM, DEFINE_OR_ISSUE_ASSET, EVM_TRANSFER, HIDE_ASSET_AMOUNT, HIDE_ASSET_TYPE,
     HIDE_ASSET_TYPE_AND_AMOUNT, PRISM_EVM_TO_NATIVE, PRISM_NATIVE_TO_EVM, STAKING, UNSTAKING,
 };
 use poem_openapi::param::Query;
@@ -1146,6 +1146,9 @@ fn evm_hash_and_type(tx: &mut TransactionResponse) -> Result<()> {
         tx.ty = CLAIM;
     } else if tx_str.contains("UnDelegation") {
         tx.ty = UNSTAKING;
+        let uv: UnDelegationValue = serde_json::from_value(tx.value.clone()).unwrap();
+        let uvw = uv.wrap();
+        tx.value = serde_json::to_value(uvw).unwrap();
     } else if tx_str.contains("Delegation") {
         tx.ty = STAKING;
     } else if tx_str.contains("DefineAsset") || tx_str.contains("IssueAsset") {

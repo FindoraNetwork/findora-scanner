@@ -262,7 +262,7 @@ pub async fn statistics(api: &Api, ty: Query<Option<i32>>) -> Result<ChainStatis
     addrs.dedup();
 
     // daily txs
-    let start_time = Local::now().date().and_hms(0, 0, 0);
+    let start_time = Local::now().date_naive().and_hms_opt(0, 0, 0).unwrap();
     let sql_str = if let Some(ty) = ty.0 {
         format!(
             "SELECT COUNT(*) as cnt FROM transaction WHERE ty={} AND timestamp>={}",

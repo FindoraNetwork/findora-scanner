@@ -460,14 +460,19 @@ pub async fn validator_signed_count(
     let page_size = page_size.0.unwrap_or(10);
 
     let day_secs = 60 * 60 * 24;
-    let nt = Local::today().and_hms(0, 0, 0).timestamp() - (page - 1) * page_size * day_secs;
+    let nt = Local::now()
+        .date_naive()
+        .and_hms_opt(0, 0, 0)
+        .unwrap()
+        .timestamp()
+        - (page - 1) * page_size * day_secs;
 
     let mut v: Vec<SignedCountItem> = vec![];
     for i in 0..page_size {
         let start_secs = nt - i * day_secs;
         let end_secs = nt - i * day_secs + day_secs;
-        let start_time = NaiveDateTime::from_timestamp(start_secs, 0);
-        let end_time = NaiveDateTime::from_timestamp(end_secs, 0);
+        let start_time = NaiveDateTime::from_timestamp_opt(start_secs, 0).unwrap();
+        let end_time = NaiveDateTime::from_timestamp_opt(end_secs, 0).unwrap();
 
         let sql_block_cnt = format!(
             "SELECT count(*) as cnt FROM block WHERE time>='{}' AND time<'{}'",
