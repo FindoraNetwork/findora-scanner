@@ -263,13 +263,13 @@ pub async fn get_blocks(
     if let Some(start_time) = start_time.0 {
         params.push(format!(
             " time >= '{}' ",
-            NaiveDateTime::from_timestamp(start_time, 0)
+            NaiveDateTime::from_timestamp_opt(start_time, 0).unwrap()
         ));
     }
     if let Some(end_time) = end_time.0 {
         params.push(format!(
             " time <= '{}' ",
-            NaiveDateTime::from_timestamp(end_time, 0)
+            NaiveDateTime::from_timestamp_opt(end_time, 0).unwrap()
         ));
     }
     let page = page.0.unwrap_or(1);

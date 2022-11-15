@@ -188,6 +188,98 @@ pub struct DelegationOpt {
     pub v_signature: Option<Vec<i64>>,
 }
 
+#[derive(Serialize, Deserialize)]
+pub struct UnDelegationValue {
+    pub body: UndelegationBody,
+}
+
+impl UnDelegationValue {
+    pub fn wrap(self) -> UnDelegationValueWrap {
+        let vaddr = hex::encode(
+            self.body
+                .operations
+                .0
+                .undelegation
+                .body
+                .pu
+                .as_ref()
+                .unwrap()
+                .target_validator,
+        )
+        .to_uppercase();
+
+        let wpu = PuWrap {
+            am: self
+                .body
+                .operations
+                .0
+                .undelegation
+                .body
+                .pu
+                .as_ref()
+                .unwrap()
+                .am,
+            new_delegator_id: self
+                .body
+                .operations
+                .0
+                .undelegation
+                .body
+                .pu
+                .unwrap()
+                .new_delegator_id,
+            target_validator: vaddr,
+        };
+        let ud = UnDelegationOptWrap {
+            body: UnDelegationOptBodyWrap {
+                nonce: self.body.operations.0.undelegation.body.nonce.clone(),
+                pu: Some(wpu),
+            },
+            pubkey: self.body.operations.0.undelegation.pubkey.clone(),
+            signature: self.body.operations.0.undelegation.signature.clone(),
+        };
+
+        UnDelegationValueWrap {
+            body: UndelegationBodyWrap {
+                no_replay_token: self.body.no_replay_token.clone(),
+                operations: (
+                    UnDelegationWrap { undelegation: ud },
+                    self.body.operations.1,
+                ),
+            },
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct UnDelegationValueWrap {
+    pub body: UndelegationBodyWrap,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct UndelegationBody {
+    pub no_replay_token: Value,
+    pub operations: (UnDelegation, Value),
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct UndelegationBodyWrap {
+    pub no_replay_token: Value,
+    pub operations: (UnDelegationWrap, Value),
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct UnDelegation {
+    #[serde(rename = "UnDelegation")]
+    pub undelegation: UnDelegationOpt,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct UnDelegationWrap {
+    #[serde(rename = "UnDelegation")]
+    pub undelegation: UnDelegationOptWrap,
+}
+
 #[derive(Serialize, Deserialize, Debug, Default)]
 pub struct UnDelegationOpt {
     pub body: UnDelegationOptBody,
@@ -196,8 +288,22 @@ pub struct UnDelegationOpt {
 }
 
 #[derive(Serialize, Deserialize, Debug, Default)]
+pub struct UnDelegationOptWrap {
+    pub body: UnDelegationOptBodyWrap,
+    pub pubkey: String,
+    pub signature: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default)]
 pub struct UnDelegationOptBody {
+    pub nonce: Value,
     pub pu: Option<Pu>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default)]
+pub struct UnDelegationOptBodyWrap {
+    pub nonce: Value,
+    pub pu: Option<PuWrap>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Default)]
@@ -205,6 +311,13 @@ pub struct Pu {
     pub am: i64,
     pub new_delegator_id: String,
     pub target_validator: [u8; 20],
+}
+
+#[derive(Serialize, Deserialize, Debug, Default)]
+pub struct PuWrap {
+    pub am: i64,
+    pub new_delegator_id: String,
+    pub target_validator: String,
 }
 
 #[derive(Serialize, Deserialize, Debug, Default)]
