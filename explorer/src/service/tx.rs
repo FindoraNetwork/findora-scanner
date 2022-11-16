@@ -1147,8 +1147,10 @@ fn evm_hash_and_type(tx: &mut TransactionResponse) -> Result<()> {
     } else if tx_str.contains("UnDelegation") {
         tx.ty = UNSTAKING;
         let uv: UnDelegationValue = serde_json::from_value(tx.value.clone()).unwrap();
-        let uvw = uv.wrap();
-        tx.value = serde_json::to_value(uvw).unwrap();
+        if uv.body.operations.0.is_some() {
+            let uvw = uv.wrap();
+            tx.value = serde_json::to_value(uvw).unwrap();
+        }
     } else if tx_str.contains("Delegation") {
         tx.ty = STAKING;
     } else if tx_str.contains("DefineAsset") || tx_str.contains("IssueAsset") {
