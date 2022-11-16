@@ -34,7 +34,10 @@ jobs:
           ~/.cargo/git/db/
           target/
         key: ${{ runner.os }}-stable-cargo-${{ hashFiles('**/Cargo.lock') }}
-
+    
+    - name: Update registry
+      run: cargo update
+    
     - name: Check Formatting
       run: cargo fmt --all -- --check 
 
