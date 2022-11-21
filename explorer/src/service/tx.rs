@@ -563,7 +563,7 @@ pub async fn get_tx(api: &Api, tx_hash: Path<String>) -> Result<TxResponse> {
         value,
     };
 
-    let _ = evm_hash_and_type(&mut tx);
+    let _ = wrap_evm_tx(&mut tx);
 
     Ok(TxResponse::Ok(Json(TxRes {
         code: 200,
@@ -703,7 +703,7 @@ pub async fn get_txs(
             result,
             value,
         };
-        let _ = evm_hash_and_type(&mut tx);
+        let _ = wrap_evm_tx(&mut tx);
         txs.push(tx);
     }
 
@@ -1119,7 +1119,7 @@ struct Output {
     pub public_key: Value,
 }
 
-fn evm_hash_and_type(tx: &mut TransactionResponse) -> Result<()> {
+fn wrap_evm_tx(tx: &mut TransactionResponse) -> Result<()> {
     let tx_str: String = serde_json::to_string(&tx.value).unwrap();
 
     if tx.ty == EVM_TRANSFER {
@@ -1187,6 +1187,67 @@ fn evm_hash_and_type(tx: &mut TransactionResponse) -> Result<()> {
     }
 
     Ok(())
+}
+
+/// get evm txs by address.
+pub async fn get_evm_txs(
+    api: &Api,
+    address: Query<String>,
+    page: Query<Option<i64>>,
+    page_size: Query<Option<i64>>,
+) -> Result<TxsResponse> {
+    let mut conn = api.storage.lock().await.acquire().await?;
+    let page = page.unwrap_or(1);
+    let page_size = page_size.unwrap_or(10);
+    let sql_total = format!("SELECT count(*) as cnt FROM transaction WHERE value @? '$.function.Ethereum.Transact.from ? (@==\"{}\")'", address.0);
+    let sql_tx = format!("SELECT * FROM transaction WHERE value @? '$.function.Ethereum.Transact.from ? (@==\"{}\")' ORDER BY timestamp LIMIT {} OFFSET {}", address.0, page_size, page_size*(page-1));
+    let rows = sqlx::query(sql_tx.as_str()).fetch_all(&mut conn).await?;
+
+    let mut txs: Vec<TransactionResponse> = vec![];
+    for row in rows {
+        let tx_hash: String = row.try_get("tx_hash")?;
+        let block_hash: String = row.try_get("block_hash")?;
+        let ty: i32 = row.try_get("ty")?;
+        let timestamp: i64 = row.try_get("timestamp")?;
+        let height: i64 = row.try_get("height")?;
+        let code: i64 = row.try_get("code")?;
+        let result: Value = row.try_get("result")?;
+        let value: Value = row.try_get("value")?;
+
+        let mut tx = TransactionResponse {
+            tx_hash,
+            evm_tx_hash: String::new(),
+            block_hash,
+            height,
+            timestamp,
+            code,
+            ty,
+            log: "".to_string(),
+            result,
+            value,
+        };
+
+        let evm_tx: EvmTx = serde_json::from_value(tx.value.clone()).unwrap();
+        let hash = H256::from_slice(Keccak256::digest(&rlp::encode(&evm_tx)).as_slice());
+        tx.evm_tx_hash = format!("{:?}", hash);
+
+        txs.push(tx);
+    }
+
+    // total
+    let res = sqlx::query(sql_total.as_str()).fetch_one(&mut conn).await?;
+    let total: i64 = res.try_get("cnt")?;
+
+    Ok(TxsResponse::Ok(Json(TxsRes {
+        code: 200,
+        message: "".to_string(),
+        data: Some(TxsData {
+            page,
+            page_size,
+            total,
+            txs,
+        }),
+    })))
 }
 
 #[cfg(test)]
