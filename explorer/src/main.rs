@@ -61,21 +61,6 @@ impl Api {
             .map_err(utils::handle_fetch_one_err)
     }
 
-    #[oai(path = "/tx/evm/records", method = "get", tag = "ApiTags::Transaction")]
-    async fn get_evm_txs_by_address(
-        &self,
-        /// evm account, e.g. '0x7dd3fd126e5d8ea01ba2188c46c53c5540a36803'.
-        address: Query<String>,
-        /// page index, default 1.
-        page: Query<Option<i64>>,
-        /// page size, default 10.
-        page_size: Query<Option<i64>>,
-    ) -> poem::Result<TxsResponse> {
-        service::tx::get_evm_txs(self, address, page, page_size)
-            .await
-            .map_err(utils::handle_fetch_one_err)
-    }
-
     #[allow(clippy::too_many_arguments)]
     #[oai(path = "/txs", method = "get", tag = "ApiTags::Transaction")]
     async fn get_txs(
