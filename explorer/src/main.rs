@@ -13,6 +13,7 @@ use crate::service::validator::{
     ValidatorDetailResponse, ValidatorHistoryResponse, ValidatorListResponse,
     ValidatorSignedCountResponse,
 };
+use crate::utils::handle_fetch_one_err;
 use anyhow::Result;
 use poem::middleware::Cors;
 use poem::{listener::TcpListener, EndpointExt, Route, Server};
@@ -59,6 +60,36 @@ impl Api {
         service::tx::get_evm_tx(self, tx_hash)
             .await
             .map_err(utils::handle_fetch_one_err)
+    }
+
+    #[oai(path = "/txs/receive", method = "get", tag = "ApiTags::Transaction")]
+    async fn get_txs_received(
+        &self,
+        /// txs received by this account, e.g. 'fra1p4vy5n9mlkdys7xczegj398xtyvw2nawz00nnfh4yr7fpjh297cqsxfv7v'.
+        address: Query<String>,
+        /// page index, starting from 1, default 1.
+        page: Query<Option<i64>>,
+        /// page size, default 10.
+        page_size: Query<Option<i64>>,
+    ) -> poem::Result<TxsResponse> {
+        service::tx::get_txs_received(self, address, page, page_size)
+            .await
+            .map_err(handle_fetch_one_err)
+    }
+
+    #[oai(path = "/txs/send", method = "get", tag = "ApiTags::Transaction")]
+    async fn get_txs_sent(
+        &self,
+        /// txs sent from this account, e.g. 'fra1p4vy5n9mlkdys7xczegj398xtyvw2nawz00nnfh4yr7fpjh297cqsxfv7v'.
+        address: Query<String>,
+        /// page index, starting from 1, default 1.
+        page: Query<Option<i64>>,
+        /// page size, default 10.
+        page_size: Query<Option<i64>>,
+    ) -> poem::Result<TxsResponse> {
+        service::tx::get_txs_sent(self, address, page, page_size)
+            .await
+            .map_err(handle_fetch_one_err)
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -112,11 +143,11 @@ impl Api {
         /// 1: AbarToBar.
         /// 2: BarToAbar.
         bar: Query<Option<i32>>,
-        /// start timestamp.
+        /// starting timestamp.
         start_time: Query<Option<i64>>,
-        /// end timestamp.
+        /// ending timestamp.
         end_time: Query<Option<i64>>,
-        /// page index, default 1.
+        /// page index, staring from 1, default 1.
         page: Query<Option<i64>>,
         /// page size, default 10.
         page_size: Query<Option<i64>>,
@@ -135,11 +166,11 @@ impl Api {
         block_id: Query<Option<String>>,
         /// public key.
         pub_key: Query<Option<String>>,
-        /// start timestamp.
+        /// starting timestamp.
         start_time: Query<Option<i64>>,
-        /// end timestamp.
+        /// ending timestamp.
         end_time: Query<Option<i64>>,
-        /// page index, default 1.
+        /// page index, starting from 1, default 1.
         page: Query<Option<i64>>,
         /// page size, default 10.
         page_size: Query<Option<i64>>,
@@ -160,11 +191,11 @@ impl Api {
         &self,
         ///Bridge Contract deploy address, e.g. 0x2B7835AE05C9Cb5EF086e3BFe249e2658b450E8d
         address: Path<String>,
-        /// start timestamp.
+        /// starting timestamp.
         start_time: Query<Option<i64>>,
-        /// end timestamp.
+        /// ending timestamp.
         end_time: Query<Option<i64>>,
-        /// page index, default 1.
+        /// page index, staring from 1, default 1.
         page: Query<Option<i64>>,
         /// page size, default 10.
         page_size: Query<Option<i64>>,
@@ -232,11 +263,11 @@ impl Api {
         start_height: Query<Option<i64>>,
         /// height of block end.
         end_height: Query<Option<i64>>,
-        /// time of block starts in seconds.
+        /// starting timestamp.
         start_time: Query<Option<i64>>,
-        /// time of block ends in seconds.
+        /// ending timestamp.
         end_time: Query<Option<i64>>,
-        /// page index, starting at 1, default 1.
+        /// page index, starting from 1, default 1.
         page: Query<Option<i64>>,
         /// page size, default 10.
         page_size: Query<Option<i64>>,
@@ -259,7 +290,7 @@ impl Api {
         &self,
         /// bech32 account address, e.g. 'fra1p4vy5n9mlkdys7xczegj398xtyvw2nawz00nnfh4yr7fpjh297cqsxfv7v'.
         address: Path<String>,
-        /// page index, default 1.
+        /// page index, staring from 1, default 1.
         page: Query<Option<i64>>,
         /// page size, default 10.
         page_size: Query<Option<i64>>,
