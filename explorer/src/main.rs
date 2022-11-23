@@ -263,9 +263,9 @@ impl Api {
         start_height: Query<Option<i64>>,
         /// height of block end.
         end_height: Query<Option<i64>>,
-        /// timestamp of block.
+        /// starting timestamp.
         start_time: Query<Option<i64>>,
-        /// timestamp of block.
+        /// ending timestamp.
         end_time: Query<Option<i64>>,
         /// page index, starting from 1, default 1.
         page: Query<Option<i64>>,
