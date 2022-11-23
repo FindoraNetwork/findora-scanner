@@ -143,11 +143,11 @@ impl Api {
         /// 1: AbarToBar.
         /// 2: BarToAbar.
         bar: Query<Option<i32>>,
-        /// start timestamp.
+        /// starting timestamp.
         start_time: Query<Option<i64>>,
-        /// end timestamp.
+        /// ending timestamp.
         end_time: Query<Option<i64>>,
-        /// page index, default 1.
+        /// page index, staring from 1, default 1.
         page: Query<Option<i64>>,
         /// page size, default 10.
         page_size: Query<Option<i64>>,
@@ -166,11 +166,11 @@ impl Api {
         block_id: Query<Option<String>>,
         /// public key.
         pub_key: Query<Option<String>>,
-        /// start timestamp.
+        /// starting timestamp.
         start_time: Query<Option<i64>>,
-        /// end timestamp.
+        /// ending timestamp.
         end_time: Query<Option<i64>>,
-        /// page index, default 1.
+        /// page index, starting from 1, default 1.
         page: Query<Option<i64>>,
         /// page size, default 10.
         page_size: Query<Option<i64>>,
@@ -191,11 +191,11 @@ impl Api {
         &self,
         ///Bridge Contract deploy address, e.g. 0x2B7835AE05C9Cb5EF086e3BFe249e2658b450E8d
         address: Path<String>,
-        /// start timestamp.
+        /// starting timestamp.
         start_time: Query<Option<i64>>,
-        /// end timestamp.
+        /// ending timestamp.
         end_time: Query<Option<i64>>,
-        /// page index, default 1.
+        /// page index, staring from 1, default 1.
         page: Query<Option<i64>>,
         /// page size, default 10.
         page_size: Query<Option<i64>>,
@@ -263,11 +263,11 @@ impl Api {
         start_height: Query<Option<i64>>,
         /// height of block end.
         end_height: Query<Option<i64>>,
-        /// time of block starts in seconds.
+        /// timestamp of block.
         start_time: Query<Option<i64>>,
-        /// time of block ends in seconds.
+        /// timestamp of block.
         end_time: Query<Option<i64>>,
-        /// page index, starting at 1, default 1.
+        /// page index, starting from 1, default 1.
         page: Query<Option<i64>>,
         /// page size, default 10.
         page_size: Query<Option<i64>>,
@@ -290,7 +290,7 @@ impl Api {
         &self,
         /// bech32 account address, e.g. 'fra1p4vy5n9mlkdys7xczegj398xtyvw2nawz00nnfh4yr7fpjh297cqsxfv7v'.
         address: Path<String>,
-        /// page index, default 1.
+        /// page index, staring from 1, default 1.
         page: Query<Option<i64>>,
         /// page size, default 10.
         page_size: Query<Option<i64>>,
