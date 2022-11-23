@@ -1279,10 +1279,12 @@ fn wrap_evm_tx(tx: &mut TransactionResponse) -> Result<()> {
         tx.ty = CLAIM;
     } else if tx_str.contains("UnDelegation") {
         tx.ty = UNSTAKING;
-        let uv: UnDelegationValue = serde_json::from_value(tx.value.clone()).unwrap();
-        if uv.body.operations.0.is_some() {
-            let uvw = uv.wrap();
-            tx.value = serde_json::to_value(uvw).unwrap();
+        let res: Result<UnDelegationValue, _> = serde_json::from_value(tx.value.clone());
+        if let Ok(uv) = res {
+            if uv.body.operations.0.is_some() {
+                let uvw = uv.wrap();
+                tx.value = serde_json::to_value(uvw).unwrap();
+            }
         }
     } else if tx_str.contains("Delegation") {
         tx.ty = STAKING;
