@@ -31,6 +31,14 @@ pub const CLAIM: i32 = 12;
 pub const DEFINE_OR_ISSUE_ASSET: i32 = 13;
 
 #[derive(Serialize, Deserialize)]
+pub enum TxOperation {
+    TransferAsset(Value),
+    UnDelegation(UnDelegationOpt),
+    #[serde(rename = "UnDelegation")]
+    UnDelegationWrap(UnDelegationOptWrap),
+}
+
+#[derive(Serialize, Deserialize)]
 pub struct EvmTx {
     pub function: Ethereum,
 }
@@ -195,96 +203,47 @@ pub struct UnDelegationValue {
 
 impl UnDelegationValue {
     pub fn wrap(&self) -> UnDelegationValueWrap {
-        let vaddr = hex::encode(
-            self.body
-                .operations
-                .0
-                .as_ref()
-                .unwrap()
-                .undelegation
-                .body
-                .pu
-                .as_ref()
-                .unwrap()
-                .target_validator,
-        )
-        .to_uppercase();
+        let mut udvw = UnDelegationValueWrap::default();
+        udvw.body.no_replay_token = self.body.no_replay_token.clone();
+        let mut operations: Vec<Value> = vec![];
 
-        let wpu = PuWrap {
-            am: self
-                .body
-                .operations
-                .0
-                .as_ref()
-                .unwrap()
-                .undelegation
-                .body
-                .pu
-                .as_ref()
-                .unwrap()
-                .am,
-            new_delegator_id: self
-                .body
-                .operations
-                .0
-                .as_ref()
-                .unwrap()
-                .undelegation
-                .body
-                .pu
-                .as_ref()
-                .unwrap()
-                .new_delegator_id
-                .clone(),
-            target_validator: vaddr,
-        };
-        let ud = UnDelegationOptWrap {
-            body: UnDelegationOptBodyWrap {
-                nonce: self
-                    .body
-                    .operations
-                    .0
-                    .as_ref()
-                    .unwrap()
-                    .undelegation
-                    .body
-                    .nonce
-                    .clone(),
-                pu: Some(wpu),
-            },
-            pubkey: self
-                .body
-                .operations
-                .0
-                .as_ref()
-                .unwrap()
-                .undelegation
-                .pubkey
-                .clone(),
-            signature: self
-                .body
-                .operations
-                .0
-                .as_ref()
-                .unwrap()
-                .undelegation
-                .signature
-                .clone(),
-        };
+        for op in &self.body.operations {
+            if let TxOperation::UnDelegation(ud) = op {
+                let vaddr =
+                    hex::encode(ud.body.pu.as_ref().unwrap().target_validator).to_uppercase();
+
+                let puw = PuWrap {
+                    am: ud.body.pu.as_ref().unwrap().am,
+                    new_delegator_id: ud.body.pu.as_ref().unwrap().new_delegator_id.clone(),
+                    target_validator: vaddr,
+                };
+
+                let ud = UnDelegationOptWrap {
+                    body: UnDelegationOptBodyWrap {
+                        nonce: ud.body.nonce.clone(),
+                        pu: Some(puw),
+                    },
+                    pubkey: ud.pubkey.clone(),
+                    signature: ud.signature.clone(),
+                };
+                let v = serde_json::to_value(TxOperation::UnDelegationWrap(ud)).unwrap();
+                operations.push(v);
+            } else {
+                let v = serde_json::to_value(op).unwrap();
+                operations.push(v);
+            }
+        }
 
         UnDelegationValueWrap {
             body: UndelegationBodyWrap {
                 no_replay_token: self.body.no_replay_token.clone(),
-                operations: (
-                    UnDelegationWrap { undelegation: ud },
-                    self.body.operations.1.clone(),
-                ),
+                operations,
             },
         }
     }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Default)]
 pub struct UnDelegationValueWrap {
     pub body: UndelegationBodyWrap,
 }
@@ -292,13 +251,13 @@ pub struct UnDelegationValueWrap {
 #[derive(Serialize, Deserialize)]
 pub struct UndelegationBody {
     pub no_replay_token: Value,
-    pub operations: (Option<UnDelegation>, Value),
+    pub operations: Vec<TxOperation>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Default)]
 pub struct UndelegationBodyWrap {
     pub no_replay_token: Value,
-    pub operations: (UnDelegationWrap, Value),
+    pub operations: Vec<Value>,
 }
 
 #[derive(Serialize, Deserialize)]
