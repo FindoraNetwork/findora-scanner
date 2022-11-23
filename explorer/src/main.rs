@@ -62,32 +62,32 @@ impl Api {
             .map_err(utils::handle_fetch_one_err)
     }
 
-    #[oai(path = "/txs/receive", method = "get", tag = "ApiTags::Transaction")]
-    async fn get_txs_received(
+    #[oai(path = "/txs/to", method = "get", tag = "ApiTags::Transaction")]
+    async fn get_txs_send_to(
         &self,
-        /// txs received by this account, e.g. 'fra1p4vy5n9mlkdys7xczegj398xtyvw2nawz00nnfh4yr7fpjh297cqsxfv7v'.
+        /// e.g. 'fra1p4vy5n9mlkdys7xczegj398xtyvw2nawz00nnfh4yr7fpjh297cqsxfv7v'.
         address: Query<String>,
         /// page index, starting from 1, default 1.
         page: Query<Option<i64>>,
         /// page size, default 10.
         page_size: Query<Option<i64>>,
     ) -> poem::Result<TxsResponse> {
-        service::tx::get_txs_received(self, address, page, page_size)
+        service::tx::get_txs_send_to(self, address, page, page_size)
             .await
             .map_err(handle_fetch_one_err)
     }
 
-    #[oai(path = "/txs/send", method = "get", tag = "ApiTags::Transaction")]
-    async fn get_txs_sent(
+    #[oai(path = "/txs/from", method = "get", tag = "ApiTags::Transaction")]
+    async fn get_txs_receive_from(
         &self,
-        /// txs sent from this account, e.g. 'fra1p4vy5n9mlkdys7xczegj398xtyvw2nawz00nnfh4yr7fpjh297cqsxfv7v'.
+        /// e.g. 'fra1p4vy5n9mlkdys7xczegj398xtyvw2nawz00nnfh4yr7fpjh297cqsxfv7v'.
         address: Query<String>,
         /// page index, starting from 1, default 1.
         page: Query<Option<i64>>,
         /// page size, default 10.
         page_size: Query<Option<i64>>,
     ) -> poem::Result<TxsResponse> {
-        service::tx::get_txs_sent(self, address, page, page_size)
+        service::tx::get_txs_receive_from(self, address, page, page_size)
             .await
             .map_err(handle_fetch_one_err)
     }
