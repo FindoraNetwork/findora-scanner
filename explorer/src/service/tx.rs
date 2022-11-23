@@ -572,7 +572,7 @@ pub async fn get_tx(api: &Api, tx_hash: Path<String>) -> Result<TxResponse> {
     })))
 }
 
-pub async fn get_txs_sent(
+pub async fn get_txs_receive_from(
     api: &Api,
     address: Query<String>,
     page: Query<Option<i64>>,
@@ -592,7 +592,7 @@ pub async fn get_txs_sent(
     }
     let pk = public_key_to_base64(&pk_res.unwrap());
 
-    let sql_total = format!("SELECT count(*) AS cnt FROM transaction WHERE value @? '$.body.operations[*].TransferAsset.body.transfer.outputs[*].public_key ? (@==\"{}\")'", pk);
+    let sql_total = format!("SELECT count(*) AS cnt FROM transaction WHERE value @? '$.body.operations[*].TransferAsset.body.transfer.inputs[*].public_key ? (@==\"{}\")'", pk);
     let row = sqlx::query(sql_total.as_str()).fetch_one(&mut conn).await?;
     let total = row.try_get("cnt")?;
 
@@ -638,7 +638,7 @@ pub async fn get_txs_sent(
     })))
 }
 
-pub async fn get_txs_received(
+pub async fn get_txs_send_to(
     api: &Api,
     address: Query<String>,
     page: Query<Option<i64>>,
@@ -658,7 +658,7 @@ pub async fn get_txs_received(
     }
     let pk = public_key_to_base64(&pk_res.unwrap());
 
-    let sql_total = format!("SELECT count(*) AS cnt FROM transaction WHERE alue @? '$.body.operations[*].TransferAsset.body.transfer.outputs[*].public_key ? (@==\"{}\")'", pk);
+    let sql_total = format!("SELECT count(*) AS cnt FROM transaction WHERE value @? '$.body.operations[*].TransferAsset.body.transfer.outputs[*].public_key ? (@==\"{}\")'", pk);
     let row = sqlx::query(sql_total.as_str()).fetch_one(&mut conn).await?;
     let total = row.try_get("cnt")?;
 
