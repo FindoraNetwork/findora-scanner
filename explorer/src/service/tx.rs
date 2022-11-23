@@ -857,6 +857,156 @@ pub async fn get_txs(
 }
 
 #[allow(clippy::too_many_arguments)]
+pub async fn get_txs_raw(
+    api: &Api,
+    block_hash: Query<Option<String>>,
+    block_height: Query<Option<i64>>,
+    address: Query<Option<String>>,
+    from: Query<Option<String>>,
+    to: Query<Option<String>>,
+    ty: Query<Option<i32>>,
+    start_time: Query<Option<i64>>,
+    end_time: Query<Option<i64>>,
+    page: Query<Option<i64>>,
+    page_size: Query<Option<i64>>,
+) -> Result<TxsResponse> {
+    let mut conn = api.storage.lock().await.acquire().await?;
+    let mut sql_str = String::from("SELECT * FROM transaction ");
+    let mut sql_total = String::from("SELECT count(*) as total FROM transaction ");
+    let mut params: Vec<String> = vec![];
+    if let Some(block_hash) = block_hash.0 {
+        params.push(format!("block_hash='{}' ", block_hash));
+    }
+    if let Some(height) = block_height.0 {
+        params.push(format!("height={} ", height));
+    }
+
+    if let Some(addr) = address.0 {
+        let pk = public_key_from_bech32(addr.as_str());
+        if pk.is_err() {
+            return Ok(TxsResponse::Ok(Json(TxsRes {
+                code: 400,
+                message: "invalid from address".to_string(),
+                data: None,
+            })));
+        }
+        let pk = pk.unwrap();
+        let native_addr = public_key_to_base64(&pk);
+        params.push(format!(
+            "((value @? '$.body.operations[*].TransferAsset.body.transfer.inputs[*].public_key ? (@==\"{}\")') OR (value @? '$.body.operations[*].TransferAsset.body.transfer.outputs[*].public_key ? (@==\"{}\")')) ",
+            native_addr, native_addr));
+    }
+
+    if let Some(from_address) = from.0 {
+        let pk = public_key_from_bech32(from_address.as_str());
+        if pk.is_err() {
+            return Ok(TxsResponse::Ok(Json(TxsRes {
+                code: 400,
+                message: "invalid from address".to_string(),
+                data: None,
+            })));
+        }
+        let pk = pk.unwrap();
+        params.push(format!(
+            "(value @? '$.body.operations[*].TransferAsset.body.transfer.inputs[*].public_key ? (@==\"{}\")') ",
+            public_key_to_base64(&pk)));
+    }
+    if let Some(to_address) = to.0 {
+        let pk = public_key_from_bech32(to_address.as_str());
+        if pk.is_err() {
+            return Ok(TxsResponse::Ok(Json(TxsRes {
+                code: 400,
+                message: "invalid to address".to_string(),
+                data: None,
+            })));
+        }
+        let pk = pk.unwrap();
+        params.push(format!(
+            "(value @? '$.body.operations[*].TransferAsset.body.transfer.outputs[*].public_key ? (@==\"{}\")') ",
+            public_key_to_base64(&pk)));
+    }
+    if let Some(ty) = ty.0 {
+        params.push(format!("ty={} ", ty));
+    }
+    if let Some(start_time) = start_time.0 {
+        params.push(format!("timestamp>={} ", start_time));
+    }
+    if let Some(end_time) = end_time.0 {
+        params.push(format!("timestamp<={} ", end_time));
+    }
+    let page = page.0.unwrap_or(1);
+    let page_size = page_size.0.unwrap_or(10);
+
+    if !params.is_empty() {
+        sql_str = sql_str.add("WHERE ").add(params.join("AND ").as_str());
+        sql_total = sql_total.add("WHERE ").add(params.join("AND ").as_str());
+    }
+
+    sql_str = sql_str.add(
+        format!(
+            "ORDER BY timestamp DESC LIMIT {} OFFSET {} ",
+            page_size,
+            (page - 1) * page_size
+        )
+        .as_str(),
+    );
+
+    let res = sqlx::query(sql_str.as_str()).fetch_all(&mut conn).await;
+    let mut txs: Vec<TransactionResponse> = vec![];
+    let rows = match res {
+        Ok(rows) => rows,
+        _ => {
+            return Ok(TxsResponse::Ok(Json(TxsRes {
+                code: 500,
+                message: "internal error".to_string(),
+                data: Some(TxsData::default()),
+            })));
+        }
+    };
+
+    for row in rows {
+        let tx_hash: String = row.try_get("tx_hash")?;
+        let block_hash: String = row.try_get("block_hash")?;
+        let ty: i32 = row.try_get("ty")?;
+        let timestamp: i64 = row.try_get("timestamp")?;
+        let height: i64 = row.try_get("height")?;
+        let code: i64 = row.try_get("code")?;
+        let log = "".to_string();
+        let result: Value = row.try_get("result")?;
+        let value: Value = row.try_get("value")?;
+
+        let tx = TransactionResponse {
+            tx_hash,
+            evm_tx_hash: "".to_string(),
+            block_hash,
+            height,
+            timestamp,
+            code,
+            ty,
+            log,
+            result,
+            value,
+        };
+        txs.push(tx);
+    }
+
+    // total items
+    let res = sqlx::query(sql_total.as_str()).fetch_all(&mut conn).await;
+    let total: i64 = res.unwrap()[0].try_get("total")?;
+
+    Ok(TxsResponse::Ok(Json(TxsRes {
+        code: 200,
+        message: "".to_string(),
+        data: Some(TxsData {
+            page,
+            page_size,
+            total,
+            txs,
+        }),
+    })))
+}
+
+#[allow(clippy::too_many_arguments)]
 pub async fn get_triple_masking_txs(
     api: &Api,
     block_hash: Query<Option<String>>,

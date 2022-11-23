@@ -128,6 +128,41 @@ impl Api {
     }
 
     #[allow(clippy::too_many_arguments)]
+    #[oai(path = "/txs/raw", method = "get", tag = "ApiTags::Transaction")]
+    async fn get_txs_no_wrap(
+        &self,
+        /// block hash, e.g. '4B7C22FA8FC6913E091DC324830181BBA1F01EBFF53049F958EA5AA65327BFE0'.
+        block_id: Query<Option<String>>,
+        /// block height
+        height: Query<Option<i64>>,
+        /// account address, querying the txs sent and received by this address.
+        /// e.g. 'fra1p4vy5n9mlkdys7xczegj398xtyvw2nawz00nnfh4yr7fpjh297cqsxfv7v'.
+        address: Query<Option<String>>,
+        /// from address, querying the txs sent to the account.
+        /// e.g. 'fra1p4vy5n9mlkdys7xczegj398xtyvw2nawz00nnfh4yr7fpjh297cqsxfv7v'.
+        from: Query<Option<String>>,
+        /// to address, querying the txs received by this account.
+        /// e.g. 'fra1p4vy5n9mlkdys7xczegj398xtyvw2nawz00nnfh4yr7fpjh297cqsxfv7v'.
+        to: Query<Option<String>>,
+        /// transaction type. 0 is for Findora tx, 1 is for evm tx.
+        ty: Query<Option<i32>>,
+        /// start timestamp.
+        start_time: Query<Option<i64>>,
+        /// end timestamp.
+        end_time: Query<Option<i64>>,
+        /// page index, default 1.
+        page: Query<Option<i64>>,
+        /// page size, default 10.
+        page_size: Query<Option<i64>>,
+    ) -> poem::Result<TxsResponse> {
+        service::tx::get_txs_raw(
+            self, block_id, height, address, from, to, ty, start_time, end_time, page, page_size,
+        )
+        .await
+        .map_err(utils::handle_fetch_one_err)
+    }
+
+    #[allow(clippy::too_many_arguments)]
     #[oai(
         path = "/txs/triple_masking",
         method = "get",
