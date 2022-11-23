@@ -39,7 +39,7 @@ impl Api {
     #[oai(path = "/tx/:tx_hash", method = "get", tag = "ApiTags::Transaction")]
     async fn get_tx(
         &self,
-        /// transaction hash, e.g. 'c19fc22beb61030607367b42d4898a26ede1e6aa6b400330804c95b241f29bd0'.
+        /// tx hash, e.g. c19fc22beb61030607367b42d4898a26ede1e6aa6b400330804c95b241f29bd0.
         tx_hash: Path<String>,
     ) -> poem::Result<TxResponse> {
         service::tx::get_tx(self, tx_hash)
@@ -54,7 +54,7 @@ impl Api {
     )]
     async fn get_evm_tx(
         &self,
-        /// evm transaction hash, e.g. '0x697c0492b64b8e786061818c12af46e9b62b9ee20e573d7549e7a82e94ef13cf'.
+        /// evm tx hash, e.g. 0x697c0492b64b8e786061818c12af46e9b62b9ee20e573d7549e7a82e94ef13cf.
         tx_hash: Path<String>,
     ) -> poem::Result<TxResponse> {
         service::tx::get_evm_tx(self, tx_hash)
@@ -65,11 +65,11 @@ impl Api {
     #[oai(path = "/txs/to", method = "get", tag = "ApiTags::Transaction")]
     async fn get_txs_send_to(
         &self,
-        /// e.g. 'fra1p4vy5n9mlkdys7xczegj398xtyvw2nawz00nnfh4yr7fpjh297cqsxfv7v'.
+        /// bech32 address, e.g. fra1p4vy5n9mlkdys7xczegj398xtyvw2nawz00nnfh4yr7fpjh297cqsxfv7v.
         address: Query<String>,
-        /// page index, starting from 1, default 1.
+        /// page index, default is 1.
         page: Query<Option<i64>>,
-        /// page size, default 10.
+        /// page size, default is 10.
         page_size: Query<Option<i64>>,
     ) -> poem::Result<TxsResponse> {
         service::tx::get_txs_send_to(self, address, page, page_size)
@@ -80,11 +80,11 @@ impl Api {
     #[oai(path = "/txs/from", method = "get", tag = "ApiTags::Transaction")]
     async fn get_txs_receive_from(
         &self,
-        /// e.g. 'fra1p4vy5n9mlkdys7xczegj398xtyvw2nawz00nnfh4yr7fpjh297cqsxfv7v'.
+        /// bech32 address, e.g. fra1p4vy5n9mlkdys7xczegj398xtyvw2nawz00nnfh4yr7fpjh297cqsxfv7v.
         address: Query<String>,
-        /// page index, starting from 1, default 1.
+        /// page index, default is 1.
         page: Query<Option<i64>>,
-        /// page size, default 10.
+        /// page size, default is 10.
         page_size: Query<Option<i64>>,
     ) -> poem::Result<TxsResponse> {
         service::tx::get_txs_receive_from(self, address, page, page_size)
@@ -96,28 +96,27 @@ impl Api {
     #[oai(path = "/txs", method = "get", tag = "ApiTags::Transaction")]
     async fn get_txs(
         &self,
-        /// block hash, e.g. '4B7C22FA8FC6913E091DC324830181BBA1F01EBFF53049F958EA5AA65327BFE0'.
+        /// block hash, e.g. 4B7C22FA8FC6913E091DC324830181BBA1F01EBFF53049F958EA5AA65327BFE0.
         block_id: Query<Option<String>>,
-        /// block height
+        /// block height.
         height: Query<Option<i64>>,
-        /// account address, querying the txs sent and received by this address.
-        /// e.g. 'fra1p4vy5n9mlkdys7xczegj398xtyvw2nawz00nnfh4yr7fpjh297cqsxfv7v'.
+        /// bech32 address, e.g. fra1p4vy5n9mlkdys7xczegj398xtyvw2nawz00nnfh4yr7fpjh297cqsxfv7v.
         address: Query<Option<String>>,
-        /// from address, querying the txs sent to the account.
-        /// e.g. 'fra1p4vy5n9mlkdys7xczegj398xtyvw2nawz00nnfh4yr7fpjh297cqsxfv7v'.
+        /// bech32 address, e.g. fra1p4vy5n9mlkdys7xczegj398xtyvw2nawz00nnfh4yr7fpjh297cqsxfv7v.
         from: Query<Option<String>>,
-        /// to address, querying the txs received by this account.
-        /// e.g. 'fra1p4vy5n9mlkdys7xczegj398xtyvw2nawz00nnfh4yr7fpjh297cqsxfv7v'.
+        /// bech32 address, e.g. fra1p4vy5n9mlkdys7xczegj398xtyvw2nawz00nnfh4yr7fpjh297cqsxfv7v.
         to: Query<Option<String>>,
-        /// transaction type. 0 is for Findora tx, 1 is for evm tx.
+        /// transaction type.
+        /// 0 - Findora native tx.
+        /// 1 - EVM tx.
         ty: Query<Option<i32>>,
-        /// start timestamp.
+        /// starting timestamp.
         start_time: Query<Option<i64>>,
-        /// end timestamp.
+        /// ending timestamp.
         end_time: Query<Option<i64>>,
-        /// page index, default 1.
+        /// page index, default is 1.
         page: Query<Option<i64>>,
-        /// page size, default 10.
+        /// page size, default is 10.
         page_size: Query<Option<i64>>,
     ) -> poem::Result<TxsResponse> {
         service::tx::get_txs(
@@ -131,28 +130,27 @@ impl Api {
     #[oai(path = "/txs/raw", method = "get", tag = "ApiTags::Transaction")]
     async fn get_txs_no_wrap(
         &self,
-        /// block hash, e.g. '4B7C22FA8FC6913E091DC324830181BBA1F01EBFF53049F958EA5AA65327BFE0'.
+        /// block hash, e.g. 4B7C22FA8FC6913E091DC324830181BBA1F01EBFF53049F958EA5AA65327BFE0.
         block_id: Query<Option<String>>,
-        /// block height
+        /// block height.
         height: Query<Option<i64>>,
-        /// account address, querying the txs sent and received by this address.
-        /// e.g. 'fra1p4vy5n9mlkdys7xczegj398xtyvw2nawz00nnfh4yr7fpjh297cqsxfv7v'.
+        /// bech32 address, e.g. fra1p4vy5n9mlkdys7xczegj398xtyvw2nawz00nnfh4yr7fpjh297cqsxfv7v.
         address: Query<Option<String>>,
-        /// from address, querying the txs sent to the account.
-        /// e.g. 'fra1p4vy5n9mlkdys7xczegj398xtyvw2nawz00nnfh4yr7fpjh297cqsxfv7v'.
+        /// bech32 address, e.g. fra1p4vy5n9mlkdys7xczegj398xtyvw2nawz00nnfh4yr7fpjh297cqsxfv7v.
         from: Query<Option<String>>,
-        /// to address, querying the txs received by this account.
-        /// e.g. 'fra1p4vy5n9mlkdys7xczegj398xtyvw2nawz00nnfh4yr7fpjh297cqsxfv7v'.
+        /// bech32 address, e.g. fra1p4vy5n9mlkdys7xczegj398xtyvw2nawz00nnfh4yr7fpjh297cqsxfv7v.
         to: Query<Option<String>>,
-        /// transaction type. 0 is for Findora tx, 1 is for evm tx.
+        /// transaction type.
+        /// 0 - Findora native tx.
+        /// 1 - EVM tx.
         ty: Query<Option<i32>>,
-        /// start timestamp.
+        /// starting timestamp.
         start_time: Query<Option<i64>>,
-        /// end timestamp.
+        /// ending timestamp.
         end_time: Query<Option<i64>>,
-        /// page index, default 1.
+        /// page index, default is 1.
         page: Query<Option<i64>>,
-        /// page size, default 10.
+        /// page size, default is 10.
         page_size: Query<Option<i64>>,
     ) -> poem::Result<TxsResponse> {
         service::tx::get_txs_raw(
@@ -170,21 +168,21 @@ impl Api {
     )]
     async fn get_triple_masking_txs(
         &self,
-        /// block hash, e.g. '4B7C22FA8FC6913E091DC324830181BBA1F01EBFF53049F958EA5AA65327BFE0'.
+        /// block hash, e.g. 4B7C22FA8FC6913E091DC324830181BBA1F01EBFF53049F958EA5AA65327BFE0.
         block_id: Query<Option<String>>,
-        /// output public key, e.g. 'b2fdE7jKfQg_XL2CT7jdw84XkTdpX3uiRgpgW-h6k6o='.
+        /// public key, e.g. b2fdE7jKfQg_XL2CT7jdw84XkTdpX3uiRgpgW-h6k6o=.
         pub_key: Query<Option<String>>,
-        /// 0: both, default.
-        /// 1: AbarToBar.
-        /// 2: BarToAbar.
+        /// 0 - default, querying both AbarToBar and BarToAbar.
+        /// 1 - AbarToBar.
+        /// 2 - BarToAbar.
         bar: Query<Option<i32>>,
         /// starting timestamp.
         start_time: Query<Option<i64>>,
         /// ending timestamp.
         end_time: Query<Option<i64>>,
-        /// page index, staring from 1, default 1.
+        /// page index, default is 1.
         page: Query<Option<i64>>,
-        /// page size, default 10.
+        /// page size, default is 10.
         page_size: Query<Option<i64>>,
     ) -> poem::Result<TxsResponse> {
         service::tx::get_triple_masking_txs(
@@ -205,9 +203,9 @@ impl Api {
         start_time: Query<Option<i64>>,
         /// ending timestamp.
         end_time: Query<Option<i64>>,
-        /// page index, starting from 1, default 1.
+        /// page index, default is 1.
         page: Query<Option<i64>>,
-        /// page size, default 10.
+        /// page size, default is 10.
         page_size: Query<Option<i64>>,
     ) -> poem::Result<TxsResponse> {
         service::tx::get_claim_txs(
@@ -224,15 +222,15 @@ impl Api {
     )]
     async fn get_prism_tx(
         &self,
-        ///Bridge Contract deploy address, e.g. 0x2B7835AE05C9Cb5EF086e3BFe249e2658b450E8d
+        /// Bridge Contract deploy address, e.g. 0x2B7835AE05C9Cb5EF086e3BFe249e2658b450E8d.
         address: Path<String>,
         /// starting timestamp.
         start_time: Query<Option<i64>>,
         /// ending timestamp.
         end_time: Query<Option<i64>>,
-        /// page index, staring from 1, default 1.
+        /// page index, default is 1.
         page: Query<Option<i64>>,
-        /// page size, default 10.
+        /// page size, default is 10.
         page_size: Query<Option<i64>>,
     ) -> poem::Result<PmtxsResponse> {
         service::tx::get_prism_tx(self, address, start_time, end_time, page, page_size)
@@ -294,17 +292,17 @@ impl Api {
     #[oai(path = "/blocks", method = "get", tag = "ApiTags::Block")]
     async fn get_blocks(
         &self,
-        /// height of block start.
+        /// starting height.
         start_height: Query<Option<i64>>,
-        /// height of block end.
+        /// ending height.
         end_height: Query<Option<i64>>,
         /// starting timestamp.
         start_time: Query<Option<i64>>,
         /// ending timestamp.
         end_time: Query<Option<i64>>,
-        /// page index, starting from 1, default 1.
+        /// page index, default is 1.
         page: Query<Option<i64>>,
-        /// page size, default 10.
+        /// page size, default is 10.
         page_size: Query<Option<i64>>,
     ) -> poem::Result<BlocksResponse> {
         service::block::get_blocks(
@@ -323,11 +321,11 @@ impl Api {
     #[oai(path = "/address/:address", method = "get", tag = "ApiTags::Address")]
     async fn get_address(
         &self,
-        /// bech32 account address, e.g. 'fra1p4vy5n9mlkdys7xczegj398xtyvw2nawz00nnfh4yr7fpjh297cqsxfv7v'.
+        /// bech32 address, e.g. fra1p4vy5n9mlkdys7xczegj398xtyvw2nawz00nnfh4yr7fpjh297cqsxfv7v.
         address: Path<String>,
-        /// page index, staring from 1, default 1.
+        /// page index, default is 1.
         page: Query<Option<i64>>,
-        /// page size, default 10.
+        /// page size, default is 10.
         page_size: Query<Option<i64>>,
     ) -> poem::Result<AddressResponse> {
         service::address::get_address(self, address, page, page_size)
@@ -338,7 +336,7 @@ impl Api {
     #[oai(path = "/asset/:code", method = "get", tag = "ApiTags::Asset")]
     async fn get_asset(
         &self,
-        /// base64 asset code, e.g. 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA='.
+        /// base64 asset code, e.g. AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=.
         code: Path<String>,
     ) -> poem::Result<AssetResponse> {
         service::asset::get_asset(self, code)
@@ -353,7 +351,7 @@ impl Api {
     )]
     async fn statistics(
         &self,
-        /// ty: tx type, 0 - Findora tx, 1 - EVM tx.
+        /// tx type, 0 - Findora native tx, 1 - EVM tx.
         ty: Query<Option<i32>>,
     ) -> poem::Result<ChainStatisticsResponse> {
         service::chain::statistics(self, ty)
@@ -379,6 +377,7 @@ impl Api {
     )]
     async fn validator_detail(
         &self,
+        /// validator address, e.g. 917454FB61CFBDB1995BC57C7A821E41FFB1AF43.
         address: Path<String>,
     ) -> poem::Result<ValidatorDetailResponse> {
         service::validator::validator_detail(self, address)
@@ -404,8 +403,11 @@ impl Api {
     )]
     async fn validator_signed_count(
         &self,
+        /// validator address, e.g. 917454FB61CFBDB1995BC57C7A821E41FFB1AF43.
         address: Query<String>,
+        /// page index, default is 1.
         page: Query<Option<i64>>,
+        /// page size, default is 10.
         page_size: Query<Option<i64>>,
     ) -> poem::Result<ValidatorSignedCountResponse> {
         service::validator::validator_signed_count(self, address, page, page_size)
@@ -418,7 +420,11 @@ impl Api {
         method = "get",
         tag = "ApiTags::BlockChain"
     )]
-    async fn delegator_list(&self, address: Path<String>) -> poem::Result<DelegatorListResponse> {
+    async fn delegator_list(
+        &self,
+        /// delegator address, e.g. 000E33AB7471186F3B1DE9FC08BB9C480F453590.
+        address: Path<String>,
+    ) -> poem::Result<DelegatorListResponse> {
         service::validator::delegator_list(self, address)
             .await
             .map_err(utils::handle_fetch_one_err)
@@ -451,7 +457,9 @@ impl Api {
     #[oai(path = "/address/count", method = "get", tag = "ApiTags::Address")]
     async fn address_count(
         &self,
+        /// staring timestamp.
         start_time: Query<i64>,
+        /// ending timestamp.
         end_time: Query<i64>,
     ) -> poem::Result<AddressCountResponse> {
         service::chain::address_count(self, start_time, end_time)
@@ -473,6 +481,7 @@ impl Api {
     )]
     async fn validator_delegation(
         &self,
+        /// validator address, e.g. 000E33AB7471186F3B1DE9FC08BB9C480F453590.
         address: Query<String>,
     ) -> poem::Result<ValidatorDelegationResponse> {
         service::validator::validator_delegation(self, address)
@@ -487,9 +496,7 @@ impl Api {
     )]
     async fn get_prism_records(
         &self,
-        /// account address
-        /// native: fra...
-        /// evm: 0x...
+        /// bech32 address or RIMP160 address.
         address: Path<String>,
     ) -> poem::Result<PrismRecordResponse> {
         service::tx::get_prism_records(self, address)
@@ -504,8 +511,11 @@ impl Api {
     )]
     async fn get_prism_records_receive(
         &self,
+        /// bech32 address or RIMP160 address.
         address: Query<String>,
+        /// page index, default is 1.
         page: Query<Option<i64>>,
+        /// page size, default is 10.
         page_size: Query<Option<i64>>,
     ) -> poem::Result<PrismRecordResponseNew> {
         service::tx::get_prism_records_receive_from(self, address, page, page_size)
@@ -520,8 +530,11 @@ impl Api {
     )]
     async fn get_prism_records_send(
         &self,
+        /// bech32 address or RIMP160 addrss.
         address: Query<String>,
+        /// page index, default is 1.
         page: Query<Option<i64>>,
+        /// page size, default is 10.
         page_size: Query<Option<i64>>,
     ) -> poem::Result<PrismRecordResponseNew> {
         service::tx::get_prism_records_send_to(self, address, page, page_size)
@@ -532,8 +545,11 @@ impl Api {
     #[oai(path = "/staking/delegation", method = "get", tag = "ApiTags::Staking")]
     async fn get_delegation(
         &self,
+        /// bech32 address, e.g. fra18fnyetvs2kc035xz78kyfcygmej8pk5h2kwczy03w6uewdphzfxsk74dym.
         address: Query<String>,
+        /// page index, default is 1.
         page: Query<Option<i64>>,
+        /// page size, default is 10.
         page_size: Query<Option<i64>>,
     ) -> poem::Result<DelegationResponse> {
         service::staking::get_delegation(self, address, page, page_size)
@@ -548,8 +564,11 @@ impl Api {
     )]
     async fn get_undelegation(
         &self,
+        /// bech32 address, e.g. fra18fnyetvs2kc035xz78kyfcygmej8pk5h2kwczy03w6uewdphzfxsk74dym.
         address: Query<String>,
+        /// page index, default is 1.
         page: Query<Option<i64>>,
+        /// page size, default is 10.
         page_size: Query<Option<i64>>,
     ) -> poem::Result<UnDelegationResponse> {
         service::staking::get_undelegation(self, address, page, page_size)
@@ -560,8 +579,11 @@ impl Api {
     #[oai(path = "/staking/claim", method = "get", tag = "ApiTags::Staking")]
     async fn get_claim(
         &self,
+        /// bech32 address, e.g. fra1xczgryuz65as77gf8d5f07xd0wetd8qpm5hvgqkfgc60gxdjpmkshnq9ys.
         address: Query<String>,
+        /// page index, default is 1.
         page: Query<Option<i64>>,
+        /// page size, default is 10.
         page_size: Query<Option<i64>>,
     ) -> poem::Result<ClaimResponse> {
         service::staking::get_claim(self, address, page, page_size)
@@ -576,8 +598,11 @@ impl Api {
     )]
     async fn get_validator_history(
         &self,
+        /// validator address, e.g. 9E6717392EFDCFA101E33449A7C2A238251315B1.
         address: Query<String>,
+        /// page index, default is 1.
         page: Query<Option<i64>>,
+        /// page size, default is 10.
         page_size: Query<Option<i64>>,
     ) -> poem::Result<ValidatorHistoryResponse> {
         service::validator::validator_history(self, address, page, page_size)
