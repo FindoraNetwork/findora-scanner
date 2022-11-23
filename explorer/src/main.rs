@@ -65,8 +65,11 @@ impl Api {
     #[oai(path = "/txs/receive", method = "get", tag = "ApiTags::Transaction")]
     async fn get_txs_received(
         &self,
+        /// txs received by this account, e.g. 'fra1p4vy5n9mlkdys7xczegj398xtyvw2nawz00nnfh4yr7fpjh297cqsxfv7v'.
         address: Query<String>,
+        /// page index, starting from 1, default 1.
         page: Query<Option<i64>>,
+        /// page size, default 10.
         page_size: Query<Option<i64>>,
     ) -> poem::Result<TxsResponse> {
         service::tx::get_txs_received(self, address, page, page_size)
@@ -77,8 +80,11 @@ impl Api {
     #[oai(path = "/txs/send", method = "get", tag = "ApiTags::Transaction")]
     async fn get_txs_sent(
         &self,
+        /// txs sent from this account, e.g. 'fra1p4vy5n9mlkdys7xczegj398xtyvw2nawz00nnfh4yr7fpjh297cqsxfv7v'.
         address: Query<String>,
+        /// page index, starting from 1, default 1.
         page: Query<Option<i64>>,
+        /// page size, default 10.
         page_size: Query<Option<i64>>,
     ) -> poem::Result<TxsResponse> {
         service::tx::get_txs_sent(self, address, page, page_size)
