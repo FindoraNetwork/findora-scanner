@@ -13,6 +13,7 @@ use crate::service::validator::{
     ValidatorDetailResponse, ValidatorHistoryResponse, ValidatorListResponse,
     ValidatorSignedCountResponse,
 };
+use crate::utils::handle_fetch_one_err;
 use anyhow::Result;
 use poem::middleware::Cors;
 use poem::{listener::TcpListener, EndpointExt, Route, Server};
@@ -59,6 +60,30 @@ impl Api {
         service::tx::get_evm_tx(self, tx_hash)
             .await
             .map_err(utils::handle_fetch_one_err)
+    }
+
+    #[oai(path = "/txs/receive", method = "get", tag = "ApiTags::Transaction")]
+    async fn get_txs_received(
+        &self,
+        address: Query<String>,
+        page: Query<Option<i64>>,
+        page_size: Query<Option<i64>>,
+    ) -> poem::Result<TxsResponse> {
+        service::tx::get_txs_received(self, address, page, page_size)
+            .await
+            .map_err(handle_fetch_one_err)
+    }
+
+    #[oai(path = "/txs/send", method = "get", tag = "ApiTags::Transaction")]
+    async fn get_txs_sent(
+        &self,
+        address: Query<String>,
+        page: Query<Option<i64>>,
+        page_size: Query<Option<i64>>,
+    ) -> poem::Result<TxsResponse> {
+        service::tx::get_txs_sent(self, address, page, page_size)
+            .await
+            .map_err(handle_fetch_one_err)
     }
 
     #[allow(clippy::too_many_arguments)]

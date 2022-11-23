@@ -572,6 +572,139 @@ pub async fn get_tx(api: &Api, tx_hash: Path<String>) -> Result<TxResponse> {
     })))
 }
 
+pub async fn get_txs_sent(
+    api: &Api,
+    address: Query<String>,
+    page: Query<Option<i64>>,
+    page_size: Query<Option<i64>>,
+) -> Result<TxsResponse> {
+    let mut conn = api.storage.lock().await.acquire().await?;
+    let page = page.0.unwrap_or(1);
+    let page_size = page_size.0.unwrap_or(10);
+
+    let pk_res = public_key_from_bech32(address.0.as_str());
+    if pk_res.is_err() {
+        return Ok(TxsResponse::Ok(Json(TxsRes {
+            code: 400,
+            message: "invalid address".to_string(),
+            data: None,
+        })));
+    }
+    let pk = public_key_to_base64(&pk_res.unwrap());
+
+    let sql_total = format!("SELECT count(*) AS cnt FROM transaction WHERE value @? '$.body.operations[*].TransferAsset.body.transfer.outputs[*].public_key ? (@==\"{}\")'", pk);
+    let row = sqlx::query(sql_total.as_str()).fetch_one(&mut conn).await?;
+    let total = row.try_get("cnt")?;
+
+    let sql_query = format!("SELECT * FROM transaction WHERE value @? '$.body.operations[*].TransferAsset.body.transfer.inputs[*].public_key ? (@==\"{}\")' ORDER BY timestamp DESC LIMIT {} OFFSET {}", pk, page_size, page_size*(page-1));
+    let rows = sqlx::query(sql_query.as_str()).fetch_all(&mut conn).await?;
+    let mut txs: Vec<TransactionResponse> = vec![];
+    for row in rows {
+        let tx_hash: String = row.try_get("tx_hash")?;
+        let block_hash: String = row.try_get("block_hash")?;
+        let ty: i32 = row.try_get("ty")?;
+        let timestamp: i64 = row.try_get("timestamp")?;
+        let height: i64 = row.try_get("height")?;
+        let code: i64 = row.try_get("code")?;
+        let log = "".to_string();
+        let result: Value = row.try_get("result")?;
+        let value: Value = row.try_get("value")?;
+
+        let mut tx = TransactionResponse {
+            tx_hash,
+            evm_tx_hash: "".to_string(),
+            block_hash,
+            height,
+            timestamp,
+            code,
+            ty,
+            log,
+            result,
+            value,
+        };
+        let _ = wrap_evm_tx(&mut tx);
+        txs.push(tx);
+    }
+
+    Ok(TxsResponse::Ok(Json(TxsRes {
+        code: 200,
+        message: "".to_string(),
+        data: Some(TxsData {
+            page,
+            page_size,
+            total,
+            txs,
+        }),
+    })))
+}
+
+pub async fn get_txs_received(
+    api: &Api,
+    address: Query<String>,
+    page: Query<Option<i64>>,
+    page_size: Query<Option<i64>>,
+) -> Result<TxsResponse> {
+    let mut conn = api.storage.lock().await.acquire().await?;
+    let page = page.0.unwrap_or(1);
+    let page_size = page_size.0.unwrap_or(10);
+
+    let pk_res = public_key_from_bech32(address.0.as_str());
+    if pk_res.is_err() {
+        return Ok(TxsResponse::Ok(Json(TxsRes {
+            code: 400,
+            message: "invalid address".to_string(),
+            data: None,
+        })));
+    }
+    let pk = public_key_to_base64(&pk_res.unwrap());
+
+    let sql_total = format!("SELECT count(*) AS cnt FROM transaction WHERE alue @? '$.body.operations[*].TransferAsset.body.transfer.outputs[*].public_key ? (@==\"{}\")'", pk);
+    let row = sqlx::query(sql_total.as_str()).fetch_one(&mut conn).await?;
+    let total = row.try_get("cnt")?;
+
+    let sql_query = format!("SELECT * FROM transaction WHERE value @? '$.body.operations[*].TransferAsset.body.transfer.outputs[*].public_key ? (@==\"{}\")' ORDER BY timestamp DESC LIMIT {} OFFSET {}", pk, page_size, page_size*(page-1));
+    let rows = sqlx::query(sql_query.as_str()).fetch_all(&mut conn).await?;
+
+    let mut txs: Vec<TransactionResponse> = vec![];
+    for row in rows {
+        let tx_hash: String = row.try_get("tx_hash")?;
+        let block_hash: String = row.try_get("block_hash")?;
+        let ty: i32 = row.try_get("ty")?;
+        let timestamp: i64 = row.try_get("timestamp")?;
+        let height: i64 = row.try_get("height")?;
+        let code: i64 = row.try_get("code")?;
+        let log = "".to_string();
+        let result: Value = row.try_get("result")?;
+        let value: Value = row.try_get("value")?;
+
+        let mut tx = TransactionResponse {
+            tx_hash,
+            evm_tx_hash: "".to_string(),
+            block_hash,
+            height,
+            timestamp,
+            code,
+            ty,
+            log,
+            result,
+            value,
+        };
+        let _ = wrap_evm_tx(&mut tx);
+        txs.push(tx);
+    }
+
+    Ok(TxsResponse::Ok(Json(TxsRes {
+        code: 200,
+        message: "".to_string(),
+        data: Some(TxsData {
+            page,
+            page_size,
+            total,
+            txs,
+        }),
+    })))
+}
+
 #[allow(clippy::too_many_arguments)]
 pub async fn get_txs(
     api: &Api,
