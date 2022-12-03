@@ -90,18 +90,7 @@ pub async fn get_asset(api: &Api, address: Path<String>) -> Result<AssetResponse
     };
 
     let str = "SELECT jsonb_path_query(value,'$.body.operations[*].DefineAsset.body.asset') as asset FROM transaction".to_string();
-    let res = sqlx::query(str.as_str()).fetch_all(&mut conn).await;
-    let rows = match res {
-        Ok(rows) => rows,
-        _ => {
-            return Ok(AssetResponse::InternalError(Json(AssetResult {
-                code: 500,
-                message: "internal error".to_string(),
-                data: None,
-            })));
-        }
-    };
-
+    let rows = sqlx::query(str.as_str()).fetch_all(&mut conn).await?;
     let mut asset = AssetDisplay::default();
     for row in rows {
         let v: Value = row.try_get("asset").unwrap();

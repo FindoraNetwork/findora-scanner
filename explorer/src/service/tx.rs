@@ -522,24 +522,8 @@ pub async fn get_tx(api: &Api, tx_hash: Path<String>) -> Result<TxResponse> {
         "SELECT * FROM transaction WHERE tx_hash = '{}'",
         tx_hash.0.to_lowercase()
     );
-    let res = sqlx::query(str.as_str()).fetch_one(&mut conn).await;
-    let row = match res {
-        Ok(row) => row,
-        Err(e) => {
-            return match e {
-                sqlx::Error::RowNotFound => Ok(TxResponse::NotFound(Json(TxRes {
-                    code: 404,
-                    message: "not found".to_string(),
-                    data: None,
-                }))),
-                _ => Ok(TxResponse::InternalError(Json(TxRes {
-                    code: 500,
-                    message: "internal error".to_string(),
-                    data: None,
-                }))),
-            }
-        }
-    };
+    let row = sqlx::query(str.as_str()).fetch_one(&mut conn).await?;
+
     let tx_hash: String = row.try_get("tx_hash")?;
     let block_hash: String = row.try_get("block_hash")?;
     let ty: i32 = row.try_get("ty")?;
@@ -800,18 +784,8 @@ pub async fn get_txs(
         .as_str(),
     );
 
-    let res = sqlx::query(sql_str.as_str()).fetch_all(&mut conn).await;
+    let rows = sqlx::query(sql_str.as_str()).fetch_all(&mut conn).await?;
     let mut txs: Vec<TransactionResponse> = vec![];
-    let rows = match res {
-        Ok(rows) => rows,
-        _ => {
-            return Ok(TxsResponse::Ok(Json(TxsRes {
-                code: 500,
-                message: "internal error".to_string(),
-                data: Some(TxsData::default()),
-            })));
-        }
-    };
 
     for row in rows {
         let tx_hash: String = row.try_get("tx_hash")?;
@@ -841,8 +815,8 @@ pub async fn get_txs(
     }
 
     // total items
-    let res = sqlx::query(sql_total.as_str()).fetch_all(&mut conn).await;
-    let total: i64 = res.unwrap()[0].try_get("total")?;
+    let row = sqlx::query(sql_total.as_str()).fetch_one(&mut conn).await?;
+    let total: i64 = row.try_get("total")?;
 
     Ok(TxsResponse::Ok(Json(TxsRes {
         code: 200,
@@ -991,8 +965,8 @@ pub async fn get_txs_raw(
     }
 
     // total items
-    let res = sqlx::query(sql_total.as_str()).fetch_all(&mut conn).await;
-    let total: i64 = res.unwrap()[0].try_get("total")?;
+    let row = sqlx::query(sql_total.as_str()).fetch_one(&mut conn).await?;
+    let total: i64 = row.try_get("total")?;
 
     Ok(TxsResponse::Ok(Json(TxsRes {
         code: 200,
@@ -1069,18 +1043,8 @@ pub async fn get_triple_masking_txs(
         )
         .as_str(),
     );
-    let res = sqlx::query(sql_str.as_str()).fetch_all(&mut conn).await;
+    let rows = sqlx::query(sql_str.as_str()).fetch_all(&mut conn).await?;
     let mut txs: Vec<TransactionResponse> = vec![];
-    let rows = match res {
-        Ok(rows) => rows,
-        _ => {
-            return Ok(TxsResponse::Ok(Json(TxsRes {
-                code: 500,
-                message: "internal error".to_string(),
-                data: None,
-            })));
-        }
-    };
 
     for row in rows {
         let tx_hash: String = row.try_get("tx_hash")?;
@@ -1111,8 +1075,8 @@ pub async fn get_triple_masking_txs(
     }
 
     // total items
-    let res = sqlx::query(sql_total.as_str()).fetch_all(&mut conn).await;
-    let total: i64 = res.unwrap()[0].try_get("total")?;
+    let row = sqlx::query(sql_total.as_str()).fetch_one(&mut conn).await?;
+    let total: i64 = row.try_get("total")?;
 
     Ok(TxsResponse::Ok(Json(TxsRes {
         code: 200,
@@ -1172,18 +1136,8 @@ pub async fn get_claim_txs(
         )
         .as_str(),
     );
-    let res = sqlx::query(sql_str.as_str()).fetch_all(&mut conn).await;
+    let rows = sqlx::query(sql_str.as_str()).fetch_all(&mut conn).await?;
     let mut txs: Vec<TransactionResponse> = vec![];
-    let rows = match res {
-        Ok(rows) => rows,
-        _ => {
-            return Ok(TxsResponse::Ok(Json(TxsRes {
-                code: 500,
-                message: "internal error".to_string(),
-                data: None,
-            })));
-        }
-    };
 
     for row in rows {
         let tx_hash: String = row.try_get("tx_hash")?;
@@ -1267,17 +1221,7 @@ pub async fn get_prism_tx(
     );
     sql += ") AS t";
 
-    let res = sqlx::query(sql.as_str()).fetch_all(&mut conn).await;
-    let rows = match res {
-        Ok(rows) => rows,
-        Err(_) => {
-            return Ok(PmtxsResponse::Ok(Json(PmtxsRes {
-                code: 500,
-                message: "internal error".to_string(),
-                data: None,
-            })));
-        }
-    };
+    let rows = sqlx::query(sql.as_str()).fetch_all(&mut conn).await?;
 
     let mut txs: Vec<PrismTransaction> = vec![];
     for row in rows {
@@ -1305,8 +1249,9 @@ pub async fn get_prism_tx(
     }
 
     // total items
-    let res = sqlx::query(sql_total.as_str()).fetch_all(&mut conn).await;
-    let total: i64 = res.unwrap()[0].try_get("total")?;
+    let row = sqlx::query(sql_total.as_str()).fetch_one(&mut conn).await?;
+    let total: i64 = row.try_get("total")?;
+
     Ok(PmtxsResponse::Ok(Json(PmtxsRes {
         code: 200,
         message: "".to_string(),
@@ -1410,7 +1355,6 @@ fn wrap_evm_tx(tx: &mut TransactionResponse) -> Result<()> {
             tx.ty = PRISM_EVM_TO_NATIVE;
             return Ok(());
         }
-
         // calc evm tx hash
         let evm_tx: EvmTx = serde_json::from_value(tx.value.clone()).unwrap();
         let hash = H256::from_slice(Keccak256::digest(&rlp::encode(&evm_tx)).as_slice());

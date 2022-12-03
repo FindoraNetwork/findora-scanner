@@ -156,24 +156,15 @@ pub async fn address_count(
     end_time: Query<i64>,
 ) -> Result<AddressCountResponse> {
     let mut conn = api.storage.lock().await.acquire().await?;
-
     let address_count_sql = format!("SELECT jsonb_path_query(value,'$.body.operations[*].TransferAsset.body.transfer.*.public_key') \
         as addr FROM transaction WHERE timestamp >= {} AND timestamp <= {}", start_time.0, end_time.0);
-    let res = sqlx::query(address_count_sql.as_str())
+
+    let rows = sqlx::query(address_count_sql.as_str())
         .fetch_all(&mut conn)
-        .await;
-    if res.is_err() {
-        return Ok(AddressCountResponse::InternalError(Json(
-            AddressCountResult {
-                code: 500,
-                message: "internal error".to_string(),
-                data: None,
-            },
-        )));
-    }
+        .await?;
 
     let mut addrs: Vec<String> = vec![];
-    for row in res.unwrap() {
+    for row in rows {
         let v: Value = row.try_get("addr").unwrap();
         let addr = serde_json::from_value(v).unwrap();
         addrs.push(addr);
@@ -216,19 +207,7 @@ pub async fn statistics(api: &Api, ty: Query<Option<i32>>) -> Result<ChainStatis
     } else {
         "SELECT COUNT(*) as cnt FROM transaction".to_string()
     };
-    let total_txs_res = sqlx::query(sql_str.as_str()).fetch_one(&mut conn).await;
-    let row = match total_txs_res {
-        Ok(row) => row,
-        _ => {
-            return Ok(ChainStatisticsResponse::InternalError(Json(
-                ChainStatisticsResult {
-                    code: 500,
-                    message: "internal error while querying total txs.".to_string(),
-                    data: None,
-                },
-            )));
-        }
-    };
+    let row = sqlx::query(sql_str.as_str()).fetch_one(&mut conn).await?;
     let total_txs = row.try_get("cnt")?;
 
     // total address
@@ -239,19 +218,7 @@ pub async fn statistics(api: &Api, ty: Query<Option<i32>>) -> Result<ChainStatis
         "SELECT jsonb_path_query(value,'$.body.operations[*].TransferAsset.body.transfer.*.public_key') \
         as addr FROM transaction".to_string()
     };
-    let active_addresses_res = sqlx::query(sql_str.as_str()).fetch_all(&mut conn).await;
-    let rows = match active_addresses_res {
-        Ok(rows) => rows,
-        _ => {
-            return Ok(ChainStatisticsResponse::InternalError(Json(
-                ChainStatisticsResult {
-                    code: 500,
-                    message: "internal error while querying total addresses.".to_string(),
-                    data: None,
-                },
-            )));
-        }
-    };
+    let rows = sqlx::query(sql_str.as_str()).fetch_all(&mut conn).await?;
 
     let mut addrs: Vec<String> = vec![];
     for row in rows {
@@ -275,19 +242,7 @@ pub async fn statistics(api: &Api, ty: Query<Option<i32>>) -> Result<ChainStatis
             start_time.timestamp()
         )
     };
-    let daily_txs_res = sqlx::query(sql_str.as_str()).fetch_one(&mut conn).await;
-    let row = match daily_txs_res {
-        Ok(row) => row,
-        _ => {
-            return Ok(ChainStatisticsResponse::InternalError(Json(
-                ChainStatisticsResult {
-                    code: 500,
-                    message: "internal error while querying daily txs.".to_string(),
-                    data: None,
-                },
-            )));
-        }
-    };
+    let row = sqlx::query(sql_str.as_str()).fetch_one(&mut conn).await?;
     let daily_txs = row.try_get("cnt")?;
 
     let res_data = StatisticsData {
