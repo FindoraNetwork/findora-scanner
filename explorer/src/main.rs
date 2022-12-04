@@ -44,7 +44,7 @@ impl Api {
     ) -> poem::Result<TxResponse> {
         service::tx::get_tx(self, tx_hash)
             .await
-            .map_err(utils::handle_fetch_one_err)
+            .map_err(handle_fetch_one_err)
     }
 
     #[oai(
@@ -59,7 +59,7 @@ impl Api {
     ) -> poem::Result<TxResponse> {
         service::tx::get_evm_tx(self, tx_hash)
             .await
-            .map_err(utils::handle_fetch_one_err)
+            .map_err(handle_fetch_one_err)
     }
 
     #[oai(path = "/txs/to", method = "get", tag = "ApiTags::Transaction")]
@@ -123,7 +123,7 @@ impl Api {
             self, block_id, height, address, from, to, ty, start_time, end_time, page, page_size,
         )
         .await
-        .map_err(utils::handle_fetch_one_err)
+        .map_err(handle_fetch_one_err)
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -157,7 +157,7 @@ impl Api {
             self, block_id, height, address, from, to, ty, start_time, end_time, page, page_size,
         )
         .await
-        .map_err(utils::handle_fetch_one_err)
+        .map_err(handle_fetch_one_err)
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -189,7 +189,7 @@ impl Api {
             self, block_id, pub_key, bar, start_time, end_time, page, page_size,
         )
         .await
-        .map_err(utils::handle_fetch_one_err)
+        .map_err(handle_fetch_one_err)
     }
 
     #[oai(path = "/txs/claim", method = "get", tag = "ApiTags::Transaction")]
@@ -212,8 +212,9 @@ impl Api {
             self, block_id, pub_key, start_time, end_time, page, page_size,
         )
         .await
-        .map_err(utils::handle_fetch_one_err)
+        .map_err(handle_fetch_one_err)
     }
+
     #[allow(clippy::too_many_arguments)]
     #[oai(
         path = "/txs/prism/:address",
@@ -235,8 +236,9 @@ impl Api {
     ) -> poem::Result<PmtxsResponse> {
         service::tx::get_prism_tx(self, address, start_time, end_time, page, page_size)
             .await
-            .map_err(utils::handle_fetch_one_err)
+            .map_err(handle_fetch_one_err)
     }
+
     #[oai(path = "/block/height/:height", method = "get", tag = "ApiTags::Block")]
     async fn get_block_by_height(
         &self,
@@ -245,7 +247,7 @@ impl Api {
     ) -> poem::Result<SimpleBlockResponse> {
         service::block::get_block_by_height(self, height)
             .await
-            .map_err(utils::handle_fetch_one_err)
+            .map_err(handle_fetch_one_err)
     }
 
     #[oai(
@@ -260,7 +262,7 @@ impl Api {
     ) -> poem::Result<FullBlockResponse> {
         service::block::get_full_block_by_height(self, height)
             .await
-            .map_err(utils::handle_fetch_one_err)
+            .map_err(handle_fetch_one_err)
     }
 
     #[oai(path = "/block/hash/:hash", method = "get", tag = "ApiTags::Block")]
@@ -271,7 +273,7 @@ impl Api {
     ) -> poem::Result<SimpleBlockResponse> {
         service::block::get_block_by_hash(self, hash)
             .await
-            .map_err(utils::handle_fetch_one_err)
+            .map_err(handle_fetch_one_err)
     }
 
     #[oai(
@@ -286,7 +288,7 @@ impl Api {
     ) -> poem::Result<FullBlockResponse> {
         service::block::get_full_block_by_hash(self, hash)
             .await
-            .map_err(utils::handle_fetch_one_err)
+            .map_err(handle_fetch_one_err)
     }
 
     #[oai(path = "/blocks", method = "get", tag = "ApiTags::Block")]
@@ -315,7 +317,7 @@ impl Api {
             page_size,
         )
         .await
-        .map_err(utils::handle_fetch_one_err)
+        .map_err(handle_fetch_one_err)
     }
 
     #[oai(path = "/address/:address", method = "get", tag = "ApiTags::Address")]
@@ -330,7 +332,7 @@ impl Api {
     ) -> poem::Result<AddressResponse> {
         service::address::get_address(self, address, page, page_size)
             .await
-            .map_err(utils::handle_fetch_one_err)
+            .map_err(handle_fetch_one_err)
     }
 
     #[oai(path = "/asset/:code", method = "get", tag = "ApiTags::Asset")]
@@ -356,7 +358,7 @@ impl Api {
     ) -> poem::Result<ChainStatisticsResponse> {
         service::chain::statistics(self, ty)
             .await
-            .map_err(utils::handle_fetch_one_err)
+            .map_err(handle_fetch_one_err)
     }
 
     #[oai(
@@ -367,7 +369,7 @@ impl Api {
     async fn validator_list(&self) -> poem::Result<ValidatorListResponse> {
         service::validator::validator_list(self)
             .await
-            .map_err(utils::handle_fetch_one_err)
+            .map_err(handle_fetch_one_err)
     }
 
     #[oai(
@@ -382,7 +384,7 @@ impl Api {
     ) -> poem::Result<ValidatorDetailResponse> {
         service::validator::validator_detail(self, address)
             .await
-            .map_err(utils::handle_fetch_one_err)
+            .map_err(handle_fetch_one_err)
     }
 
     #[oai(
@@ -393,7 +395,7 @@ impl Api {
     async fn circulating_supply(&self) -> poem::Result<CirculatingSupplyResponse> {
         service::validator::circulating_supply(self)
             .await
-            .map_err(utils::handle_fetch_one_err)
+            .map_err(handle_fetch_one_err)
     }
 
     #[oai(
@@ -412,7 +414,7 @@ impl Api {
     ) -> poem::Result<ValidatorSignedCountResponse> {
         service::validator::validator_signed_count(self, address, page, page_size)
             .await
-            .map_err(utils::handle_fetch_one_err)
+            .map_err(handle_fetch_one_err)
     }
 
     #[oai(
@@ -427,7 +429,7 @@ impl Api {
     ) -> poem::Result<DelegatorListResponse> {
         service::validator::delegator_list(self, address)
             .await
-            .map_err(utils::handle_fetch_one_err)
+            .map_err(handle_fetch_one_err)
     }
 
     #[oai(path = "/simple/price", method = "get", tag = "ApiTags::Price")]
@@ -464,14 +466,14 @@ impl Api {
     ) -> poem::Result<AddressCountResponse> {
         service::chain::address_count(self, start_time, end_time)
             .await
-            .map_err(utils::handle_fetch_one_err)
+            .map_err(handle_fetch_one_err)
     }
 
     #[oai(path = "/txs/distribute", method = "get", tag = "ApiTags::Transaction")]
     async fn distribute(&self) -> poem::Result<DistributeResponse> {
         service::chain::distribute(self)
             .await
-            .map_err(utils::handle_fetch_one_err)
+            .map_err(handle_fetch_one_err)
     }
 
     #[oai(
@@ -486,7 +488,7 @@ impl Api {
     ) -> poem::Result<ValidatorDelegationResponse> {
         service::validator::validator_delegation(self, address)
             .await
-            .map_err(utils::handle_fetch_one_err)
+            .map_err(handle_fetch_one_err)
     }
 
     #[oai(
@@ -501,7 +503,7 @@ impl Api {
     ) -> poem::Result<PrismRecordResponse> {
         service::tx::get_prism_records(self, address)
             .await
-            .map_err(utils::handle_fetch_one_err)
+            .map_err(handle_fetch_one_err)
     }
 
     #[oai(
@@ -520,7 +522,7 @@ impl Api {
     ) -> poem::Result<PrismRecordResponseNew> {
         service::tx::get_prism_records_receive_from(self, address, page, page_size)
             .await
-            .map_err(utils::handle_fetch_one_err)
+            .map_err(handle_fetch_one_err)
     }
 
     #[oai(
@@ -539,7 +541,7 @@ impl Api {
     ) -> poem::Result<PrismRecordResponseNew> {
         service::tx::get_prism_records_send_to(self, address, page, page_size)
             .await
-            .map_err(utils::handle_fetch_one_err)
+            .map_err(handle_fetch_one_err)
     }
 
     #[oai(path = "/staking/delegation", method = "get", tag = "ApiTags::Staking")]
@@ -554,7 +556,7 @@ impl Api {
     ) -> poem::Result<DelegationResponse> {
         service::staking::get_delegation(self, address, page, page_size)
             .await
-            .map_err(utils::handle_fetch_one_err)
+            .map_err(handle_fetch_one_err)
     }
 
     #[oai(
@@ -573,7 +575,7 @@ impl Api {
     ) -> poem::Result<UnDelegationResponse> {
         service::staking::get_undelegation(self, address, page, page_size)
             .await
-            .map_err(utils::handle_fetch_one_err)
+            .map_err(handle_fetch_one_err)
     }
 
     #[oai(path = "/staking/claim", method = "get", tag = "ApiTags::Staking")]
@@ -588,7 +590,7 @@ impl Api {
     ) -> poem::Result<ClaimResponse> {
         service::staking::get_claim(self, address, page, page_size)
             .await
-            .map_err(utils::handle_fetch_one_err)
+            .map_err(handle_fetch_one_err)
     }
 
     #[oai(
@@ -607,7 +609,7 @@ impl Api {
     ) -> poem::Result<ValidatorHistoryResponse> {
         service::validator::validator_history(self, address, page, page_size)
             .await
-            .map_err(utils::handle_fetch_one_err)
+            .map_err(handle_fetch_one_err)
     }
 }
 

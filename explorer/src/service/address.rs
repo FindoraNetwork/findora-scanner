@@ -61,18 +61,7 @@ pub async fn get_address(
         or (value @? '$.body.operations[*].TransferAsset.body.transfer.inputs[*].public_key ? (@ == \"{}\")') \
         ORDER BY timestamp DESC LIMIT {} OFFSET {}", pk_b64, pk_b64, page_size, (page - 1) * page_size);
 
-    let res = sqlx::query(sql_str.as_str()).fetch_all(&mut conn).await;
-    let rows = match res {
-        Ok(rows) => rows,
-        _ => {
-            return Ok(AddressResponse::InternalError(Json(AddressResult {
-                code: 500,
-                message: "internal error".to_string(),
-                data: None,
-            })));
-        }
-    };
-
+    let rows = sqlx::query(sql_str.as_str()).fetch_all(&mut conn).await?;
     let mut txs: Vec<Transaction> = vec![];
     for row in rows {
         let tx_hash: String = row.try_get("tx_hash")?;
