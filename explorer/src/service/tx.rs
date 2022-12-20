@@ -1200,7 +1200,7 @@ pub struct ClaimAmountResult {
 
 #[derive(Serialize, Deserialize, Debug, Default, Object)]
 pub struct ClaimAmount {
-    pub total_claim: u64,
+    pub amount: u64,
 }
 
 pub async fn get_claims_amount(api: &Api, address: Path<String>) -> Result<ClaimAmountResponse> {
@@ -1210,7 +1210,7 @@ pub async fn get_claims_amount(api: &Api, address: Path<String>) -> Result<Claim
         return Ok(ClaimAmountResponse::Err(Json(ClaimAmountResult {
             code: 400,
             message: "invalid bech32 address".to_string(),
-            data: ClaimAmount { total_claim: 0 },
+            data: ClaimAmount { amount: 0 },
         })));
     }
     let base64_address = public_key_to_base64(&pubkey_res.unwrap());
@@ -1225,7 +1225,7 @@ pub async fn get_claims_amount(api: &Api, address: Path<String>) -> Result<Claim
     Ok(ClaimAmountResponse::Ok(Json(ClaimAmountResult {
         code: 200,
         message: "".to_string(),
-        data: ClaimAmount { total_claim: total },
+        data: ClaimAmount { amount: total },
     })))
 }
 
