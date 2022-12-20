@@ -1183,6 +1183,52 @@ pub async fn get_claim_txs(
     })))
 }
 
+#[derive(ApiResponse)]
+pub enum ClaimAmountResponse {
+    #[oai(status = 200)]
+    Ok(Json<ClaimAmountResult>),
+    #[oai(status = 200)]
+    Err(Json<ClaimAmountResult>),
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, Object)]
+pub struct ClaimAmountResult {
+    pub code: i32,
+    pub message: String,
+    pub data: ClaimAmount,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, Object)]
+pub struct ClaimAmount {
+    pub total_claim: u64,
+}
+
+pub async fn get_claims_amount(api: &Api, address: Path<String>) -> Result<ClaimAmountResponse> {
+    let mut conn = api.storage.lock().await.acquire().await?;
+    let pubkey_res = public_key_from_bech32(&address.0);
+    if pubkey_res.is_err() {
+        return Ok(ClaimAmountResponse::Err(Json(ClaimAmountResult {
+            code: 400,
+            message: "invalid bech32 address".to_string(),
+            data: ClaimAmount { total_claim: 0 },
+        })));
+    }
+    let base64_address = public_key_to_base64(&pubkey_res.unwrap());
+    let sql_query = format!("SELECT jsonb_path_query(value, '$.body.operations[*].Claim.body.amount') AS amount FROM transaction WHERE value @? '$.body.operations[*].Claim.pubkey ? (@==\"{}\")'", base64_address);
+    let rows = sqlx::query(sql_query.as_str()).fetch_all(&mut conn).await?;
+    let mut total: u64 = 0;
+    for r in rows {
+        let amount: Value = r.try_get("amount").unwrap();
+        total += amount.to_string().parse::<u64>().unwrap();
+    }
+
+    Ok(ClaimAmountResponse::Ok(Json(ClaimAmountResult {
+        code: 200,
+        message: "".to_string(),
+        data: ClaimAmount { total_claim: total },
+    })))
+}
+
 pub async fn get_prism_tx(
     api: &Api,
     address: Path<String>,
@@ -1360,7 +1406,7 @@ fn wrap_evm_tx(tx: &mut TransactionResponse) -> Result<()> {
         let hash = H256::from_slice(Keccak256::digest(&rlp::encode(&evm_tx)).as_slice());
         tx.evm_tx_hash = format!("{:?}", hash);
         let evm_tx_response = evm_tx.to_evm_tx_response().unwrap();
-        tx.value = serde_json::to_value(&evm_tx_response).unwrap();
+        tx.value = serde_json::to_value(evm_tx_response).unwrap();
     } else if tx_str.contains("ConvertAccount") {
         tx.ty = PRISM_NATIVE_TO_EVM;
     } else if tx_str.contains("AbarToBar") {
