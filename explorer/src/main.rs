@@ -7,7 +7,9 @@ use crate::service::block::{BlocksResponse, FullBlockResponse, SimpleBlockRespon
 use crate::service::chain::{AddressCountResponse, ChainStatisticsResponse, DistributeResponse};
 use crate::service::price::{MarketChartResponse, SimplePriceResponse};
 use crate::service::staking::{ClaimResponse, DelegationResponse, UnDelegationResponse};
-use crate::service::tx::{PrismRecordResponse, PrismRecordResponseNew, TxResponse, TxsResponse};
+use crate::service::tx::{
+    ClaimAmountResponse, PrismRecordResponse, PrismRecordResponseNew, TxResponse, TxsResponse,
+};
 use crate::service::validator::{
     CirculatingSupplyResponse, DelegatorListResponse, ValidatorDelegationResponse,
     ValidatorDetailResponse, ValidatorHistoryResponse, ValidatorListResponse,
@@ -608,6 +610,17 @@ impl Api {
         page_size: Query<Option<i64>>,
     ) -> poem::Result<ValidatorHistoryResponse> {
         service::validator::validator_history(self, address, page, page_size)
+            .await
+            .map_err(handle_fetch_one_err)
+    }
+
+    #[oai(
+        path = "/chain/claim/:address",
+        method = "get",
+        tag = "ApiTags::BlockChain"
+    )]
+    async fn get_claim_amount(&self, address: Path<String>) -> poem::Result<ClaimAmountResponse> {
+        service::tx::get_claims_amount(self, address)
             .await
             .map_err(handle_fetch_one_err)
     }
