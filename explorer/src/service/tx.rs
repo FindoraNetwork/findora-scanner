@@ -1225,9 +1225,7 @@ pub async fn get_claims_amount(api: &Api, address: Path<String>) -> Result<Claim
     Ok(ClaimAmountResponse::Ok(Json(ClaimAmountResult {
         code: 200,
         message: "".to_string(),
-        data: ClaimAmount {
-            total_claim: total,
-        },
+        data: ClaimAmount { total_claim: total },
     })))
 }
 
