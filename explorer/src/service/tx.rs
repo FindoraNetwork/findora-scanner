@@ -1226,7 +1226,7 @@ pub async fn get_claims_amount(api: &Api, address: Path<String>) -> Result<Claim
         code: 200,
         message: "".to_string(),
         data: ClaimAmount {
-            total_claim: total as u64,
+            total_claim: total,
         },
     })))
 }
@@ -1408,7 +1408,7 @@ fn wrap_evm_tx(tx: &mut TransactionResponse) -> Result<()> {
         let hash = H256::from_slice(Keccak256::digest(&rlp::encode(&evm_tx)).as_slice());
         tx.evm_tx_hash = format!("{:?}", hash);
         let evm_tx_response = evm_tx.to_evm_tx_response().unwrap();
-        tx.value = serde_json::to_value(&evm_tx_response).unwrap();
+        tx.value = serde_json::to_value(evm_tx_response).unwrap();
     } else if tx_str.contains("ConvertAccount") {
         tx.ty = PRISM_NATIVE_TO_EVM;
     } else if tx_str.contains("AbarToBar") {
