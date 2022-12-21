@@ -1205,6 +1205,7 @@ pub struct ClaimAmount {
 
 pub async fn get_claims_amount(api: &Api, address: Path<String>) -> Result<ClaimAmountResponse> {
     let mut conn = api.storage.lock().await.acquire().await?;
+
     let pubkey_res = public_key_from_bech32(&address.0);
     if pubkey_res.is_err() {
         return Ok(ClaimAmountResponse::Err(Json(ClaimAmountResult {
@@ -1213,13 +1214,14 @@ pub async fn get_claims_amount(api: &Api, address: Path<String>) -> Result<Claim
             data: ClaimAmount { amount: 0 },
         })));
     }
+
     let base64_address = public_key_to_base64(&pubkey_res.unwrap());
     let sql_query = format!("SELECT jsonb_path_query(value, '$.body.operations[*].Claim.body.amount') AS amount FROM transaction WHERE value @? '$.body.operations[*].Claim.pubkey ? (@==\"{}\")'", base64_address);
     let rows = sqlx::query(sql_query.as_str()).fetch_all(&mut conn).await?;
     let mut total: u64 = 0;
     for r in rows {
-        let amount: Value = r.try_get("amount").unwrap();
-        total += amount.to_string().parse::<u64>().unwrap();
+        let amount: Value = r.try_get("amount")?;
+        total += amount.to_string().parse::<u64>()?;
     }
 
     Ok(ClaimAmountResponse::Ok(Json(ClaimAmountResult {
