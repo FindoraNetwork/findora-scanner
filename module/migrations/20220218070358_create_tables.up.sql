@@ -18,6 +18,7 @@ CREATE TABLE transaction (
      code BIGINT NOT NULL,
      ty INT NOT NULL,
      log TEXT,
+     origin TEXT NOT NULL,
      result JSONB NOT NULL,
      value JSONB NOT NULL,
      PRIMARY KEY(tx_hash)

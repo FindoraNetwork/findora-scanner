@@ -174,7 +174,7 @@ impl RPCCaller {
 
         for tx in block.block.data.txs.unwrap_or_default() {
             let bytes = base64::decode(&tx)?;
-
+            let origin = tx;
             let hasher = sha2::Sha256::digest(&bytes);
             let txid = hex::encode(hasher);
             let tx = self.rpc.load_transaction(&txid).await?;
@@ -190,6 +190,7 @@ impl RPCCaller {
                         code: tx.tx_result.code,
                         ty: 1,
                         log: tx.tx_result.log,
+                        origin,
                         result,
                         value,
                     });
@@ -204,6 +205,7 @@ impl RPCCaller {
                         code: tx.tx_result.code,
                         ty: 0,
                         log: tx.tx_result.log,
+                        origin,
                         result,
                         value,
                     });
