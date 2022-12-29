@@ -139,6 +139,7 @@ pub struct Transaction {
     pub ty: i32,
     pub code: i64,
     pub log: String,
+    pub origin: String,
     pub result: Value, // result.tx_result
     pub value: Value,  // result.tx
 }
@@ -153,6 +154,7 @@ pub struct TransactionResponse {
     pub ty: i32,
     pub code: i64,
     pub log: String,
+    pub origin: String,
     pub result: Value, // result.tx_result
     pub value: Value,  // result.tx
 }

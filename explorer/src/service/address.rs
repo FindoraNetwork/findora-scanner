@@ -70,9 +70,11 @@ pub async fn get_address(
         let timestamp: i64 = row.try_get("timestamp")?;
         let height: i64 = row.try_get("height")?;
         let code: i64 = row.try_get("code")?;
-        let log: String = row.try_get("log")?;
+        let log = row.try_get("log")?;
+        let origin = row.try_get("origin")?;
         let result: Value = row.try_get("result")?;
         let value: Value = row.try_get("value")?;
+
         let tx = Transaction {
             tx_hash,
             block_hash,
@@ -81,6 +83,7 @@ pub async fn get_address(
             code,
             ty,
             log,
+            origin,
             result,
             value,
         };

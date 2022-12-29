@@ -486,6 +486,7 @@ pub async fn get_evm_tx(api: &Api, tx_hash: Path<String>) -> Result<TxResponse> 
             let height: i64 = row.try_get("height")?;
             let code: i64 = row.try_get("code")?;
             let log = "".to_string();
+            let origin = row.try_get("origin")?;
             let result: Value = row.try_get("result")?;
 
             let tx = TransactionResponse {
@@ -497,6 +498,7 @@ pub async fn get_evm_tx(api: &Api, tx_hash: Path<String>) -> Result<TxResponse> 
                 code,
                 ty,
                 log,
+                origin,
                 result,
                 value,
             };
@@ -531,6 +533,7 @@ pub async fn get_tx(api: &Api, tx_hash: Path<String>) -> Result<TxResponse> {
     let height: i64 = row.try_get("height")?;
     let code: i64 = row.try_get("code")?;
     let log = "".to_string();
+    let origin = row.try_get("origin")?;
     let result: Value = row.try_get("result")?;
     let value: Value = row.try_get("value")?;
 
@@ -543,6 +546,7 @@ pub async fn get_tx(api: &Api, tx_hash: Path<String>) -> Result<TxResponse> {
         code,
         ty,
         log,
+        origin,
         result,
         value,
     };
@@ -591,6 +595,7 @@ pub async fn get_txs_receive_from(
         let height: i64 = row.try_get("height")?;
         let code: i64 = row.try_get("code")?;
         let log = "".to_string();
+        let origin = row.try_get("origin")?;
         let result: Value = row.try_get("result")?;
         let value: Value = row.try_get("value")?;
 
@@ -603,6 +608,7 @@ pub async fn get_txs_receive_from(
             code,
             ty,
             log,
+            origin,
             result,
             value,
         };
@@ -658,6 +664,7 @@ pub async fn get_txs_send_to(
         let height: i64 = row.try_get("height")?;
         let code: i64 = row.try_get("code")?;
         let log = "".to_string();
+        let origin = row.try_get("origin")?;
         let result: Value = row.try_get("result")?;
         let value: Value = row.try_get("value")?;
 
@@ -670,6 +677,7 @@ pub async fn get_txs_send_to(
             code,
             ty,
             log,
+            origin,
             result,
             value,
         };
@@ -795,6 +803,7 @@ pub async fn get_txs(
         let height: i64 = row.try_get("height")?;
         let code: i64 = row.try_get("code")?;
         let log = "".to_string();
+        let origin = row.try_get("origin")?;
         let result: Value = row.try_get("result")?;
         let value: Value = row.try_get("value")?;
 
@@ -807,6 +816,7 @@ pub async fn get_txs(
             code,
             ty,
             log,
+            origin,
             result,
             value,
         };
@@ -946,6 +956,7 @@ pub async fn get_txs_raw(
         let height: i64 = row.try_get("height")?;
         let code: i64 = row.try_get("code")?;
         let log = "".to_string();
+        let origin = row.try_get("origin")?;
         let result: Value = row.try_get("result")?;
         let value: Value = row.try_get("value")?;
 
@@ -958,6 +969,7 @@ pub async fn get_txs_raw(
             code,
             ty,
             log,
+            origin,
             result,
             value,
         };
@@ -1053,8 +1065,8 @@ pub async fn get_triple_masking_txs(
         let timestamp: i64 = row.try_get("timestamp")?;
         let height: i64 = row.try_get("height")?;
         let code: i64 = row.try_get("code")?;
-        //let log: String = row.try_get("log")?;
         let log = "".to_string();
+        let origin = row.try_get("origin")?;
         let result: Value = row.try_get("result")?;
         let value: Value = row.try_get("value")?;
 
@@ -1067,6 +1079,7 @@ pub async fn get_triple_masking_txs(
             code,
             ty,
             log,
+            origin,
             result,
             value,
         };
@@ -1146,8 +1159,8 @@ pub async fn get_claim_txs(
         let timestamp: i64 = row.try_get("timestamp")?;
         let height: i64 = row.try_get("height")?;
         let code: i64 = row.try_get("code")?;
-        //let log: String = row.try_get("log")?;
         let log = "".to_string();
+        let origin = row.try_get("origin")?;
         let result: Value = row.try_get("result")?;
         let value: Value = row.try_get("value")?;
 
@@ -1160,6 +1173,7 @@ pub async fn get_claim_txs(
             code,
             ty,
             log,
+            origin,
             result,
             value,
         };
