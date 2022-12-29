@@ -70,7 +70,7 @@ pub async fn get_address(
         let timestamp: i64 = row.try_get("timestamp")?;
         let height: i64 = row.try_get("height")?;
         let code: i64 = row.try_get("code")?;
-        let log= "".to_string();
+        let log = row.try_get("log")?;
         let origin = row.try_get("origin")?;
         let result: Value = row.try_get("result")?;
         let value: Value = row.try_get("value")?;
