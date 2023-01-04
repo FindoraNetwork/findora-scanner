@@ -6,7 +6,9 @@ use crate::service::asset::AssetResponse;
 use crate::service::block::{BlocksResponse, FullBlockResponse, SimpleBlockResponse};
 use crate::service::chain::{AddressCountResponse, ChainStatisticsResponse, DistributeResponse};
 use crate::service::price::{MarketChartResponse, SimplePriceResponse};
-use crate::service::staking::{ClaimResponse, DelegationResponse, UnDelegationResponse};
+use crate::service::staking::{
+    ClaimResponse, DelegationInfoResponse, DelegationResponse, UnDelegationResponse,
+};
 use crate::service::tx::{
     ClaimAmountResponse, PrismRecordResponse, PrismRecordResponseNew, TxResponse, TxsResponse,
 };
@@ -621,6 +623,20 @@ impl Api {
     )]
     async fn get_claim_amount(&self, address: Path<String>) -> poem::Result<ClaimAmountResponse> {
         service::tx::get_claims_amount(self, address)
+            .await
+            .map_err(handle_fetch_one_err)
+    }
+
+    #[oai(
+        path = "/staking/delegation_info/:address",
+        method = "get",
+        tag = "ApiTags::Staking"
+    )]
+    async fn get_delegation_info(
+        &self,
+        address: Path<String>,
+    ) -> poem::Result<DelegationInfoResponse> {
+        service::staking::delegation_info(self, address)
             .await
             .map_err(handle_fetch_one_err)
     }

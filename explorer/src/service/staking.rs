@@ -1,8 +1,9 @@
 use crate::service::util::{public_key_from_bech32, public_key_to_base64};
 use crate::Api;
 use anyhow::Result;
+use log::debug;
 use module::schema::{ClaimOpt, DelegationOpt, TdValidator, UnDelegationOpt};
-use poem_openapi::param::Query;
+use poem_openapi::param::{Path, Query};
 use poem_openapi::{payload::Json, ApiResponse, Object};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -308,5 +309,43 @@ pub async fn get_claim(
             page_size,
             items,
         }),
+    })))
+}
+
+#[derive(ApiResponse)]
+pub enum DelegationInfoResponse {
+    #[oai(status = 200)]
+    Ok(Json<DelegationInfoResult>),
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, Object)]
+pub struct DelegationInfoResult {
+    pub code: i32,
+    pub message: String,
+    pub data: Option<Value>,
+}
+
+pub async fn delegation_info(api: &Api, pubkey: Path<String>) -> Result<DelegationInfoResponse> {
+    let delegation_info_url = api
+        .platform
+        .rpc
+        .join(format!("delegation_info/{}", pubkey.0).as_str())
+        .unwrap();
+
+    debug!("delegation_info_url: {}", delegation_info_url);
+
+    let res = api
+        .platform
+        .client
+        .get(delegation_info_url)
+        .send()
+        .await?
+        .json()
+        .await?;
+
+    Ok(DelegationInfoResponse::Ok(Json(DelegationInfoResult {
+        code: 200,
+        message: "".to_string(),
+        data: Some(res),
     })))
 }
