@@ -11,6 +11,7 @@ use crate::service::staking::{
 };
 use crate::service::tx::{
     ClaimAmountResponse, PrismRecordResponse, PrismRecordResponseNew, TxResponse, TxsResponse,
+    UndelegationResponse,
 };
 use crate::service::validator::{
     CirculatingSupplyResponse, DelegatorListResponse, ValidatorDelegationResponse,
@@ -548,7 +549,7 @@ impl Api {
             .map_err(handle_fetch_one_err)
     }
 
-    #[oai(path = "/staking/delegation", method = "get", tag = "ApiTags::Staking")]
+    #[oai(path = "/tx/delegation", method = "get", tag = "ApiTags::Transaction")]
     async fn get_delegation(
         &self,
         /// bech32 address, e.g. fra18fnyetvs2kc035xz78kyfcygmej8pk5h2kwczy03w6uewdphzfxsk74dym.
@@ -564,9 +565,9 @@ impl Api {
     }
 
     #[oai(
-        path = "/staking/undelegation",
+        path = "/tx/undelegation",
         method = "get",
-        tag = "ApiTags::Staking"
+        tag = "ApiTags::Transaction"
     )]
     async fn get_undelegation(
         &self,
@@ -637,6 +638,23 @@ impl Api {
         address: Path<String>,
     ) -> poem::Result<DelegationInfoResponse> {
         service::staking::delegation_info(self, address)
+            .await
+            .map_err(handle_fetch_one_err)
+    }
+
+    #[oai(
+        path = "/staking/undelegation",
+        method = "get",
+        tag = "ApiTags::Staking"
+    )]
+    async fn get_undelegation_info(
+        &self,
+        start: Query<Option<i64>>,
+        end: Query<Option<i64>>,
+        page: Query<Option<i64>>,
+        page_size: Query<Option<i64>>,
+    ) -> poem::Result<UndelegationResponse> {
+        service::tx::get_undelegation_info(self, start, end, page, page_size)
             .await
             .map_err(handle_fetch_one_err)
     }
