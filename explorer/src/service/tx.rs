@@ -5,9 +5,10 @@ use crate::Api;
 use anyhow::Result;
 use ethereum_types::{H160, H256};
 use module::schema::{
-    EvmTx, PrismTransaction, TransactionResponse, UnDelegationValue, ABAR_TO_ABAR, ABAR_TO_BAR,
-    BAR_TO_ABAR, CLAIM, DEFINE_OR_ISSUE_ASSET, EVM_TRANSFER, HIDE_ASSET_AMOUNT, HIDE_ASSET_TYPE,
-    HIDE_ASSET_TYPE_AND_AMOUNT, PRISM_EVM_TO_NATIVE, PRISM_NATIVE_TO_EVM, STAKING, UNSTAKING,
+    EvmTx, PrismTransaction, TransactionResponse, UnDelegationOpt, UnDelegationValue, ABAR_TO_ABAR,
+    ABAR_TO_BAR, BAR_TO_ABAR, CLAIM, DEFINE_OR_ISSUE_ASSET, EVM_TRANSFER, HIDE_ASSET_AMOUNT,
+    HIDE_ASSET_TYPE, HIDE_ASSET_TYPE_AND_AMOUNT, PRISM_EVM_TO_NATIVE, PRISM_NATIVE_TO_EVM, STAKING,
+    UNSTAKING,
 };
 use poem_openapi::param::Query;
 use poem_openapi::{param::Path, payload::Json, ApiResponse, Object};
@@ -1323,6 +1324,98 @@ pub async fn get_prism_tx(
             total,
             txs,
         }),
+    })))
+}
+
+#[derive(ApiResponse)]
+pub enum UndelegationResponse {
+    #[oai(status = 200)]
+    Ok(Json<UndelegationResult>),
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, Object)]
+pub struct UndelegationResult {
+    pub code: i32,
+    pub message: String,
+    pub data: DelegationResultData,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, Object)]
+pub struct DelegationResultData {
+    pub page: i64,
+    pub page_size: i64,
+    pub total: i64,
+    pub undelegations: Vec<UndelegationInfo>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, Object)]
+pub struct UndelegationInfo {
+    pub tx_hash: String,
+    pub timestamp: i64,
+    pub pubkey: String,
+    pub amount: u64,
+    pub validator: String,
+}
+
+pub async fn get_undelegation_info(
+    api: &Api,
+    start: Query<Option<i64>>,
+    end: Query<Option<i64>>,
+    page: Query<Option<i64>>,
+    page_size: Query<Option<i64>>,
+) -> Result<UndelegationResponse> {
+    let mut conn = api.storage.lock().await.acquire().await?;
+    let page = page.0.unwrap_or(1);
+    let page_size = page_size.0.unwrap_or(10);
+    let mut params: Vec<String> = vec![];
+    if let Some(start) = start.0 {
+        params.push(format!("timestamp > {} ", start));
+    }
+    if let Some(end) = end.0 {
+        params.push(format!("timestamp < {} ", end));
+    }
+
+    let mut query_sql = "SELECT tx_hash, timestamp, jsonb_path_query(value,'$.body.operations[*].UnDelegation') AS u FROM transaction".to_string();
+
+    if !params.is_empty() {
+        query_sql = query_sql.add(" WHERE ").add(params.join(" AND ").as_str());
+    }
+    query_sql =
+        query_sql.add(format!(" LIMIT {} OFFSET {}", page_size, (page - 1) * page_size).as_str());
+
+    let rows = sqlx::query(query_sql.as_str()).fetch_all(&mut conn).await?;
+    let l = rows.len();
+    let mut undelegations: Vec<UndelegationInfo> = vec![];
+    for r in rows {
+        let tx_hash: String = r.try_get("tx_hash").unwrap();
+        let timestamp: i64 = r.try_get("timestamp").unwrap();
+        let val: Value = r.try_get("u")?;
+        let opt: UnDelegationOpt = serde_json::from_value(val).unwrap();
+        if opt.body.pu.is_none() {
+            continue;
+        }
+        let vaddr = hex::encode(opt.body.pu.as_ref().unwrap().target_validator).to_uppercase();
+
+        undelegations.push(UndelegationInfo {
+            tx_hash,
+            timestamp,
+            pubkey: opt.pubkey,
+            amount: opt.body.pu.unwrap().am as u64,
+            validator: vaddr,
+        })
+    }
+
+    let res = DelegationResultData {
+        page,
+        page_size,
+        total: l as i64,
+        undelegations,
+    };
+
+    Ok(UndelegationResponse::Ok(Json(UndelegationResult {
+        code: 200,
+        message: "".to_string(),
+        data: res,
     })))
 }
 
