@@ -10,8 +10,8 @@ use crate::service::staking::{
     ClaimResponse, DelegationInfoResponse, DelegationResponse, UnDelegationResponse,
 };
 use crate::service::tx::{
-    ClaimAmountResponse, PrismRecordResponse, PrismRecordResponseNew, TxResponse, TxsResponse,
-    UndelegationResponse,
+    ClaimAmountResponse, PrismRecordResponse, PrismRecordResponseNew, SimpleDelegationResponse,
+    TxResponse, TxsResponse, UndelegationResponse,
 };
 use crate::service::validator::{
     CirculatingSupplyResponse, DelegatorListResponse, ValidatorDelegationResponse,
@@ -550,7 +550,7 @@ impl Api {
     }
 
     #[oai(path = "/tx/delegation", method = "get", tag = "ApiTags::Transaction")]
-    async fn get_delegation(
+    async fn get_delegation_tx(
         &self,
         /// bech32 address, e.g. fra18fnyetvs2kc035xz78kyfcygmej8pk5h2kwczy03w6uewdphzfxsk74dym.
         address: Query<String>,
@@ -559,7 +559,7 @@ impl Api {
         /// page size, default is 10.
         page_size: Query<Option<i64>>,
     ) -> poem::Result<DelegationResponse> {
-        service::staking::get_delegation(self, address, page, page_size)
+        service::staking::get_delegation_tx(self, address, page, page_size)
             .await
             .map_err(handle_fetch_one_err)
     }
@@ -633,11 +633,8 @@ impl Api {
         method = "get",
         tag = "ApiTags::Staking"
     )]
-    async fn get_delegation_info(
-        &self,
-        address: Path<String>,
-    ) -> poem::Result<DelegationInfoResponse> {
-        service::staking::delegation_info(self, address)
+    async fn get_delegation(&self, address: Path<String>) -> poem::Result<DelegationInfoResponse> {
+        service::staking::delegation(self, address)
             .await
             .map_err(handle_fetch_one_err)
     }
@@ -655,6 +652,19 @@ impl Api {
         page_size: Query<Option<i64>>,
     ) -> poem::Result<UndelegationResponse> {
         service::tx::get_undelegation_info(self, start, end, page, page_size)
+            .await
+            .map_err(handle_fetch_one_err)
+    }
+
+    #[oai(path = "/staking/delegation", method = "get", tag = "ApiTags::Staking")]
+    async fn get_delegation_info(
+        &self,
+        start: Query<Option<i64>>,
+        end: Query<Option<i64>>,
+        page: Query<Option<i64>>,
+        page_size: Query<Option<i64>>,
+    ) -> poem::Result<SimpleDelegationResponse> {
+        service::tx::get_delegation_info(self, start, end, page, page_size)
             .await
             .map_err(handle_fetch_one_err)
     }

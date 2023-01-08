@@ -46,7 +46,7 @@ pub struct DelegationItem {
     pub timestamp: i64,
 }
 
-pub async fn get_delegation(
+pub async fn get_delegation_tx(
     api: &Api,
     address: Query<String>,
     page: Query<Option<i64>>,
@@ -325,7 +325,7 @@ pub struct DelegationInfoResult {
     pub data: Option<Value>,
 }
 
-pub async fn delegation_info(api: &Api, pubkey: Path<String>) -> Result<DelegationInfoResponse> {
+pub async fn delegation(api: &Api, pubkey: Path<String>) -> Result<DelegationInfoResponse> {
     let delegation_info_url = api
         .platform
         .rpc
