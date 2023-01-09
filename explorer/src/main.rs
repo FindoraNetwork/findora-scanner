@@ -7,11 +7,11 @@ use crate::service::block::{BlocksResponse, FullBlockResponse, SimpleBlockRespon
 use crate::service::chain::{AddressCountResponse, ChainStatisticsResponse, DistributeResponse};
 use crate::service::price::{MarketChartResponse, SimplePriceResponse};
 use crate::service::staking::{
-    ClaimResponse, DelegationInfoResponse, DelegationResponse, UnDelegationResponse,
+    ClaimResponse, DelegationAmountResponse, DelegationInfoResponse, DelegationResponse,
+    SimpleDelegationResponse, UnDelegationResponse, UndelegationResponse,
 };
 use crate::service::tx::{
-    ClaimAmountResponse, PrismRecordResponse, PrismRecordResponseNew, SimpleDelegationResponse,
-    TxResponse, TxsResponse, UndelegationResponse,
+    ClaimAmountResponse, PrismRecordResponse, PrismRecordResponseNew, TxResponse, TxsResponse,
 };
 use crate::service::validator::{
     CirculatingSupplyResponse, DelegatorListResponse, ValidatorDelegationResponse,
@@ -657,7 +657,7 @@ impl Api {
         /// page size, the default is 10.
         page_size: Query<Option<i64>>,
     ) -> poem::Result<UndelegationResponse> {
-        service::tx::get_undelegation_info(self, pubkey, start, end, page, page_size)
+        service::staking::get_undelegation_info(self, pubkey, start, end, page, page_size)
             .await
             .map_err(handle_fetch_one_err)
     }
@@ -676,7 +676,26 @@ impl Api {
         /// page size, the default is 10.
         page_size: Query<Option<i64>>,
     ) -> poem::Result<SimpleDelegationResponse> {
-        service::tx::get_delegation_info(self, pubkey, start, end, page, page_size)
+        service::staking::get_delegation_info(self, pubkey, start, end, page, page_size)
+            .await
+            .map_err(handle_fetch_one_err)
+    }
+
+    #[oai(
+        path = "/staking/delegation/amount",
+        method = "get",
+        tag = "ApiTags::Staking"
+    )]
+    async fn get_delegation_amount(
+        &self,
+        /// base64 pubkey, e.g. OmZMrZBVsPjQwvHsROCI3mRw2pdVnYER8Xa5lzQ3Ek0=
+        pubkey: Query<Option<String>>,
+        /// starting timestamp.
+        start: Query<Option<i64>>,
+        /// ending timestamp.
+        end: Query<Option<i64>>,
+    ) -> poem::Result<DelegationAmountResponse> {
+        service::staking::get_delegation_amount(self, pubkey, start, end)
             .await
             .map_err(handle_fetch_one_err)
     }
