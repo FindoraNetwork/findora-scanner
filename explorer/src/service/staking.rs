@@ -8,6 +8,7 @@ use poem_openapi::{payload::Json, ApiResponse, Object};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sqlx::Row;
+use std::ops::Add;
 
 #[derive(ApiResponse)]
 pub enum DelegationResponse {
@@ -347,5 +348,262 @@ pub async fn delegation(api: &Api, pubkey: Path<String>) -> Result<DelegationInf
         code: 200,
         message: "".to_string(),
         data: Some(res),
+    })))
+}
+
+#[derive(ApiResponse)]
+pub enum UndelegationResponse {
+    #[oai(status = 200)]
+    Ok(Json<UndelegationResult>),
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, Object)]
+pub struct UndelegationResult {
+    pub code: i32,
+    pub message: String,
+    pub data: UndelegationResultData,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, Object)]
+pub struct UndelegationResultData {
+    pub page: i64,
+    pub page_size: i64,
+    pub total: i64,
+    pub undelegations: Vec<UndelegationInfo>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, Object)]
+pub struct UndelegationInfo {
+    pub tx_hash: String,
+    pub timestamp: i64,
+    pub pubkey: String,
+    pub amount: u64,
+    pub validator: String,
+}
+
+pub async fn get_undelegation_info(
+    api: &Api,
+    pubkey: Query<Option<String>>,
+    start: Query<Option<i64>>,
+    end: Query<Option<i64>>,
+    page: Query<Option<i64>>,
+    page_size: Query<Option<i64>>,
+) -> Result<UndelegationResponse> {
+    let mut conn = api.storage.lock().await.acquire().await?;
+    let page = page.0.unwrap_or(1);
+    let page_size = page_size.0.unwrap_or(10);
+
+    let mut params: Vec<String> = vec![];
+    if let Some(start) = start.0 {
+        params.push(format!(" timestamp>={} ", start));
+    }
+    if let Some(end) = end.0 {
+        params.push(format!(" timestamp<={} ", end));
+    }
+    if let Some(pk) = pubkey.0 {
+        params.push(format!(
+            "(value @? '$.body.operations[*].UnDelegation.pubkey ? (@==\"{}\")')",
+            pk
+        ));
+    }
+
+    let mut query_sql = "SELECT tx_hash,timestamp,jsonb_path_query(value,'$.body.operations[*].UnDelegation') AS ud FROM transaction".to_string();
+    if !params.is_empty() {
+        query_sql = query_sql.add(" WHERE ").add(params.join(" AND ").as_str());
+    }
+    query_sql =
+        query_sql.add(format!(" LIMIT {} OFFSET {}", page_size, (page - 1) * page_size).as_str());
+
+    let rows = sqlx::query(query_sql.as_str()).fetch_all(&mut conn).await?;
+    let l = rows.len();
+    let mut undelegations: Vec<UndelegationInfo> = vec![];
+    for r in rows {
+        let tx_hash: String = r.try_get("tx_hash")?;
+        let timestamp: i64 = r.try_get("timestamp")?;
+        let val: Value = r.try_get("ud")?;
+        let opt: UnDelegationOpt = serde_json::from_value(val)?;
+        if opt.body.pu.is_none() {
+            continue;
+        }
+        let vaddr = hex::encode(opt.body.pu.as_ref().unwrap().target_validator).to_uppercase();
+
+        undelegations.push(UndelegationInfo {
+            tx_hash,
+            timestamp,
+            pubkey: opt.pubkey,
+            amount: opt.body.pu.unwrap().am as u64,
+            validator: vaddr,
+        })
+    }
+
+    let res = UndelegationResultData {
+        page,
+        page_size,
+        total: l as i64,
+        undelegations,
+    };
+
+    Ok(UndelegationResponse::Ok(Json(UndelegationResult {
+        code: 200,
+        message: "".to_string(),
+        data: res,
+    })))
+}
+
+#[derive(ApiResponse)]
+pub enum SimpleDelegationResponse {
+    #[oai(status = 200)]
+    Ok(Json<SimpleDelegationResult>),
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, Object)]
+pub struct SimpleDelegationResult {
+    pub code: i32,
+    pub message: String,
+    pub data: DelegationResultData,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, Object)]
+pub struct DelegationResultData {
+    pub page: i64,
+    pub page_size: i64,
+    pub total: i64,
+    pub delegations: Vec<DelegationInfo>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, Object)]
+pub struct DelegationInfo {
+    pub tx_hash: String,
+    pub timestamp: i64,
+    pub pubkey: String,
+    pub amount: u64,
+    pub validator: String,
+}
+
+pub async fn get_delegation_info(
+    api: &Api,
+    pubkey: Query<Option<String>>,
+    start: Query<Option<i64>>,
+    end: Query<Option<i64>>,
+    page: Query<Option<i64>>,
+    page_size: Query<Option<i64>>,
+) -> Result<SimpleDelegationResponse> {
+    let mut conn = api.storage.lock().await.acquire().await?;
+    let page = page.0.unwrap_or(1);
+    let page_size = page_size.0.unwrap_or(10);
+
+    let mut params: Vec<String> = vec![];
+    if let Some(start) = start.0 {
+        params.push(format!(" timestamp>={} ", start));
+    }
+    if let Some(end) = end.0 {
+        params.push(format!(" timestamp<={} ", end));
+    }
+    if let Some(pk) = pubkey.0 {
+        params.push(format!(
+            "(value @? '$.body.operations[*].Delegation.pubkey ? (@==\"{}\")')",
+            pk
+        ));
+    }
+
+    let mut query_sql = "SELECT tx_hash,timestamp,jsonb_path_query(value,'$.body.operations[*].Delegation') AS d FROM transaction".to_string();
+    if !params.is_empty() {
+        query_sql = query_sql.add(" WHERE ").add(params.join(" AND ").as_str());
+    }
+    query_sql =
+        query_sql.add(format!(" LIMIT {} OFFSET {}", page_size, (page - 1) * page_size).as_str());
+
+    let rows = sqlx::query(query_sql.as_str()).fetch_all(&mut conn).await?;
+    let l = rows.len();
+    let mut delegations: Vec<DelegationInfo> = vec![];
+
+    for r in rows {
+        let tx_hash: String = r.try_get("tx_hash")?;
+        let timestamp: i64 = r.try_get("timestamp")?;
+        let val: Value = r.try_get("d")?;
+        let opt: DelegationOpt = serde_json::from_value(val)?;
+
+        delegations.push(DelegationInfo {
+            tx_hash,
+            timestamp,
+            pubkey: opt.pubkey,
+            amount: opt.body.amount as u64,
+            validator: opt.body.validator,
+        })
+    }
+
+    let res = DelegationResultData {
+        page,
+        page_size,
+        total: l as i64,
+        delegations,
+    };
+
+    Ok(SimpleDelegationResponse::Ok(Json(SimpleDelegationResult {
+        code: 200,
+        message: "".to_string(),
+        data: res,
+    })))
+}
+
+#[derive(ApiResponse)]
+pub enum DelegationAmountResponse {
+    #[oai(status = 200)]
+    Ok(Json<DelegationAmountResult>),
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, Object)]
+pub struct DelegationAmountResult {
+    pub code: i32,
+    pub message: String,
+    pub data: DelegationAmountData,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, Object)]
+pub struct DelegationAmountData {
+    pub amount: u64,
+}
+
+pub async fn get_delegation_amount(
+    api: &Api,
+    pubkey: Query<Option<String>>,
+    start: Query<Option<i64>>,
+    end: Query<Option<i64>>,
+) -> Result<DelegationAmountResponse> {
+    let mut conn = api.storage.lock().await.acquire().await?;
+
+    let mut params: Vec<String> = vec![];
+    if let Some(start) = start.0 {
+        params.push(format!(" timestamp>={} ", start));
+    }
+    if let Some(end) = end.0 {
+        params.push(format!(" timestamp<={} ", end));
+    }
+    if let Some(pk) = pubkey.0 {
+        params.push(format!(
+            "(value @? '$.body.operations[*].Delegation.pubkey ? (@==\"{}\")')",
+            pk
+        ));
+    }
+
+    let mut query_sql =
+        "SELECT jsonb_path_query(value,'$.body.operations[*].Delegation') AS d FROM transaction"
+            .to_string();
+    if !params.is_empty() {
+        query_sql = query_sql.add(" WHERE ").add(params.join(" AND ").as_str());
+    }
+
+    let rows = sqlx::query(query_sql.as_str()).fetch_all(&mut conn).await?;
+    let mut amount: u64 = 0;
+    for r in rows {
+        let val: Value = r.try_get("d")?;
+        let opt: DelegationOpt = serde_json::from_value(val)?;
+        amount += opt.body.amount as u64;
+    }
+
+    Ok(DelegationAmountResponse::Ok(Json(DelegationAmountResult {
+        code: 200,
+        message: "".to_string(),
+        data: DelegationAmountData { amount },
     })))
 }
