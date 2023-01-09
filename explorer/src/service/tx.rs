@@ -1359,6 +1359,7 @@ pub struct UndelegationInfo {
 
 pub async fn get_undelegation_info(
     api: &Api,
+    pubkey: Query<Option<String>>,
     start: Query<Option<i64>>,
     end: Query<Option<i64>>,
     page: Query<Option<i64>>,
@@ -1367,16 +1368,22 @@ pub async fn get_undelegation_info(
     let mut conn = api.storage.lock().await.acquire().await?;
     let page = page.0.unwrap_or(1);
     let page_size = page_size.0.unwrap_or(10);
+
     let mut params: Vec<String> = vec![];
     if let Some(start) = start.0 {
-        params.push(format!("timestamp > {} ", start));
+        params.push(format!(" timestamp>={} ", start));
     }
     if let Some(end) = end.0 {
-        params.push(format!("timestamp < {} ", end));
+        params.push(format!(" timestamp<={} ", end));
+    }
+    if let Some(pk) = pubkey.0 {
+        params.push(format!(
+            "(value @? '$.body.operations[*].UnDelegation.pubkey ? (@==\"{}\")')",
+            pk
+        ));
     }
 
-    let mut query_sql = "SELECT tx_hash,timestamp,jsonb_path_query(value,'$.body.operations[*].UnDelegation') AS u FROM transaction".to_string();
-
+    let mut query_sql = "SELECT tx_hash,timestamp,jsonb_path_query(value,'$.body.operations[*].UnDelegation') AS ud FROM transaction".to_string();
     if !params.is_empty() {
         query_sql = query_sql.add(" WHERE ").add(params.join(" AND ").as_str());
     }
@@ -1389,7 +1396,7 @@ pub async fn get_undelegation_info(
     for r in rows {
         let tx_hash: String = r.try_get("tx_hash")?;
         let timestamp: i64 = r.try_get("timestamp")?;
-        let val: Value = r.try_get("u")?;
+        let val: Value = r.try_get("ud")?;
         let opt: UnDelegationOpt = serde_json::from_value(val)?;
         if opt.body.pu.is_none() {
             continue;
@@ -1451,6 +1458,7 @@ pub struct DelegationInfo {
 
 pub async fn get_delegation_info(
     api: &Api,
+    pubkey: Query<Option<String>>,
     start: Query<Option<i64>>,
     end: Query<Option<i64>>,
     page: Query<Option<i64>>,
@@ -1459,16 +1467,22 @@ pub async fn get_delegation_info(
     let mut conn = api.storage.lock().await.acquire().await?;
     let page = page.0.unwrap_or(1);
     let page_size = page_size.0.unwrap_or(10);
+
     let mut params: Vec<String> = vec![];
     if let Some(start) = start.0 {
-        params.push(format!("timestamp > {} ", start));
+        params.push(format!(" timestamp>={} ", start));
     }
     if let Some(end) = end.0 {
-        params.push(format!("timestamp < {} ", end));
+        params.push(format!(" timestamp<={} ", end));
+    }
+    if let Some(pk) = pubkey.0 {
+        params.push(format!(
+            "(value @? '$.body.operations[*].Delegation.pubkey ? (@==\"{}\")')",
+            pk
+        ));
     }
 
     let mut query_sql = "SELECT tx_hash,timestamp,jsonb_path_query(value,'$.body.operations[*].Delegation') AS d FROM transaction".to_string();
-
     if !params.is_empty() {
         query_sql = query_sql.add(" WHERE ").add(params.join(" AND ").as_str());
     }
