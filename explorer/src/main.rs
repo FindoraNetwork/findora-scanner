@@ -8,7 +8,8 @@ use crate::service::chain::{AddressCountResponse, ChainStatisticsResponse, Distr
 use crate::service::price::{MarketChartResponse, SimplePriceResponse};
 use crate::service::staking::{
     ClaimResponse, DelegationAmountResponse, DelegationInfoResponse, DelegationResponse,
-    SimpleDelegationResponse, UnDelegationResponse, UndelegationResponse,
+    SimpleDelegationResponse, UnDelegationResponse, UndelegationAmountResponse,
+    UndelegationResponse,
 };
 use crate::service::tx::{
     ClaimAmountResponse, PrismRecordResponse, PrismRecordResponseNew, TxResponse, TxsResponse,
@@ -696,6 +697,25 @@ impl Api {
         end: Query<Option<i64>>,
     ) -> poem::Result<DelegationAmountResponse> {
         service::staking::get_delegation_amount(self, pubkey, start, end)
+            .await
+            .map_err(handle_fetch_one_err)
+    }
+
+    #[oai(
+        path = "/staking/undelegation/amount",
+        method = "get",
+        tag = "ApiTags::Staking"
+    )]
+    async fn get_undelegation_amount(
+        &self,
+        /// base64 pubkey, e.g. OmZMrZBVsPjQwvHsROCI3mRw2pdVnYER8Xa5lzQ3Ek0=
+        pubkey: Query<Option<String>>,
+        /// starting timestamp.
+        start: Query<Option<i64>>,
+        /// ending timestamp.
+        end: Query<Option<i64>>,
+    ) -> poem::Result<UndelegationAmountResponse> {
+        service::staking::get_undelegation_amount(self, pubkey, start, end)
             .await
             .map_err(handle_fetch_one_err)
     }
