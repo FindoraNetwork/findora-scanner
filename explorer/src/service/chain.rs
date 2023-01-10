@@ -57,71 +57,117 @@ pub struct TxsDistribute {
 
 #[allow(clippy::let_unit_value)]
 pub async fn distribute(api: &Api) -> Result<DistributeResponse> {
-    let mut rds_conn = api.redis_client.get_connection().unwrap();
-    let res = rds_conn.get("tx_distribute");
-    if res.is_ok() {
-        let distribute_data: String = res.unwrap();
-        let v: TxsDistribute = serde_json::from_str(distribute_data.as_str()).unwrap();
-        return Ok(DistributeResponse::Ok(Json(DistributeResult {
-            code: 200,
-            message: "".to_string(),
-            data: Some(v),
-        })));
-    }
-
     let mut conn = api.storage.lock().await.acquire().await?;
-    // xhub
-    let xhub: i64 =
-        sqlx::query("SELECT count(*) as cnt FROM transaction WHERE value @? '$.function.XHub'")
-            .fetch_one(&mut conn)
-            .await?
-            .try_get("cnt")?;
-
-    // evm
-    let evm: i64 = sqlx::query("SELECT count(*) as cnt FROM transaction WHERE ty=1")
-        .fetch_one(&mut conn)
-        .await?
-        .try_get("cnt")?;
-
-    // not evm
-    let not_evm: i64 = sqlx::query("SELECT count(*) as cnt FROM transaction WHERE ty=0")
-        .fetch_one(&mut conn)
-        .await?
-        .try_get("cnt")?;
-
     let convert_account_sql = "SELECT count(*) as cnt FROM transaction WHERE value @? '$.body.operations[*].ConvertAccount'";
     let bar_sql = "SELECT count(*) as cnt FROM transaction WHERE (value @? '$.body.operations[*].AbarToBar') OR (value @? '$.body.operations[*].BarToAbar') OR (value @? '$.body.operations[*].TransferAnonAsset')";
     let hide_amount_or_type_sql =  "SELECT count(*) as cnt FROM transaction WHERE (value @? '$.body.operations[*].TransferAsset.body.transfer.outputs[*].asset_type.Confidential') OR (value @? '$.body.operations[*].TransferAsset.body.transfer.outputs[*].amount.Confidential')";
     let hide_amount_and_type_sql = "SELECT count(*) as cnt FROM transaction WHERE (value @? '$.body.operations[*].TransferAsset.body.transfer.outputs[*].asset_type.Confidential') AND (value @? '$.body.operations[*].TransferAsset.body.transfer.outputs[*].amount.Confidential')";
 
-    let convert_account: i64 = sqlx::query(convert_account_sql)
-        .fetch_one(&mut conn)
-        .await?
-        .try_get("cnt")?;
-    let bar: i64 = sqlx::query(bar_sql)
-        .fetch_one(&mut conn)
-        .await?
-        .try_get("cnt")?;
-    let hide_type_or_amount: i64 = sqlx::query(hide_amount_or_type_sql)
-        .fetch_one(&mut conn)
-        .await?
-        .try_get("cnt")?;
-    let hide_amount_and_type: i64 = sqlx::query(hide_amount_and_type_sql)
-        .fetch_one(&mut conn)
-        .await?
-        .try_get("cnt")?;
-    let hide = hide_type_or_amount - hide_amount_and_type;
+    let mut res_data = TxsDistribute::default();
 
-    let res_data = TxsDistribute {
-        transparent: not_evm - convert_account - bar - hide,
-        privacy: bar + hide,
-        prism: xhub + convert_account,
-        evm_compatible: evm - xhub,
-    };
+    let rds_conn_res = api.redis_client.get_connection();
+    if rds_conn_res.is_ok() {
+        let mut rds_conn = rds_conn_res.unwrap();
+        let res = rds_conn.get("tx_distribute");
+        if res.is_ok() {
+            let distribute_data: String = res.unwrap();
+            let v: TxsDistribute = serde_json::from_str(distribute_data.as_str()).unwrap();
+            return Ok(DistributeResponse::Ok(Json(DistributeResult {
+                code: 200,
+                message: "".to_string(),
+                data: Some(v),
+            })));
+        }
 
-    let v = serde_json::to_string(&res_data).unwrap();
-    let _: () = rds_conn.set("tx_distribute", v).unwrap();
-    let _: () = rds_conn.expire("tx_distribute", 60 * 60 * 24).unwrap();
+        // xhub
+        let xhub: i64 =
+            sqlx::query("SELECT count(*) as cnt FROM transaction WHERE value @? '$.function.XHub'")
+                .fetch_one(&mut conn)
+                .await?
+                .try_get("cnt")?;
+
+        // evm
+        let evm: i64 = sqlx::query("SELECT count(*) as cnt FROM transaction WHERE ty=1")
+            .fetch_one(&mut conn)
+            .await?
+            .try_get("cnt")?;
+
+        // not evm
+        let not_evm: i64 = sqlx::query("SELECT count(*) as cnt FROM transaction WHERE ty=0")
+            .fetch_one(&mut conn)
+            .await?
+            .try_get("cnt")?;
+
+        let convert_account: i64 = sqlx::query(convert_account_sql)
+            .fetch_one(&mut conn)
+            .await?
+            .try_get("cnt")?;
+        let bar: i64 = sqlx::query(bar_sql)
+            .fetch_one(&mut conn)
+            .await?
+            .try_get("cnt")?;
+        let hide_type_or_amount: i64 = sqlx::query(hide_amount_or_type_sql)
+            .fetch_one(&mut conn)
+            .await?
+            .try_get("cnt")?;
+        let hide_amount_and_type: i64 = sqlx::query(hide_amount_and_type_sql)
+            .fetch_one(&mut conn)
+            .await?
+            .try_get("cnt")?;
+        let hide = hide_type_or_amount - hide_amount_and_type;
+
+        // save to redis
+        let v = serde_json::to_string(&res_data).unwrap();
+        let _: () = rds_conn.set("tx_distribute", v).unwrap();
+        let _: () = rds_conn.expire("tx_distribute", 60 * 60 * 24).unwrap();
+
+        res_data.transparent = not_evm - convert_account - bar - hide;
+        res_data.privacy = bar + hide;
+        res_data.prism = xhub + convert_account;
+        res_data.evm_compatible = evm - xhub;
+    } else {
+        // xhub
+        let xhub: i64 =
+            sqlx::query("SELECT count(*) as cnt FROM transaction WHERE value @? '$.function.XHub'")
+                .fetch_one(&mut conn)
+                .await?
+                .try_get("cnt")?;
+
+        // evm
+        let evm: i64 = sqlx::query("SELECT count(*) as cnt FROM transaction WHERE ty=1")
+            .fetch_one(&mut conn)
+            .await?
+            .try_get("cnt")?;
+
+        // not evm
+        let not_evm: i64 = sqlx::query("SELECT count(*) as cnt FROM transaction WHERE ty=0")
+            .fetch_one(&mut conn)
+            .await?
+            .try_get("cnt")?;
+
+        let convert_account: i64 = sqlx::query(convert_account_sql)
+            .fetch_one(&mut conn)
+            .await?
+            .try_get("cnt")?;
+        let bar: i64 = sqlx::query(bar_sql)
+            .fetch_one(&mut conn)
+            .await?
+            .try_get("cnt")?;
+        let hide_type_or_amount: i64 = sqlx::query(hide_amount_or_type_sql)
+            .fetch_one(&mut conn)
+            .await?
+            .try_get("cnt")?;
+        let hide_amount_and_type: i64 = sqlx::query(hide_amount_and_type_sql)
+            .fetch_one(&mut conn)
+            .await?
+            .try_get("cnt")?;
+        let hide = hide_type_or_amount - hide_amount_and_type;
+
+        res_data.transparent = not_evm - convert_account - bar - hide;
+        res_data.privacy = bar + hide;
+        res_data.prism = xhub + convert_account;
+        res_data.evm_compatible = evm - xhub;
+    }
 
     Ok(DistributeResponse::Ok(Json(DistributeResult {
         code: 200,
@@ -182,78 +228,129 @@ pub async fn address_count(
 
 #[allow(clippy::let_unit_value)]
 pub async fn statistics(api: &Api, ty: Query<Option<i32>>) -> Result<ChainStatisticsResponse> {
+    let mut conn = api.storage.lock().await.acquire().await?;
+
     let key = if let Some(ty) = ty.0 {
         format!("stat{}", ty)
     } else {
         "stat".to_string()
     };
-    let mut rds_conn = api.redis_client.get_connection().unwrap();
-    let res = rds_conn.get(key.clone());
-    if res.is_ok() {
-        let stat_data: String = res.unwrap();
-        let v: StatisticsData = serde_json::from_str(stat_data.as_str()).unwrap();
-        return Ok(ChainStatisticsResponse::Ok(Json(ChainStatisticsResult {
-            code: 200,
-            message: "".to_string(),
-            data: Some(v),
-        })));
-    }
+    let mut res_data = StatisticsData::default();
+    let rds_conn_res = api.redis_client.get_connection();
+    if rds_conn_res.is_ok() {
+        let mut rds_conn = rds_conn_res?;
+        let res = rds_conn.get(key.clone());
+        if res.is_ok() {
+            let stat_data: String = res?;
+            let v: StatisticsData = serde_json::from_str(stat_data.as_str())?;
+            return Ok(ChainStatisticsResponse::Ok(Json(ChainStatisticsResult {
+                code: 200,
+                message: "".to_string(),
+                data: Some(v),
+            })));
+        }
 
-    let mut conn = api.storage.lock().await.acquire().await?;
+        // total txs
+        let sql_str = if let Some(ty) = ty.0 {
+            format!("SELECT COUNT(*) as cnt FROM transaction WHERE ty={}", ty)
+        } else {
+            "SELECT COUNT(*) as cnt FROM transaction".to_string()
+        };
+        let row = sqlx::query(sql_str.as_str()).fetch_one(&mut conn).await?;
+        let total_txs = row.try_get("cnt")?;
 
-    // total txs
-    let sql_str = if let Some(ty) = ty.0 {
-        format!("SELECT COUNT(*) as cnt FROM transaction WHERE ty={}", ty)
-    } else {
-        "SELECT COUNT(*) as cnt FROM transaction".to_string()
-    };
-    let row = sqlx::query(sql_str.as_str()).fetch_one(&mut conn).await?;
-    let total_txs = row.try_get("cnt")?;
-
-    // total address
-    let sql_str = if let Some(ty) = ty.0 {
-        format!("SELECT jsonb_path_query(value,'$.body.operations[*].TransferAsset.body.transfer.*.public_key') \
+        // total address
+        let sql_str = if let Some(ty) = ty.0 {
+            format!("SELECT jsonb_path_query(value,'$.body.operations[*].TransferAsset.body.transfer.*.public_key') \
         as addr FROM transaction WHERE ty={}", ty)
-    } else {
-        "SELECT jsonb_path_query(value,'$.body.operations[*].TransferAsset.body.transfer.*.public_key') \
+        } else {
+            "SELECT jsonb_path_query(value,'$.body.operations[*].TransferAsset.body.transfer.*.public_key') \
         as addr FROM transaction".to_string()
-    };
-    let rows = sqlx::query(sql_str.as_str()).fetch_all(&mut conn).await?;
+        };
+        let rows = sqlx::query(sql_str.as_str()).fetch_all(&mut conn).await?;
 
-    let mut addrs: Vec<String> = vec![];
-    for row in rows {
-        let value: Value = row.try_get("addr")?;
-        let addr: String = serde_json::from_value(value).unwrap();
-        addrs.push(addr);
-    }
-    addrs.dedup();
+        let mut addrs: Vec<String> = vec![];
+        for row in rows {
+            let value: Value = row.try_get("addr")?;
+            let addr: String = serde_json::from_value(value)?;
+            addrs.push(addr);
+        }
+        addrs.dedup();
 
-    // daily txs
-    let start_time = Local::now().date_naive().and_hms_opt(0, 0, 0).unwrap();
-    let sql_str = if let Some(ty) = ty.0 {
-        format!(
-            "SELECT COUNT(*) as cnt FROM transaction WHERE ty={} AND timestamp>={}",
-            ty,
-            start_time.timestamp()
-        )
+        // daily txs
+        let start_time = Local::now().date_naive().and_hms_opt(0, 0, 0).unwrap();
+        let sql_str = if let Some(ty) = ty.0 {
+            format!(
+                "SELECT COUNT(*) as cnt FROM transaction WHERE ty={} AND timestamp>={}",
+                ty,
+                start_time.timestamp()
+            )
+        } else {
+            format!(
+                "SELECT COUNT(*) as cnt FROM transaction WHERE timestamp>={}",
+                start_time.timestamp()
+            )
+        };
+        let row = sqlx::query(sql_str.as_str()).fetch_one(&mut conn).await?;
+        let daily_txs = row.try_get("cnt")?;
+
+        // save to redis
+        let v = serde_json::to_string(&res_data)?;
+        let _: () = rds_conn.set(key.clone(), v)?;
+        let _: () = rds_conn.expire(key, 60 * 60 * 24)?;
+
+        res_data.active_addresses = addrs.len() as i64;
+        res_data.total_txs = total_txs;
+        res_data.daily_txs = daily_txs;
     } else {
-        format!(
-            "SELECT COUNT(*) as cnt FROM transaction WHERE timestamp>={}",
-            start_time.timestamp()
-        )
-    };
-    let row = sqlx::query(sql_str.as_str()).fetch_one(&mut conn).await?;
-    let daily_txs = row.try_get("cnt")?;
+        // total txs
+        let sql_str = if let Some(ty) = ty.0 {
+            format!("SELECT COUNT(*) as cnt FROM transaction WHERE ty={}", ty)
+        } else {
+            "SELECT COUNT(*) as cnt FROM transaction".to_string()
+        };
+        let row = sqlx::query(sql_str.as_str()).fetch_one(&mut conn).await?;
+        let total_txs = row.try_get("cnt")?;
 
-    let res_data = StatisticsData {
-        active_addresses: addrs.len() as i64,
-        total_txs,
-        daily_txs,
-    };
+        // total address
+        let sql_str = if let Some(ty) = ty.0 {
+            format!("SELECT jsonb_path_query(value,'$.body.operations[*].TransferAsset.body.transfer.*.public_key') \
+        as addr FROM transaction WHERE ty={}", ty)
+        } else {
+            "SELECT jsonb_path_query(value,'$.body.operations[*].TransferAsset.body.transfer.*.public_key') \
+        as addr FROM transaction".to_string()
+        };
+        let rows = sqlx::query(sql_str.as_str()).fetch_all(&mut conn).await?;
 
-    let v = serde_json::to_string(&res_data).unwrap();
-    let _: () = rds_conn.set(key.clone(), v).unwrap();
-    let _: () = rds_conn.expire(key, 60 * 60 * 24).unwrap();
+        let mut addrs: Vec<String> = vec![];
+        for row in rows {
+            let value: Value = row.try_get("addr")?;
+            let addr: String = serde_json::from_value(value).unwrap();
+            addrs.push(addr);
+        }
+        addrs.dedup();
+
+        // daily txs
+        let start_time = Local::now().date_naive().and_hms_opt(0, 0, 0).unwrap();
+        let sql_str = if let Some(ty) = ty.0 {
+            format!(
+                "SELECT COUNT(*) as cnt FROM transaction WHERE ty={} AND timestamp>={}",
+                ty,
+                start_time.timestamp()
+            )
+        } else {
+            format!(
+                "SELECT COUNT(*) as cnt FROM transaction WHERE timestamp>={}",
+                start_time.timestamp()
+            )
+        };
+        let row = sqlx::query(sql_str.as_str()).fetch_one(&mut conn).await?;
+        let daily_txs = row.try_get("cnt")?;
+
+        res_data.active_addresses = addrs.len() as i64;
+        res_data.total_txs = total_txs;
+        res_data.daily_txs = daily_txs;
+    }
 
     Ok(ChainStatisticsResponse::Ok(Json(ChainStatisticsResult {
         code: 200,
