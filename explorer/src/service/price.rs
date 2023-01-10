@@ -89,30 +89,43 @@ pub async fn market_chart(
     if id.is_empty() || vs_currency.is_empty() || days.is_empty() {
         return Ok(MarketChartResponse::BadRequest);
     }
-    let mut rds_conn = api.redis_client.get_connection().unwrap();
-    let res = rds_conn.get("market_chart");
-    if res.is_ok() {
-        let market_data: String = res.unwrap();
-        let v: Value = serde_json::from_str(market_data.as_str()).unwrap();
-        return Ok(MarketChartResponse::Ok(Json(MarketChartResult {
-            code: 200,
-            message: "".to_string(),
-            data: v,
-        })));
+    let v: Value;
+    let rds_conn_res = api.redis_client.get_connection();
+    if rds_conn_res.is_ok() {
+        let mut rds_conn = rds_conn_res.unwrap();
+        let res = rds_conn.get("market_chart");
+        if res.is_ok() {
+            let market_data: String = res.unwrap();
+            let v: Value = serde_json::from_str(market_data.as_str()).unwrap();
+            return Ok(MarketChartResponse::Ok(Json(MarketChartResult {
+                code: 200,
+                message: "".to_string(),
+                data: v,
+            })));
+        }
+        let mut url = format!(
+            "https://api.coingecko.com/api/v3/coins/{}/market_chart?vs_currency={}&days={}",
+            id.0, vs_currency.0, days.0
+        );
+        if let Some(itv) = interval.0 {
+            url = format!("https://api.coingecko.com/api/v3/coins/{}/market_chart?vs_currency={}&days={}&interval={}", id.0, vs_currency.0, days.0, itv);
+        }
+        let resp = reqwest::get(url).await.unwrap().text().await.unwrap();
+        v = serde_json::from_str(resp.as_str()).unwrap();
+        // save to redis
+        let _: () = rds_conn.set("market_chart", resp).unwrap();
+        let _: () = rds_conn.expire("market_chart", 5 * 60).unwrap();
+    } else {
+        let mut url = format!(
+            "https://api.coingecko.com/api/v3/coins/{}/market_chart?vs_currency={}&days={}",
+            id.0, vs_currency.0, days.0
+        );
+        if let Some(itv) = interval.0 {
+            url = format!("https://api.coingecko.com/api/v3/coins/{}/market_chart?vs_currency={}&days={}&interval={}", id.0, vs_currency.0, days.0, itv);
+        }
+        let resp = reqwest::get(url).await.unwrap().text().await.unwrap();
+        v = serde_json::from_str(resp.as_str()).unwrap();
     }
-
-    let mut url = format!(
-        "https://api.coingecko.com/api/v3/coins/{}/market_chart?vs_currency={}&days={}",
-        id.0, vs_currency.0, days.0
-    );
-    if let Some(itv) = interval.0 {
-        url = format!("https://api.coingecko.com/api/v3/coins/{}/market_chart?vs_currency={}&days={}&interval={}", id.0, vs_currency.0, days.0, itv);
-    }
-    let resp = reqwest::get(url).await.unwrap().text().await.unwrap();
-    let v: Value = serde_json::from_str(resp.as_str()).unwrap();
-
-    let _: () = rds_conn.set("market_chart", resp).unwrap();
-    let _: () = rds_conn.expire("market_chart", 5 * 60).unwrap();
 
     Ok(MarketChartResponse::Ok(Json(MarketChartResult {
         code: 200,
