@@ -49,27 +49,38 @@ pub async fn simple_price(
     if ids.is_empty() || vs_currencies.is_empty() {
         return Ok(SimplePriceResponse::BadRequest);
     }
-    let mut rds_conn = api.redis_client.get_connection().unwrap();
-    let res = rds_conn.get("simple_price");
-    if res.is_ok() {
-        let price_data: String = res.unwrap();
-        let v: Value = serde_json::from_str(price_data.as_str()).unwrap();
-        return Ok(SimplePriceResponse::Ok(Json(SimplePriceResult {
-            code: 200,
-            message: "".to_string(),
-            data: v,
-        })));
+
+    let v: Value;
+    let rds_conn_res = api.redis_client.get_connection();
+    if rds_conn_res.is_ok() {
+        let mut rds_conn = rds_conn_res.unwrap();
+        let res = rds_conn.get("simple_price");
+        if res.is_ok() {
+            let price_data: String = res.unwrap();
+            let v: Value = serde_json::from_str(price_data.as_str()).unwrap();
+            return Ok(SimplePriceResponse::Ok(Json(SimplePriceResult {
+                code: 200,
+                message: "".to_string(),
+                data: v,
+            })));
+        }
+        let url = format!(
+            "https://api.coingecko.com/api/v3/simple/price?ids={}&vs_currencies={}",
+            ids.0, vs_currencies.0
+        );
+        let resp = reqwest::get(url).await.unwrap().text().await.unwrap();
+        v = serde_json::from_str(resp.as_str()).unwrap();
+        // save to redis
+        let _: () = rds_conn.set("simple_price", resp).unwrap();
+        let _: () = rds_conn.expire("simple_price", 5 * 60).unwrap();
+    } else {
+        let url = format!(
+            "https://api.coingecko.com/api/v3/simple/price?ids={}&vs_currencies={}",
+            ids.0, vs_currencies.0
+        );
+        let resp = reqwest::get(url).await.unwrap().text().await.unwrap();
+        v = serde_json::from_str(resp.as_str()).unwrap();
     }
-
-    let url = format!(
-        "https://api.coingecko.com/api/v3/simple/price?ids={}&vs_currencies={}",
-        ids.0, vs_currencies.0
-    );
-    let resp = reqwest::get(url).await.unwrap().text().await.unwrap();
-    let v: Value = serde_json::from_str(resp.as_str()).unwrap();
-
-    let _: () = rds_conn.set("simple_price", resp).unwrap();
-    let _: () = rds_conn.expire("simple_price", 5 * 60).unwrap();
 
     Ok(SimplePriceResponse::Ok(Json(SimplePriceResult {
         code: 200,
