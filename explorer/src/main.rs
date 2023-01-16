@@ -759,11 +759,11 @@ async fn main() -> Result<()> {
 
     // tendermint rpc
     let tendermint_rpc_client = TendermintRPC::new(
-        Duration::from_secs(10),
+        Duration::from_secs(60),
         config.rpc.tendermint.to_string().parse().unwrap(),
     );
     let platform_rpc_client = TendermintRPC::new(
-        Duration::from_secs(10),
+        Duration::from_secs(60),
         config.rpc.platform.to_string().parse().unwrap(),
     );
 
