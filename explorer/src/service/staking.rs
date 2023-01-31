@@ -69,7 +69,7 @@ pub async fn get_delegation_tx(
     let base64_address = public_key_to_base64(&pubkey);
 
     let sql_count = format!("SELECT count(*) AS cnt FROM transaction WHERE value @? '$.body.operations[*].Delegation.pubkey ? (@==\"{base64_address}\")'");
-    let sql_query = format!("SELECT tx_hash,timestamp,jsonb_path_query(value,'$.body.operations[*].Delegation') AS delegation FROM transaction WHERE value @? '$.body.operations[*].Delegation.pubkey ? (@==\"{}\")' ORDER BY timestamp DESC LIMIT {} OFFSET {}", base64_address, page_size, (page-1)*page_size);
+    let sql_query = format!("SELECT tx_hash,timestamp,jsonb_path_query(value,'$.body.operations[*].Delegation') AS d FROM transaction WHERE value @? '$.body.operations[*].Delegation.pubkey ? (@==\"{}\")' ORDER BY timestamp DESC LIMIT {} OFFSET {}", base64_address, page_size, (page-1)*page_size);
 
     let mut items: Vec<DelegationItem> = vec![];
     let row_cnt = sqlx::query(sql_count.as_str()).fetch_one(&mut conn).await?;
@@ -78,7 +78,7 @@ pub async fn get_delegation_tx(
     for row in rows {
         let timestamp: i64 = row.try_get("timestamp")?;
         let tx_hash: String = row.try_get("tx_hash")?;
-        let val: Value = row.try_get("delegation")?;
+        let val: Value = row.try_get("d")?;
         let opt: DelegationOpt = serde_json::from_value(val).unwrap();
 
         let validator_detail_url = api
@@ -86,8 +86,8 @@ pub async fn get_delegation_tx(
             .rpc
             .join(format!("validator_detail/{}", opt.body.validator).as_str())
             .unwrap();
-        let res = reqwest::get(validator_detail_url).await?.json().await?;
-        let validator: TdValidator = serde_json::from_value(res).unwrap();
+        let res = reqwest::get(validator_detail_url).await?.text().await?;
+        let validator: TdValidator = serde_json::from_str(res.as_str()).unwrap();
 
         items.push(DelegationItem {
             tx_hash,
@@ -171,7 +171,7 @@ pub async fn get_undelegation(
     let base64_address = public_key_to_base64(&pubkey);
 
     let sql_count = format!("SELECT count(*) AS cnt FROM transaction WHERE value @? '$.body.operations[*].UnDelegation.pubkey ? (@==\"{base64_address}\")'");
-    let sql_query = format!("SELECT tx_hash,timestamp,jsonb_path_query(value,'$.body.operations[*].UnDelegation') AS undelegation FROM transaction WHERE value @? '$.body.operations[*].UnDelegation.pubkey ? (@==\"{}\")' ORDER BY timestamp DESC LIMIT {} OFFSET {}", base64_address, page_size, (page-1)*page_size);
+    let sql_query = format!("SELECT tx_hash,timestamp,jsonb_path_query(value,'$.body.operations[*].UnDelegation') AS ud FROM transaction WHERE value @? '$.body.operations[*].UnDelegation.pubkey ? (@==\"{}\")' ORDER BY timestamp DESC LIMIT {} OFFSET {}", base64_address, page_size, (page-1)*page_size);
 
     let mut items: Vec<UnDelegationItem> = vec![];
     let row_cnt = sqlx::query(sql_count.as_str()).fetch_one(&mut conn).await?;
@@ -180,7 +180,7 @@ pub async fn get_undelegation(
     for row in rows {
         let timestamp: i64 = row.try_get("timestamp")?;
         let tx_hash: String = row.try_get("tx_hash")?;
-        let val: Value = row.try_get("undelegation")?;
+        let val: Value = row.try_get("ud")?;
         let opt: UnDelegationOpt = serde_json::from_value(val).unwrap();
         if opt.body.pu.is_none() {
             continue;
@@ -192,8 +192,8 @@ pub async fn get_undelegation(
             .rpc
             .join(format!("validator_detail/{validator_address}").as_str())
             .unwrap();
-        let res = reqwest::get(validator_detail_url).await?.json().await?;
-        let validator: TdValidator = serde_json::from_value(res).unwrap();
+        let res = reqwest::get(validator_detail_url).await?.text().await?;
+        let validator: TdValidator = serde_json::from_str(res.as_str()).unwrap();
 
         items.push(UnDelegationItem {
             tx_hash,
