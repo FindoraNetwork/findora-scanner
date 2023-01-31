@@ -211,25 +211,27 @@ impl UnDelegationValue {
 
         for op in &self.body.operations {
             if let TxOperation::UnDelegation(ud) = op {
-                let vaddr =
-                    hex::encode(ud.body.pu.as_ref().unwrap().target_validator).to_uppercase();
+                if ud.body.pu.is_some() {
+                    let vaddr =
+                        hex::encode(ud.body.pu.as_ref().unwrap().target_validator).to_uppercase();
 
-                let puw = PuWrap {
-                    am: ud.body.pu.as_ref().unwrap().am,
-                    new_delegator_id: ud.body.pu.as_ref().unwrap().new_delegator_id.clone(),
-                    target_validator: vaddr,
-                };
+                    let puw = PuWrap {
+                        am: ud.body.pu.as_ref().unwrap().am,
+                        new_delegator_id: ud.body.pu.as_ref().unwrap().new_delegator_id.clone(),
+                        target_validator: vaddr,
+                    };
 
-                let ud = UnDelegationOptWrap {
-                    body: UnDelegationOptBodyWrap {
-                        nonce: ud.body.nonce.clone(),
-                        pu: Some(puw),
-                    },
-                    pubkey: ud.pubkey.clone(),
-                    signature: ud.signature.clone(),
-                };
-                let v = serde_json::to_value(TxOperation::UnDelegationWrap(ud)).unwrap();
-                operations.push(v);
+                    let ud = UnDelegationOptWrap {
+                        body: UnDelegationOptBodyWrap {
+                            nonce: ud.body.nonce.clone(),
+                            pu: Some(puw),
+                        },
+                        pubkey: ud.pubkey.clone(),
+                        signature: ud.signature.clone(),
+                    };
+                    let v = serde_json::to_value(TxOperation::UnDelegationWrap(ud)).unwrap();
+                    operations.push(v);
+                }
             } else {
                 let v = serde_json::to_value(op).unwrap();
                 operations.push(v);
