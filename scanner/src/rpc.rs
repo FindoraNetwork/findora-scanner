@@ -31,7 +31,7 @@ impl TendermintRPC {
 
     pub async fn load_block(&self, height: i64) -> Result<ModuleBlockRPC> {
         let mut url = self.rpc.join("block").unwrap();
-        url.set_query(Some(&format!("height={}", height)));
+        url.set_query(Some(&format!("height={height}")));
         debug!("{}", url.as_str());
         let r: ModuleBlockRPC = self.client_get(url).await?;
         Ok(r)
@@ -39,7 +39,7 @@ impl TendermintRPC {
 
     pub async fn get_block_size(&self, height: i64) -> Result<BlockSizeRPC> {
         let mut url = self.rpc.join("blockchain").unwrap();
-        url.set_query(Some(&format!("minHeight={}&maxHeight={}", height, height)));
+        url.set_query(Some(&format!("minHeight={height}&maxHeight={height}")));
         debug!("{}", url.as_str());
         let r: BlockSizeRPC = self.client_get(url).await?;
         Ok(r)
@@ -48,8 +48,7 @@ impl TendermintRPC {
     fn validator_url(&self, height: i64, page: i32, per_page: i32) -> Result<Url> {
         let mut url = self.rpc.join("validators").unwrap();
         url.set_query(Some(&format!(
-            "height={}&per_page={}&page={}",
-            height, per_page, page
+            "height={height}&per_page={per_page}&page={page}"
         )));
         Ok(url)
     }
@@ -77,7 +76,7 @@ impl TendermintRPC {
 
     pub async fn load_transaction(&self, hash: &str) -> Result<ModuleTx> {
         let mut url = self.rpc.join("tx").unwrap();
-        url.set_query(Some(&format!("hash=0x{}", hash)));
+        url.set_query(Some(&format!("hash=0x{hash}")));
 
         let r: ModuleTx = self.client_get(url).await?;
         Ok(r)

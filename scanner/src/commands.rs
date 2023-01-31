@@ -46,7 +46,7 @@ impl Load {
 
         let target = if let Some(h) = self.height {
             if h <= 0 {
-                return Err(format!("Invalid height: {}.", h).into());
+                return Err(format!("Invalid height: {h}.").into());
             }
             h
         } else if let Ok(h) = db::load_last_height(&pool).await {
@@ -151,7 +151,7 @@ impl Subscribe {
 
         let mut cursor = if let Some(h) = self.start {
             if h <= 0 {
-                return Err(format!("Invalid height: {}.", h).into());
+                return Err(format!("Invalid height: {h}.").into());
             }
             h
         } else if let Ok(h) = db::load_last_height(&pool).await {
@@ -197,7 +197,7 @@ impl Subscribe {
 
 async fn prepare(rpc: &str) -> Result<(Url, PgPool)> {
     let pool = db::connect().await?;
-    let rpc: Url = rpc.parse().map_err(|e| Error::from(format!("{}", e)))?;
+    let rpc: Url = rpc.parse().map_err(|e| Error::from(format!("{e}")))?;
 
     Ok((rpc, pool))
 }

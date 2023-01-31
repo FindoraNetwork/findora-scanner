@@ -172,7 +172,7 @@ pub async fn statistics(api: &Api, ty: Query<Option<i32>>) -> Result<ChainStatis
 
     // total txs
     let sql_str = if let Some(ty) = ty.0 {
-        format!("SELECT COUNT(*) as cnt FROM transaction WHERE ty={}", ty)
+        format!("SELECT COUNT(*) as cnt FROM transaction WHERE ty={ty}")
     } else {
         "SELECT COUNT(*) as cnt FROM transaction".to_string()
     };
@@ -182,7 +182,7 @@ pub async fn statistics(api: &Api, ty: Query<Option<i32>>) -> Result<ChainStatis
     // total address
     let sql_str = if let Some(ty) = ty.0 {
         format!("SELECT jsonb_path_query(value,'$.body.operations[*].TransferAsset.body.transfer.*.public_key') \
-    as addr FROM transaction WHERE ty={}", ty)
+    as addr FROM transaction WHERE ty={ty}")
     } else {
         "SELECT jsonb_path_query(value,'$.body.operations[*].TransferAsset.body.transfer.*.public_key') \
     as addr FROM transaction".to_string()

@@ -93,8 +93,8 @@ pub async fn get_address(
     // total items
     let sql_total = format!(
         "SELECT count(*) as total FROM transaction WHERE \
-        (value @? '$.body.operations[*].TransferAsset.body.transfer.outputs[*].public_key ? (@ == \"{}\")') \
-        or (value @? '$.body.operations[*].TransferAsset.body.transfer.inputs[*].public_key ? (@ == \"{}\")')", pk_b64, pk_b64);
+        (value @? '$.body.operations[*].TransferAsset.body.transfer.outputs[*].public_key ? (@ == \"{pk_b64}\")') \
+        or (value @? '$.body.operations[*].TransferAsset.body.transfer.inputs[*].public_key ? (@ == \"{pk_b64}\")')");
     let res = sqlx::query(sql_total.as_str()).fetch_one(&mut conn).await;
     let total: i64 = res.unwrap().try_get("total")?;
 
