@@ -68,7 +68,7 @@ pub async fn get_delegation_tx(
     };
     let base64_address = public_key_to_base64(&pubkey);
 
-    let sql_count = format!("SELECT count(*) AS cnt FROM transaction WHERE value @? '$.body.operations[*].Delegation.pubkey ? (@==\"{}\")'", base64_address);
+    let sql_count = format!("SELECT count(*) AS cnt FROM transaction WHERE value @? '$.body.operations[*].Delegation.pubkey ? (@==\"{base64_address}\")'");
     let sql_query = format!("SELECT tx_hash,timestamp,jsonb_path_query(value,'$.body.operations[*].Delegation') AS delegation FROM transaction WHERE value @? '$.body.operations[*].Delegation.pubkey ? (@==\"{}\")' ORDER BY timestamp DESC LIMIT {} OFFSET {}", base64_address, page_size, (page-1)*page_size);
 
     let mut items: Vec<DelegationItem> = vec![];
@@ -170,7 +170,7 @@ pub async fn get_undelegation(
     };
     let base64_address = public_key_to_base64(&pubkey);
 
-    let sql_count = format!("SELECT count(*) AS cnt FROM transaction WHERE value @? '$.body.operations[*].UnDelegation.pubkey ? (@==\"{}\")'", base64_address);
+    let sql_count = format!("SELECT count(*) AS cnt FROM transaction WHERE value @? '$.body.operations[*].UnDelegation.pubkey ? (@==\"{base64_address}\")'");
     let sql_query = format!("SELECT tx_hash,timestamp,jsonb_path_query(value,'$.body.operations[*].UnDelegation') AS undelegation FROM transaction WHERE value @? '$.body.operations[*].UnDelegation.pubkey ? (@==\"{}\")' ORDER BY timestamp DESC LIMIT {} OFFSET {}", base64_address, page_size, (page-1)*page_size);
 
     let mut items: Vec<UnDelegationItem> = vec![];
@@ -190,7 +190,7 @@ pub async fn get_undelegation(
         let validator_detail_url = api
             .platform
             .rpc
-            .join(format!("validator_detail/{}", validator_address).as_str())
+            .join(format!("validator_detail/{validator_address}").as_str())
             .unwrap();
         let res = reqwest::get(validator_detail_url).await?.json().await?;
         let validator: TdValidator = serde_json::from_value(res).unwrap();
@@ -278,7 +278,7 @@ pub async fn get_claim(
     };
     let base64_address = public_key_to_base64(&pubkey);
 
-    let sql_count = format!("SELECT count(*) AS cnt FROM transaction WHERE value @? '$.body.operations[*].Claim.pubkey ? (@==\"{}\")'", base64_address);
+    let sql_count = format!("SELECT count(*) AS cnt FROM transaction WHERE value @? '$.body.operations[*].Claim.pubkey ? (@==\"{base64_address}\")'");
     let sql_query =format!("SELECT tx_hash,timestamp,jsonb_path_query(value,'$.body.operations[*].Claim') AS claim FROM transaction WHERE value @? '$.body.operations[*].Claim.pubkey ? (@==\"{}\")' ORDER BY timestamp DESC LIMIT {} OFFSET {}", base64_address, page_size, (page-1)*page_size);
 
     let mut items: Vec<ClaimItem> = vec![];
@@ -395,15 +395,14 @@ pub async fn get_undelegation_info(
 
     let mut params: Vec<String> = vec![];
     if let Some(start) = start.0 {
-        params.push(format!(" timestamp>={} ", start));
+        params.push(format!(" timestamp>={start} "));
     }
     if let Some(end) = end.0 {
-        params.push(format!(" timestamp<={} ", end));
+        params.push(format!(" timestamp<={end} "));
     }
     if let Some(pk) = pubkey.0 {
         params.push(format!(
-            "(value @? '$.body.operations[*].UnDelegation.pubkey ? (@==\"{}\")')",
-            pk
+            "(value @? '$.body.operations[*].UnDelegation.pubkey ? (@==\"{pk}\")')"
         ));
     }
 
@@ -494,15 +493,14 @@ pub async fn get_delegation_info(
 
     let mut params: Vec<String> = vec![];
     if let Some(start) = start.0 {
-        params.push(format!(" timestamp>={} ", start));
+        params.push(format!(" timestamp>={start} "));
     }
     if let Some(end) = end.0 {
-        params.push(format!(" timestamp<={} ", end));
+        params.push(format!(" timestamp<={end} "));
     }
     if let Some(pk) = pubkey.0 {
         params.push(format!(
-            "(value @? '$.body.operations[*].Delegation.pubkey ? (@==\"{}\")')",
-            pk
+            "(value @? '$.body.operations[*].Delegation.pubkey ? (@==\"{pk}\")')"
         ));
     }
 
@@ -574,15 +572,14 @@ pub async fn get_delegation_amount(
 
     let mut params: Vec<String> = vec![];
     if let Some(start) = start.0 {
-        params.push(format!(" timestamp>={} ", start));
+        params.push(format!(" timestamp>={start} "));
     }
     if let Some(end) = end.0 {
-        params.push(format!(" timestamp<={} ", end));
+        params.push(format!(" timestamp<={end} "));
     }
     if let Some(pk) = pubkey.0 {
         params.push(format!(
-            "(value @? '$.body.operations[*].Delegation.pubkey ? (@==\"{}\")')",
-            pk
+            "(value @? '$.body.operations[*].Delegation.pubkey ? (@==\"{pk}\")')"
         ));
     }
 
@@ -636,15 +633,14 @@ pub async fn get_undelegation_amount(
 
     let mut params: Vec<String> = vec![];
     if let Some(start) = start.0 {
-        params.push(format!(" timestamp>={} ", start));
+        params.push(format!(" timestamp>={start} "));
     }
     if let Some(end) = end.0 {
-        params.push(format!(" timestamp<={} ", end));
+        params.push(format!(" timestamp<={end} "));
     }
     if let Some(pk) = pubkey.0 {
         params.push(format!(
-            "(value @? '$.body.operations[*].UnDelegation.pubkey ? (@==\"{}\")')",
-            pk
+            "(value @? '$.body.operations[*].UnDelegation.pubkey ? (@==\"{pk}\")')"
         ));
     }
 

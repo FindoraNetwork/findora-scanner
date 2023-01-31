@@ -162,7 +162,7 @@ pub async fn get_prism_records_receive_from(
             let pk = pk_result.unwrap();
             let base64_addr = public_key_to_base64(&pk);
 
-            let sql_receive_count = format!("SELECT count(*) AS cnt FROM transaction WHERE value @? '$.function.XHub.NonConfidentialTransfer.outputs[*].target ? (@==\"{}\")'", base64_addr);
+            let sql_receive_count = format!("SELECT count(*) AS cnt FROM transaction WHERE value @? '$.function.XHub.NonConfidentialTransfer.outputs[*].target ? (@==\"{base64_addr}\")'");
             let sql_receive = format!("SELECT tx_hash, timestamp, jsonb_path_query(value, '$.function.XHub.NonConfidentialTransfer.outputs[*].amount') AS amount, jsonb_path_query(value, '$.signature[0]') as pk FROM transaction WHERE value @? '$.function.XHub.NonConfidentialTransfer.outputs[*].target ? (@==\"{}\")' ORDER BY timestamp DESC LIMIT {} OFFSET {}", base64_addr, page_size, (page-1)*page_size);
             let row_receive_count = sqlx::query(sql_receive_count.as_str())
                 .fetch_one(&mut conn)
@@ -262,7 +262,7 @@ pub async fn get_prism_records_send_to(
             }
             let pk = pk_result.unwrap();
             let base64_addr = public_key_to_base64(&pk);
-            let sql_to_count = format!("SELECT count(*) AS cnt FROM transaction WHERE value @? '$.body.operations[*].ConvertAccount.signer ? (@==\"{}\")'", base64_addr);
+            let sql_to_count = format!("SELECT count(*) AS cnt FROM transaction WHERE value @? '$.body.operations[*].ConvertAccount.signer ? (@==\"{base64_addr}\")'");
             let sql_to = format!("SELECT tx_hash, timestamp, jsonb_path_query(value,'$.body.operations[*].ConvertAccount.receiver.Ethereum') AS to, jsonb_path_query(value, '$.body.operations[*].ConvertAccount.value') AS amount FROM transaction WHERE value @? '$.body.operations[*].ConvertAccount.signer ? (@==\"{}\")' ORDER BY timestamp DESC LIMIT {} OFFSET {}", base64_addr, page_size, (page-1)*page_size);
             let row_to_count = sqlx::query(sql_to_count.as_str())
                 .fetch_one(&mut conn)
@@ -365,8 +365,8 @@ pub async fn get_prism_records(api: &Api, address: Path<String>) -> Result<Prism
             let pk = pk_result.unwrap();
             let base64_addr = public_key_to_base64(&pk);
 
-            let to_sql = format!("SELECT tx_hash, timestamp, jsonb_path_query(value,'$.body.operations[*].ConvertAccount.receiver.Ethereum') AS to, jsonb_path_query(value, '$.body.operations[*].ConvertAccount.value') AS amount FROM transaction WHERE value @? '$.body.operations[*].ConvertAccount.signer ? (@==\"{}\")' ORDER BY timestamp DESC", base64_addr);
-            let from_sql = format!("SELECT tx_hash, timestamp, jsonb_path_query(value, '$.function.XHub.NonConfidentialTransfer.outputs[*].amount') AS amount, jsonb_path_query(value, '$.signature[0]') as pk FROM transaction WHERE value @? '$.function.XHub.NonConfidentialTransfer.outputs[*].target ? (@==\"{}\")' ORDER BY timestamp DESC", base64_addr);
+            let to_sql = format!("SELECT tx_hash, timestamp, jsonb_path_query(value,'$.body.operations[*].ConvertAccount.receiver.Ethereum') AS to, jsonb_path_query(value, '$.body.operations[*].ConvertAccount.value') AS amount FROM transaction WHERE value @? '$.body.operations[*].ConvertAccount.signer ? (@==\"{base64_addr}\")' ORDER BY timestamp DESC");
+            let from_sql = format!("SELECT tx_hash, timestamp, jsonb_path_query(value, '$.function.XHub.NonConfidentialTransfer.outputs[*].amount') AS amount, jsonb_path_query(value, '$.signature[0]') as pk FROM transaction WHERE value @? '$.function.XHub.NonConfidentialTransfer.outputs[*].target ? (@==\"{base64_addr}\")' ORDER BY timestamp DESC");
 
             let from_acc_result = sqlx::query(from_sql.as_str()).fetch_all(&mut conn).await?;
             for row in from_acc_result {
@@ -477,7 +477,7 @@ pub async fn get_evm_tx(api: &Api, tx_hash: Path<String>) -> Result<TxResponse> 
         let evm_tx: EvmTx = serde_json::from_value(value.clone()).unwrap();
         let hash = H256::from_slice(Keccak256::digest(&rlp::encode(&evm_tx)).as_slice());
 
-        let evm_tx_hash = format!("{:?}", hash);
+        let evm_tx_hash = format!("{hash:?}");
         if evm_tx_hash.eq(&tx_hash.0.to_lowercase()) {
             let tx_hash: String = row.try_get("tx_hash")?;
             let block_hash: String = row.try_get("block_hash")?;
@@ -580,7 +580,7 @@ pub async fn get_txs_receive_from(
     }
     let pk = public_key_to_base64(&pk_res.unwrap());
 
-    let sql_total = format!("SELECT count(*) AS cnt FROM transaction WHERE value @? '$.body.operations[*].TransferAsset.body.transfer.inputs[*].public_key ? (@==\"{}\")'", pk);
+    let sql_total = format!("SELECT count(*) AS cnt FROM transaction WHERE value @? '$.body.operations[*].TransferAsset.body.transfer.inputs[*].public_key ? (@==\"{pk}\")'");
     let row = sqlx::query(sql_total.as_str()).fetch_one(&mut conn).await?;
     let total = row.try_get("cnt")?;
 
@@ -648,7 +648,7 @@ pub async fn get_txs_send_to(
     }
     let pk = public_key_to_base64(&pk_res.unwrap());
 
-    let sql_total = format!("SELECT count(*) AS cnt FROM transaction WHERE value @? '$.body.operations[*].TransferAsset.body.transfer.outputs[*].public_key ? (@==\"{}\")'", pk);
+    let sql_total = format!("SELECT count(*) AS cnt FROM transaction WHERE value @? '$.body.operations[*].TransferAsset.body.transfer.outputs[*].public_key ? (@==\"{pk}\")'");
     let row = sqlx::query(sql_total.as_str()).fetch_one(&mut conn).await?;
     let total = row.try_get("cnt")?;
 
@@ -716,10 +716,10 @@ pub async fn get_txs(
     let mut sql_total = String::from("SELECT count(*) as total FROM transaction ");
     let mut params: Vec<String> = vec![];
     if let Some(block_hash) = block_hash.0 {
-        params.push(format!("block_hash='{}' ", block_hash));
+        params.push(format!("block_hash='{block_hash}' "));
     }
     if let Some(height) = block_height.0 {
-        params.push(format!("height={} ", height));
+        params.push(format!("height={height} "));
     }
 
     if let Some(addr) = address.0 {
@@ -734,8 +734,8 @@ pub async fn get_txs(
         let pk = pk.unwrap();
         let native_addr = public_key_to_base64(&pk);
         params.push(format!(
-            "((value @? '$.body.operations[*].TransferAsset.body.transfer.inputs[*].public_key ? (@==\"{}\")') OR (value @? '$.body.operations[*].TransferAsset.body.transfer.outputs[*].public_key ? (@==\"{}\")')) ",
-            native_addr, native_addr));
+            "((value @? '$.body.operations[*].TransferAsset.body.transfer.inputs[*].public_key ? (@==\"{native_addr}\")') OR (value @? '$.body.operations[*].TransferAsset.body.transfer.outputs[*].public_key ? (@==\"{native_addr}\")')) "
+            ));
     }
 
     if let Some(from_address) = from.0 {
@@ -767,13 +767,13 @@ pub async fn get_txs(
             public_key_to_base64(&pk)));
     }
     if let Some(ty) = ty.0 {
-        params.push(format!("ty={} ", ty));
+        params.push(format!("ty={ty} "));
     }
     if let Some(start_time) = start_time.0 {
-        params.push(format!("timestamp>={} ", start_time));
+        params.push(format!("timestamp>={start_time} "));
     }
     if let Some(end_time) = end_time.0 {
-        params.push(format!("timestamp<={} ", end_time));
+        params.push(format!("timestamp<={end_time} "));
     }
     let page = page.0.unwrap_or(1);
     let page_size = page_size.0.unwrap_or(10);
@@ -859,10 +859,10 @@ pub async fn get_txs_raw(
     let mut sql_total = String::from("SELECT count(*) as total FROM transaction ");
     let mut params: Vec<String> = vec![];
     if let Some(block_hash) = block_hash.0 {
-        params.push(format!("block_hash='{}' ", block_hash));
+        params.push(format!("block_hash='{block_hash}' "));
     }
     if let Some(height) = block_height.0 {
-        params.push(format!("height={} ", height));
+        params.push(format!("height={height} "));
     }
 
     if let Some(addr) = address.0 {
@@ -877,8 +877,8 @@ pub async fn get_txs_raw(
         let pk = pk.unwrap();
         let native_addr = public_key_to_base64(&pk);
         params.push(format!(
-            "((value @? '$.body.operations[*].TransferAsset.body.transfer.inputs[*].public_key ? (@==\"{}\")') OR (value @? '$.body.operations[*].TransferAsset.body.transfer.outputs[*].public_key ? (@==\"{}\")')) ",
-            native_addr, native_addr));
+            "((value @? '$.body.operations[*].TransferAsset.body.transfer.inputs[*].public_key ? (@==\"{native_addr}\")') OR (value @? '$.body.operations[*].TransferAsset.body.transfer.outputs[*].public_key ? (@==\"{native_addr}\")')) "
+            ));
     }
 
     if let Some(from_address) = from.0 {
@@ -910,13 +910,13 @@ pub async fn get_txs_raw(
             public_key_to_base64(&pk)));
     }
     if let Some(ty) = ty.0 {
-        params.push(format!("ty={} ", ty));
+        params.push(format!("ty={ty} "));
     }
     if let Some(start_time) = start_time.0 {
-        params.push(format!("timestamp>={} ", start_time));
+        params.push(format!("timestamp>={start_time} "));
     }
     if let Some(end_time) = end_time.0 {
-        params.push(format!("timestamp<={} ", end_time));
+        params.push(format!("timestamp<={end_time} "));
     }
     let page = page.0.unwrap_or(1);
     let page_size = page_size.0.unwrap_or(10);
@@ -1008,31 +1008,31 @@ pub async fn get_triple_masking_txs(
     let mut sql_total = String::from("SELECT count(*) as total FROM transaction ");
     let mut params: Vec<String> = vec![];
     if let Some(block_hash) = block_hash.0 {
-        params.push(format!(" block_hash='{}' ", block_hash));
+        params.push(format!(" block_hash='{block_hash}' "));
     }
     if let Some(bar) = bar.0 {
         if bar == ABAR_TO_BAR {
             if let Some(pk) = pub_key.0 {
-                params.push(format!("(value @? '$.body.operations[*].AbarToBar.note.body.output.public_key ? (@==\"{}\")') ", pk));
+                params.push(format!("(value @? '$.body.operations[*].AbarToBar.note.body.output.public_key ? (@==\"{pk}\")') "));
             } else {
                 params.push("(value @? '$.body.operations[*].AbarToBar.note.body.output.public_key ? (@!=\"\")') ".to_string());
             }
         } else if bar == BAR_TO_ABAR {
             if let Some(pk) = pub_key.0 {
-                params.push(format!("(value @? '$.body.operations[*].BarToAbar.note.body.output.commitment ? (@==\"{}\")') ", pk));
+                params.push(format!("(value @? '$.body.operations[*].BarToAbar.note.body.output.commitment ? (@==\"{pk}\")') "));
             } else {
                 params.push("(value @? '$.body.operations[*].BarToAbar.note.body.output.commitment ? (@!=\"\")') ".to_string());
             }
         }
     } else if let Some(pk) = pub_key.0 {
-        params.push(format!("(value @? '$.body.operations[*].AbarToBar.note.body.output.public_key ? (@==\"{}\")') OR (value @? '$.body.operations[*].BarToAbar.note.body.output.commitment ? (@==\"{}\")') ", pk, pk));
+        params.push(format!("(value @? '$.body.operations[*].AbarToBar.note.body.output.public_key ? (@==\"{pk}\")') OR (value @? '$.body.operations[*].BarToAbar.note.body.output.commitment ? (@==\"{pk}\")') "));
     }
 
     if let Some(start_time) = start_time.0 {
-        params.push(format!("timestamp>={} ", start_time));
+        params.push(format!("timestamp>={start_time} "));
     }
     if let Some(end_time) = end_time.0 {
-        params.push(format!("timestamp<={} ", end_time));
+        params.push(format!("timestamp<={end_time} "));
     }
     let page = page.0.unwrap_or(1);
     let page_size = page_size.0.unwrap_or(10);
@@ -1117,19 +1117,18 @@ pub async fn get_claim_txs(
     let mut sql_total = String::from("SELECT count(*) as total FROM transaction ");
     let mut params: Vec<String> = vec![];
     if let Some(block_hash) = block_hash.0 {
-        params.push(format!(" block_hash='{}' ", block_hash));
+        params.push(format!(" block_hash='{block_hash}' "));
     }
     if let Some(pk) = pub_key.0 {
         params.push(format!(
-            "(value @? '$.body.operations[*].Claim.pubkey ? (@==\"{}\")')",
-            pk
+            "(value @? '$.body.operations[*].Claim.pubkey ? (@==\"{pk}\")')"
         ));
     }
     if let Some(start_time) = start_time.0 {
-        params.push(format!(" timestamp>={} ", start_time));
+        params.push(format!(" timestamp>={start_time} "));
     }
     if let Some(end_time) = end_time.0 {
-        params.push(format!(" timestamp<={} ", end_time));
+        params.push(format!(" timestamp<={end_time} "));
     }
     let page = page.0.unwrap_or(1);
     let page_size = page_size.0.unwrap_or(10);
@@ -1230,7 +1229,7 @@ pub async fn get_claims_amount(api: &Api, address: Path<String>) -> Result<Claim
     }
 
     let base64_address = public_key_to_base64(&pubkey_res.unwrap());
-    let sql_query = format!("SELECT jsonb_path_query(value, '$.body.operations[*].Claim.body.amount') AS amount FROM transaction WHERE value @? '$.body.operations[*].Claim.pubkey ? (@==\"{}\")'", base64_address);
+    let sql_query = format!("SELECT jsonb_path_query(value, '$.body.operations[*].Claim.body.amount') AS amount FROM transaction WHERE value @? '$.body.operations[*].Claim.pubkey ? (@==\"{base64_address}\")'");
     let rows = sqlx::query(sql_query.as_str()).fetch_all(&mut conn).await?;
     let mut total: u64 = 0;
     for r in rows {
@@ -1262,10 +1261,10 @@ pub async fn get_prism_tx(
         address.as_str().to_lowercase()
     ));
     if let Some(start_time) = start_time.0 {
-        params.push(format!(" timestamp>={} ", start_time));
+        params.push(format!(" timestamp>={start_time} "));
     }
     if let Some(end_time) = end_time.0 {
-        params.push(format!(" timestamp<={} ", end_time));
+        params.push(format!(" timestamp<={end_time} "));
     }
     if !params.is_empty() {
         sql = sql.add(" AND ").add(params.join(" AND ").as_str());
@@ -1420,7 +1419,7 @@ fn wrap_evm_tx(tx: &mut TransactionResponse) -> Result<()> {
         // calc evm tx hash
         let evm_tx: EvmTx = serde_json::from_value(tx.value.clone()).unwrap();
         let hash = H256::from_slice(Keccak256::digest(&rlp::encode(&evm_tx)).as_slice());
-        tx.evm_tx_hash = format!("{:?}", hash);
+        tx.evm_tx_hash = format!("{hash:?}");
         let evm_tx_response = evm_tx.to_evm_tx_response().unwrap();
         tx.value = serde_json::to_value(evm_tx_response).unwrap();
     } else if tx_str.contains("ConvertAccount") {
@@ -1485,7 +1484,7 @@ mod tests {
         let tx_str= "{\"signature\":null,\"function\":{\"Ethereum\":{\"Transact\":{\"nonce\":\"0x9\",\"gas_price\":\"0xe8d4a51000\",\"gas_limit\":\"0x5208\",\"action\":{\"Call\":\"0xa5225cbee5052100ec2d2d94aa6d258558073757\"},\"value\":\"0x98a7d9b8314c0000\",\"input\":[],\"signature\":{\"v\":1082,\"r\":\"0x800cf49e032bac6826737adbad137f419994c681ea5d52b9b0bad2f402b30124\",\"s\":\"0x295277ef6563400ced61b88d3fb4c7b32ccd570a8b9bb8cbbe259214ab7de25a\"}}}}}";
         let evm_tx: EvmTx = serde_json::from_str(tx_str).unwrap();
         let hash = H256::from_slice(Keccak256::digest(&rlp::encode(&evm_tx)).as_slice());
-        let tx_hash = format!("{:?}", hash);
+        let tx_hash = format!("{hash:?}");
         assert_eq!(
             tx_hash,
             "0x0eeb0ff455b1b57b821634cf853e7247e584a675610f13097cc49c2022505df3"

@@ -57,7 +57,7 @@ mod test {
         let tx_str = "{\"signature\":null,\"function\":{\"Ethereum\":{\"Transact\":{\"nonce\":\"0x1\",\"gas_price\":\"0x174876e800\",\"gas_limit\":\"0x5208\",\"action\":{\"Call\":\"0x2ad32846c6dd2ffd3edadbe51cd5ae04aa5e575e\"},\"value\":\"0x56bc75e2d63100000\",\"input\":[],\"signature\":{\"v\":1082,\"r\":\"0xf8aef7f8053d89fee3950c4d702080bf3a8072bed5d84a3af19a360081b636a2\",\"s\":\"0x296299a8f2430b86fd3eb976eabc730ac1cfbbbe36eb69eae338cff33c4a98c1\"}}}}}";
         let evm_tx: EvmTx = serde_json::from_str(tx_str).unwrap();
         let signer = recover_signer(&evm_tx.function.ethereum.transact).unwrap();
-        let addr = format!("{:?}", signer);
+        let addr = format!("{signer:?}");
         assert_eq!(addr, "0xa5225cbee5052100ec2d2d94aa6d258558073757");
     }
 

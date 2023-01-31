@@ -338,7 +338,7 @@ pub async fn validator_history(
     let page = page.unwrap_or(1);
     let page_size = page_size.unwrap_or(10);
 
-    let sql_delegation = format!("SELECT tx_hash,timestamp,jsonb_path_query(value, '$.body.operations[*].Delegation') AS delegation FROM transaction WHERE code=0 AND (value @? '$.body.operations[*].Delegation.body.validator ? (@==\"{}\")')", addr);
+    let sql_delegation = format!("SELECT tx_hash,timestamp,jsonb_path_query(value, '$.body.operations[*].Delegation') AS delegation FROM transaction WHERE code=0 AND (value @? '$.body.operations[*].Delegation.body.validator ? (@==\"{addr}\")')");
     let sql_undelegation = "SELECT tx_hash,timestamp,jsonb_path_query(value,'$.body.operations[*].UnDelegation') AS undelegation FROM transaction WHERE code=0";
 
     let mut tmp_items: Vec<ValidatorHistoryItem> = vec![];
@@ -475,8 +475,7 @@ pub async fn validator_signed_count(
         let end_time = NaiveDateTime::from_timestamp_opt(end_secs, 0).unwrap();
 
         let sql_block_cnt = format!(
-            "SELECT count(*) as cnt FROM block WHERE time>='{}' AND time<'{}'",
-            start_time, end_time
+            "SELECT count(*) as cnt FROM block WHERE time>='{start_time}' AND time<'{end_time}'"
         );
         let row_blk_cnt = sqlx::query(sql_block_cnt.as_str())
             .fetch_one(&mut conn)

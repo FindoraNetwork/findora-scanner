@@ -192,10 +192,10 @@ pub async fn get_blocks(
     let mut params: Vec<String> = vec![];
 
     if let Some(start_height) = start_height.0 {
-        params.push(format!(" height >= {} ", start_height));
+        params.push(format!(" height >= {start_height} "));
     }
     if let Some(end_height) = end_height.0 {
-        params.push(format!(" height <= {} ", end_height));
+        params.push(format!(" height <= {end_height} "));
     }
     if let Some(start_time) = start_time.0 {
         params.push(format!(

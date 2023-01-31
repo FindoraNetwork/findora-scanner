@@ -57,7 +57,7 @@ impl EvmTx {
             function: EthereumResponse {
                 ethereum: TransactResponse {
                     transact: LegacyTransactionResponse {
-                        from: format!("{:?}", signer),
+                        from: format!("{signer:?}"),
                         nonce: self.function.ethereum.transact.nonce,
                         gas_price: self.function.ethereum.transact.gas_price,
                         gas_limit: self.function.ethereum.transact.gas_limit,
