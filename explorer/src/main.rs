@@ -560,7 +560,7 @@ impl Api {
         /// page size, the default is 10.
         page_size: Query<Option<i64>>,
     ) -> poem::Result<DelegationResponse> {
-        service::staking::get_delegation_tx(self, address, page, page_size)
+        service::staking::get_tx_delegation(self, address, page, page_size)
             .await
             .map_err(handle_fetch_one_err)
     }
@@ -579,7 +579,7 @@ impl Api {
         /// page size, the default is 10.
         page_size: Query<Option<i64>>,
     ) -> poem::Result<UnDelegationResponse> {
-        service::staking::get_undelegation(self, address, page, page_size)
+        service::staking::get_tx_undelegation(self, address, page, page_size)
             .await
             .map_err(handle_fetch_one_err)
     }
