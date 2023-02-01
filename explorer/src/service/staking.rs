@@ -1,7 +1,7 @@
 use crate::service::util::{public_key_from_bech32, public_key_to_base64};
 use crate::Api;
 use anyhow::Result;
-use log::debug;
+use log::{debug, error};
 use module::schema::{ClaimOpt, DelegationOpt, TdValidator, UnDelegationOpt};
 use poem_openapi::param::{Path, Query};
 use poem_openapi::{payload::Json, ApiResponse, Object};
@@ -47,7 +47,7 @@ pub struct DelegationItem {
     pub timestamp: i64,
 }
 
-pub async fn get_delegation_tx(
+pub async fn get_tx_delegation(
     api: &Api,
     address: Query<String>,
     page: Query<Option<i64>>,
@@ -86,8 +86,15 @@ pub async fn get_delegation_tx(
             .rpc
             .join(format!("validator_detail/{}", opt.body.validator).as_str())
             .unwrap();
-        let res = reqwest::get(validator_detail_url).await?.text().await?;
-        let validator: TdValidator = serde_json::from_str(res.as_str()).unwrap();
+        let res = reqwest::get(validator_detail_url)
+            .await?
+            .json::<TdValidator>()
+            .await;
+        if res.is_err() {
+            error!("failed to parse validator: {}", opt.body.validator);
+            continue;
+        }
+        let validator = res.unwrap();
 
         items.push(DelegationItem {
             tx_hash,
@@ -149,7 +156,7 @@ pub struct UnDelegationItem {
     pub expected_arrival_time: i64,
 }
 
-pub async fn get_undelegation(
+pub async fn get_tx_undelegation(
     api: &Api,
     address: Query<String>,
     page: Query<Option<i64>>,
@@ -192,8 +199,15 @@ pub async fn get_undelegation(
             .rpc
             .join(format!("validator_detail/{validator_address}").as_str())
             .unwrap();
-        let res = reqwest::get(validator_detail_url).await?.text().await?;
-        let validator: TdValidator = serde_json::from_str(res.as_str()).unwrap();
+        let res = reqwest::get(validator_detail_url)
+            .await?
+            .json::<TdValidator>()
+            .await;
+        if res.is_err() {
+            error!("failed to parse validator: {}", validator_address);
+            continue;
+        }
+        let validator = res.unwrap();
 
         items.push(UnDelegationItem {
             tx_hash,
