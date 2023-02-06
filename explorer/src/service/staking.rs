@@ -1,4 +1,4 @@
-use crate::service::util::{public_key_from_bech32, public_key_to_base64};
+use crate::service::util::{public_key_from_base64, public_key_from_bech32, public_key_to_base64};
 use crate::Api;
 use anyhow::Result;
 use log::{debug, error};
@@ -369,13 +369,15 @@ pub async fn delegation(api: &Api, pubkey: Path<String>) -> Result<DelegationInf
 pub enum UndelegationResponse {
     #[oai(status = 200)]
     Ok(Json<UndelegationResult>),
+    #[oai(status = 400)]
+    BadRequest(Json<UndelegationResult>),
 }
 
 #[derive(Serialize, Deserialize, Debug, Default, Object)]
 pub struct UndelegationResult {
     pub code: i32,
     pub message: String,
-    pub data: UndelegationResultData,
+    pub data: Option<UndelegationResultData>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Default, Object)]
@@ -415,20 +417,34 @@ pub async fn get_undelegation_info(
         params.push(format!(" timestamp<={end} "));
     }
     if let Some(pk) = pubkey.0 {
+        let pk_res = public_key_from_base64(&pk);
+        if pk_res.is_err() {
+            return Ok(UndelegationResponse::BadRequest(Json(UndelegationResult {
+                code: 400,
+                message: "invalid pubkey".to_string(),
+                data: None,
+            })));
+        }
         params.push(format!(
             "(value @? '$.body.operations[*].UnDelegation.pubkey ? (@==\"{pk}\")')"
         ));
+    } else {
+        params.push("(value @? '$.body.operations[*].UnDelegation.pubkey')".to_string());
     }
 
+    let mut count_sql = "SELECT count(*) AS cnt FROM transaction".to_string();
     let mut query_sql = "SELECT tx_hash,timestamp,jsonb_path_query(value,'$.body.operations[*].UnDelegation') AS ud FROM transaction".to_string();
     if !params.is_empty() {
+        count_sql = count_sql.add(" WHERE ").add(params.join(" AND ").as_str());
         query_sql = query_sql.add(" WHERE ").add(params.join(" AND ").as_str());
     }
     query_sql =
         query_sql.add(format!(" LIMIT {} OFFSET {}", page_size, (page - 1) * page_size).as_str());
 
+    let rows_count = sqlx::query(count_sql.as_str()).fetch_one(&mut conn).await?;
+    let total: i64 = rows_count.try_get("cnt")?;
+
     let rows = sqlx::query(query_sql.as_str()).fetch_all(&mut conn).await?;
-    let l = rows.len();
     let mut undelegations: Vec<UndelegationInfo> = vec![];
     for r in rows {
         let tx_hash: String = r.try_get("tx_hash")?;
@@ -452,14 +468,14 @@ pub async fn get_undelegation_info(
     let res = UndelegationResultData {
         page,
         page_size,
-        total: l as i64,
+        total,
         undelegations,
     };
 
     Ok(UndelegationResponse::Ok(Json(UndelegationResult {
         code: 200,
         message: "".to_string(),
-        data: res,
+        data: Some(res),
     })))
 }
 
@@ -467,13 +483,15 @@ pub async fn get_undelegation_info(
 pub enum SimpleDelegationResponse {
     #[oai(status = 200)]
     Ok(Json<SimpleDelegationResult>),
+    #[oai(status = 400)]
+    BadRequest(Json<SimpleDelegationResult>),
 }
 
 #[derive(Serialize, Deserialize, Debug, Default, Object)]
 pub struct SimpleDelegationResult {
     pub code: i32,
     pub message: String,
-    pub data: DelegationResultData,
+    pub data: Option<DelegationResultData>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Default, Object)]
@@ -513,22 +531,36 @@ pub async fn get_delegation_info(
         params.push(format!(" timestamp<={end} "));
     }
     if let Some(pk) = pubkey.0 {
+        let pk_res = public_key_from_base64(&pk);
+        if pk_res.is_err() {
+            return Ok(SimpleDelegationResponse::BadRequest(Json(
+                SimpleDelegationResult {
+                    code: 400,
+                    message: "invalid pubkey".to_string(),
+                    data: None,
+                },
+            )));
+        }
         params.push(format!(
             "(value @? '$.body.operations[*].Delegation.pubkey ? (@==\"{pk}\")')"
         ));
+    } else {
+        params.push("(value @? '$.body.operations[*].Delegation.pubkey')".to_string());
     }
-
+    let mut count_sql = "SELECT count(*) AS cnt FROM transaction".to_string();
     let mut query_sql = "SELECT tx_hash,timestamp,jsonb_path_query(value,'$.body.operations[*].Delegation') AS d FROM transaction".to_string();
     if !params.is_empty() {
+        count_sql = count_sql.add(" WHERE ").add(params.join(" AND ").as_str());
         query_sql = query_sql.add(" WHERE ").add(params.join(" AND ").as_str());
     }
     query_sql =
         query_sql.add(format!(" LIMIT {} OFFSET {}", page_size, (page - 1) * page_size).as_str());
 
-    let rows = sqlx::query(query_sql.as_str()).fetch_all(&mut conn).await?;
-    let l = rows.len();
-    let mut delegations: Vec<DelegationInfo> = vec![];
+    let rows_count = sqlx::query(count_sql.as_str()).fetch_one(&mut conn).await?;
+    let total: i64 = rows_count.try_get("cnt")?;
 
+    let rows = sqlx::query(query_sql.as_str()).fetch_all(&mut conn).await?;
+    let mut delegations: Vec<DelegationInfo> = vec![];
     for r in rows {
         let tx_hash: String = r.try_get("tx_hash")?;
         let timestamp: i64 = r.try_get("timestamp")?;
@@ -547,14 +579,14 @@ pub async fn get_delegation_info(
     let res = DelegationResultData {
         page,
         page_size,
-        total: l as i64,
+        total,
         delegations,
     };
 
     Ok(SimpleDelegationResponse::Ok(Json(SimpleDelegationResult {
         code: 200,
         message: "".to_string(),
-        data: res,
+        data: Some(res),
     })))
 }
 
