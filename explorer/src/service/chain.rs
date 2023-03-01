@@ -228,7 +228,7 @@ pub async fn statistics(api: &Api, ty: Query<Option<i32>>) -> Result<ChainStatis
     let row = sqlx::query(sql_str.as_str()).fetch_one(&mut conn).await?;
     let daily_txs = row.try_get("cnt")?;
 
-    res_data.active_addresses = addr_counts;
+    res_data.active_addresses = addr_counts / 10;
     res_data.total_txs = total_txs;
     res_data.daily_txs = daily_txs;
 
