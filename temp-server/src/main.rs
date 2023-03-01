@@ -2,7 +2,8 @@ mod module;
 mod utils;
 
 use module::{config::*, rpc::*};
-use poem::{listener::TcpListener, Route, Server};
+use poem::middleware::Cors;
+use poem::{listener::TcpListener, EndpointExt, Route, Server};
 use poem_openapi::{payload::Json, OpenApi, OpenApiService, Tags};
 use utils::*;
 
@@ -111,7 +112,12 @@ async fn main() -> anyhow::Result<()> {
 
     let server_addr = format!("{}:{}", config.server.addr, config.server.port);
     Server::new(TcpListener::bind(server_addr))
-        .run(Route::new().nest("/", api_service).nest("/ui", ui))
+        .run(
+            Route::new()
+                .nest("/", api_service)
+                .nest("/ui", ui)
+                .with(Cors::new()),
+        )
         .await?;
 
     Ok(())
