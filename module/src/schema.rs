@@ -145,6 +145,17 @@ pub struct Transaction {
 }
 
 #[derive(Serialize, Deserialize, Debug, Default, Object)]
+pub struct TxResult {
+    pub tx_hash: String,
+    pub block_hash: String,
+    pub height: i64,
+    pub timestamp: i64,
+    pub ty: i32,
+    pub code: i64,
+    pub value: Value,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, Object)]
 pub struct TransactionResponse {
     pub tx_hash: String,
     pub evm_tx_hash: String,

@@ -4,6 +4,7 @@ members = [
     "explorer",
     "module",
     "temp-server",
+    "prismer",
 ]
 
 [profile.release]
