@@ -79,4 +79,14 @@ mod tests {
         assert_eq!(asset_addr, res_addr);
         Ok(())
     }
+
+    #[tokio::test]
+    async fn pk_to_bech32() -> Result<()> {
+        let target = "fra1rkvlrs8j8y7rlud9qh6ndg5nr4ag7ar4640dr8h0ys6zfrwv25as42zptu";
+        let pk_b64 = "HZnxwPI5PD_xpQX1NqKTHXqPdHXVXtGe7yQ0JI3MVTs=";
+        let pk = public_key_from_base64(pk_b64).unwrap();
+        let addr_bech32 = public_key_to_bech32(&pk);
+        assert_eq!(addr_bech32, target);
+        Ok(())
+    }
 }

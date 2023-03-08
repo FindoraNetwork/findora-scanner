@@ -13,6 +13,7 @@ use crate::service::staking::{
 };
 use crate::service::tx::{
     ClaimAmountResponse, PrismRecordResponse, PrismRecordResponseNew, TxResponse, TxsResponse,
+    V2PrismRecordResponse,
 };
 use crate::service::validator::{
     CirculatingSupplyResponse, DelegatorListResponse, ValidatorDelegationResponse,
@@ -527,6 +528,25 @@ impl Api {
         page_size: Query<Option<i64>>,
     ) -> poem::Result<PrismRecordResponseNew> {
         service::tx::get_prism_records_receive_from(self, address, page, page_size)
+            .await
+            .map_err(handle_fetch_one_err)
+    }
+
+    #[oai(
+        path = "/v2/tx/prism/records/receive",
+        method = "get",
+        tag = "ApiTags::Transaction"
+    )]
+    async fn get_prism_records_receive_v2(
+        &self,
+        /// bech32 address, e.g. fra1rkvlrs8j8y7rlud9qh6ndg5nr4ag7ar4640dr8h0ys6zfrwv25as42zptu
+        address: Query<String>,
+        /// page index, the default is 1.
+        page: Query<Option<i64>>,
+        /// page size, the default is 10.
+        page_size: Query<Option<i64>>,
+    ) -> poem::Result<V2PrismRecordResponse> {
+        service::tx::get_prism_received(self, address, page, page_size)
             .await
             .map_err(handle_fetch_one_err)
     }

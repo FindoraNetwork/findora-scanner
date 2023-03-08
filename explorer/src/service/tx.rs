@@ -118,6 +118,16 @@ pub struct PrismRecordResultNew {
     pub data: Option<PrismRecordNew>,
 }
 
+#[derive(ApiResponse)]
+pub enum V2PrismRecordResponse {
+    #[oai(status = 200)]
+    Ok(Json<V2PrismRecordResult>),
+    #[oai(status = 400)]
+    BadRequest(Json<V2PrismRecordResult>),
+    #[oai(status = 500)]
+    InternalError(Json<V2PrismRecordResult>),
+}
+
 #[derive(Serialize, Deserialize, Debug, Default, Object)]
 pub struct PrismRecordNew {
     pub total: i64,
@@ -126,12 +136,126 @@ pub struct PrismRecordNew {
     pub items: Vec<PrismItem>,
 }
 
+#[derive(Serialize, Deserialize, Debug, Default, Object)]
+pub struct V2PrismRecordResult {
+    pub code: i32,
+    pub message: String,
+    pub data: Option<V2PrismRecord>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, Object)]
+pub struct V2PrismRecord {
+    pub total: i64,
+    pub page: i64,
+    pub page_size: i64,
+    pub items: Vec<V2PrismItem>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, Clone, Object)]
+pub struct V2PrismItem {
+    pub tx_hash: String,
+    pub amount: u64,
+    pub timestamp: i64,
+}
+
 #[derive(Serialize, Deserialize, Debug, Default, Clone, Object)]
 pub struct PrismItem {
     pub tx_hash: String,
     pub address: String,
     pub amount: u64,
     pub timestamp: i64,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, Clone, Object)]
+pub struct NonConfidentialItem {
+    pub asset: Vec<u8>,
+    pub amount: u64,
+    pub target: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, Clone, Object)]
+pub struct Call {
+    pub non_confidential_outputs: Vec<NonConfidentialItem>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, Clone, Object)]
+pub struct CallData {
+    #[serde(rename = "Call")]
+    pub call: Call,
+}
+
+pub async fn get_prism_received(
+    api: &Api,
+    address: Query<String>,
+    page: Query<Option<i64>>,
+    page_size: Query<Option<i64>>,
+) -> Result<V2PrismRecordResponse> {
+    let mut conn = api.storage.lock().await.acquire().await?;
+    let page = page.0.unwrap_or(1);
+    let page_size = page_size.0.unwrap_or(10);
+
+    let mut total = 0;
+    let mut items: Vec<V2PrismItem> = vec![];
+
+    let pubkey = public_key_from_bech32(&address.0);
+    if pubkey.is_err() {
+        return Ok(V2PrismRecordResponse::BadRequest(Json(
+            V2PrismRecordResult {
+                code: 400,
+                message: "invalid bech32 address".to_string(),
+                data: None,
+            },
+        )));
+    }
+    let pubkey_base64 = public_key_to_base64(&pubkey.unwrap());
+    let sql_query = "SELECT tx_hash,timestamp,jsonb_path_query(result, '$.data') AS d FROM transaction WHERE result->>'data' is not null order by timestamp desc";
+    let rows = sqlx::query(sql_query).fetch_all(&mut conn).await?;
+
+    for r in rows {
+        let tx_hash: String = r.try_get("tx_hash")?;
+        let timestamp: i64 = r.try_get("timestamp")?;
+        let data: Value = r.try_get("d")?;
+        let data_str: String = serde_json::from_value(data)?;
+        let raw = base64::decode(&data_str)?;
+        let call_data: CallData = serde_json::from_slice(&raw)?;
+
+        for t in call_data.call.non_confidential_outputs {
+            if t.target != pubkey_base64 {
+                continue;
+            }
+            total += 1;
+            items.push(V2PrismItem {
+                tx_hash: tx_hash.clone(),
+                amount: t.amount,
+                timestamp,
+            })
+        }
+    }
+    let mut res: Vec<V2PrismItem> = vec![];
+    let page_num = total / page_size + 1;
+    match page - page_num {
+        0 => {
+            let start = ((page - 1) * page_size) as usize;
+            res = items.as_slice()[start..].to_owned();
+        }
+        c if c < 0 => {
+            let start = ((page - 1) * page_size) as usize;
+            let end = start + page_size as usize;
+            res = items.as_slice()[start..end].to_owned();
+        }
+        _ => {}
+    }
+
+    Ok(V2PrismRecordResponse::Ok(Json(V2PrismRecordResult {
+        code: 200,
+        message: "".to_string(),
+        data: Some(V2PrismRecord {
+            total,
+            page,
+            page_size,
+            items: res,
+        }),
+    })))
 }
 
 pub async fn get_prism_records_receive_from(
