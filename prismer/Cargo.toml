@@ -35,3 +35,4 @@ openssl-sys = { version = "*", features = ["vendored"] }
 
 [features]
 default = []
+static-check =[]

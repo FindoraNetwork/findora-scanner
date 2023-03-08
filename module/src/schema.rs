@@ -144,7 +144,7 @@ pub struct Transaction {
     pub value: Value,  // result.tx
 }
 
-#[derive(Serialize, Deserialize, Debug, Default, Object)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct TxResult {
     pub tx_hash: String,
     pub block_hash: String,
