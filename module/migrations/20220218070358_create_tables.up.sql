@@ -24,6 +24,17 @@ CREATE TABLE transaction (
      PRIMARY KEY(tx_hash)
 );
 
+CREATE TABLE result (
+     tx_hash VARCHAR(255) NOT NULL,
+     block_hash VARCHAR(255) NOT NULL,
+     height BIGINT NOT NULL,
+     timestamp BIGINT NOT NULL,
+     code BIGINT NOT NULL,
+     ty INT NOT NULL,
+     value JSONB NOT NULL,
+     PRIMARY KEY(tx_hash)
+);
+
 CREATE TABLE validators (
     address VARCHAR(255) NOT NULL,
     pubkey_type INT NOT NULL,
@@ -42,6 +53,12 @@ CREATE TABLE block_generation (
 );
 
 CREATE TABLE last_height (
+    tip VARCHAR(255) NOT NULL,
+    height BIGINT NOT NULL,
+    PRIMARY KEY(tip)
+);
+
+CREATE TABLE result_last_height (
     tip VARCHAR(255) NOT NULL,
     height BIGINT NOT NULL,
     PRIMARY KEY(tip)
