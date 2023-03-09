@@ -513,27 +513,27 @@ impl Api {
             .map_err(handle_fetch_one_err)
     }
 
-    #[oai(
-        path = "/tx/prism/records/receive",
-        method = "get",
-        tag = "ApiTags::Transaction"
-    )]
-    async fn get_prism_records_receive(
-        &self,
-        /// bech32 address or RIMP160 address.
-        address: Query<String>,
-        /// page index, the default is 1.
-        page: Query<Option<i64>>,
-        /// page size, the default is 10.
-        page_size: Query<Option<i64>>,
-    ) -> poem::Result<PrismRecordResponseNew> {
-        service::tx::get_prism_records_receive_from(self, address, page, page_size)
-            .await
-            .map_err(handle_fetch_one_err)
-    }
+    // #[oai(
+    //     path = "/tx/prism/records/receive",
+    //     method = "get",
+    //     tag = "ApiTags::Transaction"
+    // )]
+    // async fn get_prism_records_receive(
+    //     &self,
+    //     /// bech32 address or RIMP160 address.
+    //     address: Query<String>,
+    //     /// page index, the default is 1.
+    //     page: Query<Option<i64>>,
+    //     /// page size, the default is 10.
+    //     page_size: Query<Option<i64>>,
+    // ) -> poem::Result<PrismRecordResponseNew> {
+    //     service::tx::get_prism_records_receive_from(self, address, page, page_size)
+    //         .await
+    //         .map_err(handle_fetch_one_err)
+    // }
 
     #[oai(
-        path = "/v2/tx/prism/records/receive",
+        path = "/tx/prism/records/receive",
         method = "get",
         tag = "ApiTags::Transaction"
     )]
