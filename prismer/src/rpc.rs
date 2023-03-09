@@ -100,7 +100,7 @@ pub struct RPCCaller {
 #[derive(Serialize, Deserialize)]
 pub struct TxResultData {
     #[serde(rename = "Call")]
-    pub call: Value,
+    pub call: Option<Value>,
 }
 
 impl RPCCaller {
