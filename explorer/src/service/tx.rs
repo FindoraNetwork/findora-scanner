@@ -243,106 +243,106 @@ pub async fn get_prism_received(
     })))
 }
 
-pub async fn get_prism_records_receive_from(
-    api: &Api,
-    address: Query<String>,
-    page: Query<Option<i64>>,
-    page_size: Query<Option<i64>>,
-) -> Result<PrismRecordResponseNew> {
-    let mut conn = api.storage.lock().await.acquire().await?;
-
-    let page = page.0.unwrap_or(1);
-    let page_size = page_size.0.unwrap_or(10);
-    let mut receive_from: Vec<PrismItem> = vec![];
-    let total;
-
-    match "fra".as_bytes().eq(&address.0.as_bytes()[..3]) {
-        true => {
-            let pk_result = public_key_from_bech32(address.0.as_str());
-            if pk_result.is_err() {
-                return Ok(PrismRecordResponseNew::BadRequest(Json(
-                    PrismRecordResultNew {
-                        code: 400,
-                        message: "invalid bech32 address".to_string(),
-                        data: None,
-                    },
-                )));
-            }
-            let pk = pk_result.unwrap();
-            let base64_addr = public_key_to_base64(&pk);
-
-            let sql_receive_count = format!("SELECT count(*) AS cnt FROM transaction WHERE value @? '$.function.XHub.NonConfidentialTransfer.outputs[*].target ? (@==\"{base64_addr}\")'");
-            let sql_receive = format!("SELECT tx_hash, timestamp, jsonb_path_query(value, '$.function.XHub.NonConfidentialTransfer.outputs[*].amount') AS amount, jsonb_path_query(value, '$.signature[0]') as pk FROM transaction WHERE value @? '$.function.XHub.NonConfidentialTransfer.outputs[*].target ? (@==\"{}\")' ORDER BY timestamp DESC LIMIT {} OFFSET {}", base64_addr, page_size, (page-1)*page_size);
-            let row_receive_count = sqlx::query(sql_receive_count.as_str())
-                .fetch_one(&mut conn)
-                .await?;
-            total = row_receive_count.try_get("cnt")?;
-
-            let rows_receive = sqlx::query(sql_receive.as_str())
-                .fetch_all(&mut conn)
-                .await?;
-            for row in rows_receive {
-                let timestamp: i64 = row.try_get("timestamp")?;
-                let tx_hash: String = row.try_get("tx_hash")?;
-                let amount_val: Value = row.try_get("amount")?;
-                let pk_val: Value = row.try_get("pk")?;
-
-                let amount: u64 = serde_json::from_value(amount_val).unwrap();
-                let pk: [u8; 32] = serde_json::from_value(pk_val).unwrap();
-                let from: String = format!("{:?}", H160::from_slice(&pk[4..24]));
-
-                receive_from.push(PrismItem {
-                    tx_hash,
-                    address: from,
-                    amount,
-                    timestamp,
-                });
-            }
-        }
-        _ => {
-            let sql_receive_count = format!("SELECT count(*) AS cnt FROM transaction WHERE value @? '$.body.operations[*].ConvertAccount.receiver.Ethereum ? (@==\"{}\")'", address.0);
-            let sql_receive = format!("SELECT tx_hash, timestamp, jsonb_path_query(value, '$.body.operations[*].ConvertAccount.value') AS amount, jsonb_path_query(value, '$.body.operations[*].ConvertAccount.signer') AS signer FROM transaction WHERE value @? '$.body.operations[*].ConvertAccount.receiver.Ethereum ? (@==\"{}\")' ORDER BY timestamp DESC LIMIT {} OFFSET {}", address.0, page_size, (page-1)*page_size);
-            let row_receive_count = sqlx::query(sql_receive_count.as_str())
-                .fetch_one(&mut conn)
-                .await?;
-            total = row_receive_count.try_get("cnt")?;
-
-            // from
-            let rows_receive = sqlx::query(sql_receive.as_str())
-                .fetch_all(&mut conn)
-                .await?;
-            for row in rows_receive {
-                let timestamp: i64 = row.try_get("timestamp")?;
-                let tx_hash: String = row.try_get("tx_hash")?;
-                let amount_val: Value = row.try_get("amount")?;
-                let signer_val: Value = row.try_get("signer")?;
-
-                let amount_str: String = serde_json::from_value(amount_val).unwrap();
-                let amount: u64 = amount_str.parse::<u64>().unwrap();
-                let signer: String = serde_json::from_value(signer_val).unwrap();
-                let pk = public_key_from_base64(&signer).unwrap();
-
-                receive_from.push(PrismItem {
-                    tx_hash,
-                    address: public_key_to_bech32(&pk),
-                    amount,
-                    timestamp,
-                });
-            }
-        }
-    }
-
-    Ok(PrismRecordResponseNew::Ok(Json(PrismRecordResultNew {
-        code: 200,
-        message: "".to_string(),
-        data: Some(PrismRecordNew {
-            total,
-            page,
-            page_size,
-            items: receive_from,
-        }),
-    })))
-}
+// pub async fn get_prism_records_receive_from(
+//     api: &Api,
+//     address: Query<String>,
+//     page: Query<Option<i64>>,
+//     page_size: Query<Option<i64>>,
+// ) -> Result<PrismRecordResponseNew> {
+//     let mut conn = api.storage.lock().await.acquire().await?;
+//
+//     let page = page.0.unwrap_or(1);
+//     let page_size = page_size.0.unwrap_or(10);
+//     let mut receive_from: Vec<PrismItem> = vec![];
+//     let total;
+//
+//     match "fra".as_bytes().eq(&address.0.as_bytes()[..3]) {
+//         true => {
+//             let pk_result = public_key_from_bech32(address.0.as_str());
+//             if pk_result.is_err() {
+//                 return Ok(PrismRecordResponseNew::BadRequest(Json(
+//                     PrismRecordResultNew {
+//                         code: 400,
+//                         message: "invalid bech32 address".to_string(),
+//                         data: None,
+//                     },
+//                 )));
+//             }
+//             let pk = pk_result.unwrap();
+//             let base64_addr = public_key_to_base64(&pk);
+//
+//             let sql_receive_count = format!("SELECT count(*) AS cnt FROM transaction WHERE value @? '$.function.XHub.NonConfidentialTransfer.outputs[*].target ? (@==\"{base64_addr}\")'");
+//             let sql_receive = format!("SELECT tx_hash, timestamp, jsonb_path_query(value, '$.function.XHub.NonConfidentialTransfer.outputs[*].amount') AS amount, jsonb_path_query(value, '$.signature[0]') as pk FROM transaction WHERE value @? '$.function.XHub.NonConfidentialTransfer.outputs[*].target ? (@==\"{}\")' ORDER BY timestamp DESC LIMIT {} OFFSET {}", base64_addr, page_size, (page-1)*page_size);
+//             let row_receive_count = sqlx::query(sql_receive_count.as_str())
+//                 .fetch_one(&mut conn)
+//                 .await?;
+//             total = row_receive_count.try_get("cnt")?;
+//
+//             let rows_receive = sqlx::query(sql_receive.as_str())
+//                 .fetch_all(&mut conn)
+//                 .await?;
+//             for row in rows_receive {
+//                 let timestamp: i64 = row.try_get("timestamp")?;
+//                 let tx_hash: String = row.try_get("tx_hash")?;
+//                 let amount_val: Value = row.try_get("amount")?;
+//                 let pk_val: Value = row.try_get("pk")?;
+//
+//                 let amount: u64 = serde_json::from_value(amount_val).unwrap();
+//                 let pk: [u8; 32] = serde_json::from_value(pk_val).unwrap();
+//                 let from: String = format!("{:?}", H160::from_slice(&pk[4..24]));
+//
+//                 receive_from.push(PrismItem {
+//                     tx_hash,
+//                     address: from,
+//                     amount,
+//                     timestamp,
+//                 });
+//             }
+//         }
+//         _ => {
+//             let sql_receive_count = format!("SELECT count(*) AS cnt FROM transaction WHERE value @? '$.body.operations[*].ConvertAccount.receiver.Ethereum ? (@==\"{}\")'", address.0);
+//             let sql_receive = format!("SELECT tx_hash, timestamp, jsonb_path_query(value, '$.body.operations[*].ConvertAccount.value') AS amount, jsonb_path_query(value, '$.body.operations[*].ConvertAccount.signer') AS signer FROM transaction WHERE value @? '$.body.operations[*].ConvertAccount.receiver.Ethereum ? (@==\"{}\")' ORDER BY timestamp DESC LIMIT {} OFFSET {}", address.0, page_size, (page-1)*page_size);
+//             let row_receive_count = sqlx::query(sql_receive_count.as_str())
+//                 .fetch_one(&mut conn)
+//                 .await?;
+//             total = row_receive_count.try_get("cnt")?;
+//
+//             // from
+//             let rows_receive = sqlx::query(sql_receive.as_str())
+//                 .fetch_all(&mut conn)
+//                 .await?;
+//             for row in rows_receive {
+//                 let timestamp: i64 = row.try_get("timestamp")?;
+//                 let tx_hash: String = row.try_get("tx_hash")?;
+//                 let amount_val: Value = row.try_get("amount")?;
+//                 let signer_val: Value = row.try_get("signer")?;
+//
+//                 let amount_str: String = serde_json::from_value(amount_val).unwrap();
+//                 let amount: u64 = amount_str.parse::<u64>().unwrap();
+//                 let signer: String = serde_json::from_value(signer_val).unwrap();
+//                 let pk = public_key_from_base64(&signer).unwrap();
+//
+//                 receive_from.push(PrismItem {
+//                     tx_hash,
+//                     address: public_key_to_bech32(&pk),
+//                     amount,
+//                     timestamp,
+//                 });
+//             }
+//         }
+//     }
+//
+//     Ok(PrismRecordResponseNew::Ok(Json(PrismRecordResultNew {
+//         code: 200,
+//         message: "".to_string(),
+//         data: Some(PrismRecordNew {
+//             total,
+//             page,
+//             page_size,
+//             items: receive_from,
+//         }),
+//     })))
+// }
 
 pub async fn get_prism_records_send_to(
     api: &Api,
