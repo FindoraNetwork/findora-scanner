@@ -157,7 +157,8 @@ impl Subscribe {
         } else if let Ok(h) = db::load_last_height(&pool).await {
             h + 1
         } else {
-            1
+            let prism_start = std::env::var("PRISM_START").unwrap_or(String::from("1"));
+            prism_start.parse::<i64>().unwrap()
         };
 
         let concurrency = self.concurrency.unwrap_or(DEFAULT_CONCURRENCY);
