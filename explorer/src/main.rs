@@ -12,8 +12,7 @@ use crate::service::staking::{
     UndelegationResponse,
 };
 use crate::service::tx::{
-    ClaimAmountResponse, PrismRecordResponse, PrismRecordResponseNew, TxResponse, TxsResponse,
-    V2PrismRecordResponse,
+    ClaimAmountResponse, PrismRecordResponseNew, TxResponse, TxsResponse, V2PrismRecordResponse,
 };
 use crate::service::validator::{
     CirculatingSupplyResponse, DelegatorListResponse, ValidatorDelegationResponse,
@@ -498,20 +497,20 @@ impl Api {
             .map_err(handle_fetch_one_err)
     }
 
-    #[oai(
-        path = "/tx/prism/records/:address",
-        method = "get",
-        tag = "ApiTags::Transaction"
-    )]
-    async fn get_prism_records(
-        &self,
-        /// bech32 address or RIMP160 address.
-        address: Path<String>,
-    ) -> poem::Result<PrismRecordResponse> {
-        service::tx::get_prism_records(self, address)
-            .await
-            .map_err(handle_fetch_one_err)
-    }
+    // #[oai(
+    //     path = "/tx/prism/records/:address",
+    //     method = "get",
+    //     tag = "ApiTags::Transaction"
+    // )]
+    // async fn get_prism_records(
+    //     &self,
+    //     /// bech32 address or RIMP160 address.
+    //     address: Path<String>,
+    // ) -> poem::Result<PrismRecordResponse> {
+    //     service::tx::get_prism_records(self, address)
+    //         .await
+    //         .map_err(handle_fetch_one_err)
+    // }
 
     // #[oai(
     //     path = "/tx/prism/records/receive",
@@ -558,7 +557,7 @@ impl Api {
     )]
     async fn get_prism_records_send(
         &self,
-        /// bech32 address or RIMP160 addrss.
+        /// bech32 address or RIMP160 addrss, e.g. fra18fnyetvs2kc035xz78kyfcygmej8pk5h2kwczy03w6uewdphzfxsk74dym or 0x6f6050950cfa13f612388cd793242458acca4aa7
         address: Query<String>,
         /// page index, the default is 1.
         page: Query<Option<i64>>,
