@@ -1,6 +1,4 @@
-use crate::service::util::{
-    public_key_from_base64, public_key_from_bech32, public_key_to_base64, public_key_to_bech32,
-};
+use crate::service::util::{public_key_from_bech32, public_key_to_base64};
 use crate::Api;
 use anyhow::Result;
 use ethereum_types::{H160, H256};
@@ -9,11 +7,11 @@ use module::schema::{
     BAR_TO_ABAR, CLAIM, DEFINE_OR_ISSUE_ASSET, EVM_TRANSFER, HIDE_ASSET_AMOUNT, HIDE_ASSET_TYPE,
     HIDE_ASSET_TYPE_AND_AMOUNT, PRISM_EVM_TO_NATIVE, PRISM_NATIVE_TO_EVM, STAKING, UNSTAKING,
 };
+use module::utils::crypto::recover_signer;
 use poem_openapi::param::Query;
 use poem_openapi::{param::Path, payload::Json, ApiResponse, Object};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use serde_json::Value::Number;
 use sha3::{Digest, Keccak256};
 use sqlx::Row;
 use std::ops::Add;
@@ -154,9 +152,11 @@ pub struct V2PrismRecord {
 
 #[derive(Serialize, Deserialize, Debug, Default, Clone, Object)]
 pub struct V2PrismItem {
+    pub address: String,
     pub tx_hash: String,
     pub amount: u64,
     pub timestamp: i64,
+    pub data: String,
 }
 
 #[derive(Serialize, Deserialize, Debug, Default, Clone, Object)]
@@ -165,6 +165,7 @@ pub struct PrismItem {
     pub address: String,
     pub amount: u64,
     pub timestamp: i64,
+    pub data: String,
 }
 
 #[derive(Serialize, Deserialize, Debug, Default, Clone, Object)]
@@ -175,7 +176,18 @@ pub struct NonConfidentialItem {
 }
 
 #[derive(Serialize, Deserialize, Debug, Default, Clone, Object)]
+pub struct CallDataLog {
+    pub data: Vec<u8>,
+    pub topics: Vec<String>,
+    pub address: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, Clone, Object)]
 pub struct Call {
+    pub logs: Value,
+    pub value: Value,
+    pub used_gas: Value,
+    pub exit_reason: Value,
     pub non_confidential_outputs: Vec<NonConfidentialItem>,
 }
 
@@ -215,20 +227,31 @@ pub async fn get_prism_received(
         .await?;
     let total: i64 = row_counts.try_get("cnt")?;
 
-    let sql_query = format!("SELECT tx_hash,timestamp,jsonb_path_query(value, '$.Call.non_confidential_outputs[*].amount') AS a FROM result WHERE value @? '$.Call.non_confidential_outputs[*].target ? (@==\"{pubkey_base64}\")' ORDER BY timestamp DESC LIMIT {} OFFSET {}", page_size, (page-1)*page_size);
+    let sql_query = format!("SELECT tx_hash,timestamp,value AS v FROM result WHERE value @? '$.Call.non_confidential_outputs[*].target ? (@==\"{pubkey_base64}\")' ORDER BY timestamp DESC LIMIT {} OFFSET {}", page_size, (page-1)*page_size);
     let rows = sqlx::query(sql_query.as_str()).fetch_all(&mut conn).await?;
-    for r in rows {
-        let tx_hash: String = r.try_get("tx_hash")?;
-        let timestamp: i64 = r.try_get("timestamp")?;
-        let amount = match r.try_get("a")? {
-            Number(a) => a.as_u64().unwrap(),
-            _ => 0,
-        };
-        items.push(V2PrismItem {
-            tx_hash,
-            amount,
-            timestamp,
-        });
+    for row in rows {
+        let tx_hash: String = row.try_get("tx_hash")?;
+        let timestamp: i64 = row.try_get("timestamp")?;
+
+        let result_val: Value = row.try_get("v")?;
+        let call_data: CallData = serde_json::from_value(result_val.clone())?;
+        let result_bin = serde_json::to_vec(&result_val)?;
+
+        let sql_tx = format!("SELECT value AS v FROM transaction WHERE tx_hash=\'{tx_hash}\'");
+        let r = sqlx::query(sql_tx.as_str()).fetch_one(&mut conn).await?;
+        let tx_val: Value = r.try_get("v")?;
+        let evm_tx: EvmTx = serde_json::from_value(tx_val)?;
+        let signer = recover_signer(&evm_tx.function.ethereum.transact).unwrap();
+
+        for noc in call_data.call.non_confidential_outputs {
+            items.push(V2PrismItem {
+                data: base64::encode(&result_bin),
+                address: format!("{signer:?}"),
+                tx_hash: tx_hash.clone(),
+                amount: noc.amount,
+                timestamp,
+            });
+        }
     }
 
     Ok(V2PrismRecordResponse::Ok(Json(V2PrismRecordResult {
@@ -344,6 +367,33 @@ pub async fn get_prism_received(
 //     })))
 // }
 
+#[derive(Serialize, Deserialize, Debug, Default, Clone, Object)]
+pub struct ConvertAccountReceiver {
+    #[serde(rename = "Ethereum")]
+    pub ethereum: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, Clone, Object)]
+pub struct ConvertAccount {
+    pub nonce: Value,
+    pub receiver: ConvertAccountReceiver,
+    pub signer: String,
+    pub value: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, Clone, Object)]
+pub struct NonConfidentialTransferOutput {
+    pub amount: u64,
+    pub asset: Value,
+    pub target: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, Clone, Object)]
+pub struct NonConfidentialTransfer {
+    pub input_value: u64,
+    pub outputs: Vec<NonConfidentialTransferOutput>,
+}
+
 pub async fn get_prism_records_send_to(
     api: &Api,
     address: Query<String>,
@@ -372,7 +422,7 @@ pub async fn get_prism_records_send_to(
             let pk = pk_result.unwrap();
             let base64_addr = public_key_to_base64(&pk);
             let sql_to_count = format!("SELECT count(*) AS cnt FROM transaction WHERE value @? '$.body.operations[*].ConvertAccount.signer ? (@==\"{base64_addr}\")'");
-            let sql_to = format!("SELECT tx_hash, timestamp, jsonb_path_query(value,'$.body.operations[*].ConvertAccount.receiver.Ethereum') AS to, jsonb_path_query(value, '$.body.operations[*].ConvertAccount.value') AS amount FROM transaction WHERE value @? '$.body.operations[*].ConvertAccount.signer ? (@==\"{}\")' ORDER BY timestamp DESC LIMIT {} OFFSET {}", base64_addr, page_size, (page-1)*page_size);
+            let sql_to = format!("SELECT tx_hash, timestamp, jsonb_path_query(value,'$.body.operations[*].ConvertAccount') AS ca FROM transaction WHERE value @? '$.body.operations[*].ConvertAccount.signer ? (@==\"{}\")' ORDER BY timestamp DESC LIMIT {} OFFSET {}", base64_addr, page_size, (page-1)*page_size);
             let row_to_count = sqlx::query(sql_to_count.as_str())
                 .fetch_one(&mut conn)
                 .await?;
@@ -382,23 +432,22 @@ pub async fn get_prism_records_send_to(
             for row in rows_send_to {
                 let timestamp: i64 = row.try_get("timestamp")?;
                 let tx_hash: String = row.try_get("tx_hash")?;
-                let to_val: Value = row.try_get("to")?;
-                let amount_val: Value = row.try_get("amount")?;
-
-                let amount_str: String = serde_json::from_value(amount_val).unwrap();
-                let amount: u64 = amount_str.parse::<u64>().unwrap();
-                let to: String = serde_json::from_value(to_val).unwrap();
+                let ca_val: Value = row.try_get("ca")?;
+                let ca_bin = serde_json::to_vec(&ca_val).unwrap();
+                let convert_account: ConvertAccount = serde_json::from_value(ca_val).unwrap();
+                let amount: u64 = convert_account.value.parse::<u64>()?;
 
                 send_to.push(PrismItem {
+                    data: base64::encode(&ca_bin),
                     tx_hash,
-                    address: to,
+                    address: convert_account.receiver.ethereum,
                     amount,
                     timestamp,
                 })
             }
         }
         _ => {
-            let sql_to = "SELECT tx_hash, timestamp, jsonb_path_query(value, '$.function.XHub.NonConfidentialTransfer.outputs[*].amount') AS amount, jsonb_path_query(value, '$.signature[0]') AS sig FROM transaction WHERE value @? '$.function.XHub.NonConfidentialTransfer.outputs[*].amount ? (@ > 0)' ORDER BY timestamp DESC";
+            let sql_to = "SELECT tx_hash, timestamp, jsonb_path_query(value, '$.function.XHub.NonConfidentialTransfer') AS nct, jsonb_path_query(value, '$.signature[0]') AS sig FROM transaction WHERE value @? '$.function.XHub.NonConfidentialTransfer.outputs[*].amount ? (@ > 0)' ORDER BY timestamp DESC";
             let mut send_to_tmp: Vec<PrismItem> = vec![];
             let rows_send_to = sqlx::query(sql_to).fetch_all(&mut conn).await?;
             for row in rows_send_to {
@@ -413,13 +462,16 @@ pub async fn get_prism_records_send_to(
                 let address: String = format!("{:?}", H160::from_slice(&pk[4..24]));
                 let timestamp: i64 = row.try_get("timestamp")?;
                 let tx_hash: String = row.try_get("tx_hash")?;
-                let amount_val: Value = row.try_get("amount")?;
-                let amount: u64 = serde_json::from_value(amount_val).unwrap();
+
+                let nct_val = row.try_get("nct")?;
+                let nct: NonConfidentialTransfer = serde_json::from_value(nct_val).unwrap();
+                let nct_bin = serde_json::to_vec(&nct)?;
 
                 send_to_tmp.push(PrismItem {
+                    data: base64::encode(&nct_bin),
                     tx_hash,
                     address,
-                    amount,
+                    amount: nct.outputs[0].amount,
                     timestamp,
                 })
             }
@@ -453,128 +505,128 @@ pub async fn get_prism_records_send_to(
     })))
 }
 
-pub async fn get_prism_records(api: &Api, address: Path<String>) -> Result<PrismRecordResponse> {
-    let mut conn = api.storage.lock().await.acquire().await?;
-    let addr_bytes = address.0.as_bytes();
-
-    let mut receive_from: Vec<PrismItem> = vec![];
-    let mut send_to: Vec<PrismItem> = vec![];
-
-    match "fra".as_bytes().eq(&addr_bytes[..3]) {
-        true => {
-            // native: fra...
-            let pk_result = public_key_from_bech32(address.0.as_str());
-            if pk_result.is_err() {
-                return Ok(PrismRecordResponse::BadRequest(Json(PrismRecordResult {
-                    code: 400,
-                    message: "invalid fra address".to_string(),
-                    data: None,
-                })));
-            }
-            let pk = pk_result.unwrap();
-            let base64_addr = public_key_to_base64(&pk);
-
-            let to_sql = format!("SELECT tx_hash, timestamp, jsonb_path_query(value,'$.body.operations[*].ConvertAccount.receiver.Ethereum') AS to, jsonb_path_query(value, '$.body.operations[*].ConvertAccount.value') AS amount FROM transaction WHERE value @? '$.body.operations[*].ConvertAccount.signer ? (@==\"{base64_addr}\")' ORDER BY timestamp DESC");
-            let from_sql = format!("SELECT tx_hash, timestamp, jsonb_path_query(value, '$.function.XHub.NonConfidentialTransfer.outputs[*].amount') AS amount, jsonb_path_query(value, '$.signature[0]') as pk FROM transaction WHERE value @? '$.function.XHub.NonConfidentialTransfer.outputs[*].target ? (@==\"{base64_addr}\")' ORDER BY timestamp DESC");
-
-            let from_acc_result = sqlx::query(from_sql.as_str()).fetch_all(&mut conn).await?;
-            for row in from_acc_result {
-                let timestamp: i64 = row.try_get("timestamp")?;
-                let tx_hash: String = row.try_get("tx_hash")?;
-                let amount_val: Value = row.try_get("amount")?;
-                let pk_val: Value = row.try_get("pk")?;
-
-                let amount: u64 = serde_json::from_value(amount_val).unwrap();
-                let pk: [u8; 32] = serde_json::from_value(pk_val).unwrap();
-                let from: String = format!("{:?}", H160::from_slice(&pk[4..24]));
-
-                receive_from.push(PrismItem {
-                    tx_hash,
-                    address: from,
-                    amount,
-                    timestamp,
-                });
-            }
-
-            let to_acc_result = sqlx::query(to_sql.as_str()).fetch_all(&mut conn).await?;
-            for row in to_acc_result {
-                let timestamp: i64 = row.try_get("timestamp")?;
-                let tx_hash: String = row.try_get("tx_hash")?;
-                let to_val: Value = row.try_get("to")?;
-                let amount_val: Value = row.try_get("amount")?;
-
-                let amount_str: String = serde_json::from_value(amount_val).unwrap();
-                let amount: u64 = amount_str.parse::<u64>().unwrap();
-                let to: String = serde_json::from_value(to_val).unwrap();
-
-                send_to.push(PrismItem {
-                    tx_hash,
-                    address: to,
-                    amount,
-                    timestamp,
-                })
-            }
-        }
-        _ => {
-            // evm: 0x...
-            let from_sql = format!("SELECT tx_hash, timestamp, jsonb_path_query(value, '$.body.operations[*].ConvertAccount.value') AS amount, jsonb_path_query(value, '$.body.operations[*].ConvertAccount.signer') AS signer FROM transaction WHERE value @? '$.body.operations[*].ConvertAccount.receiver.Ethereum ? (@==\"{}\")' ORDER BY timestamp DESC", address.0);
-            let to_sql = "SELECT tx_hash, timestamp, jsonb_path_query(value, '$.function.XHub.NonConfidentialTransfer.outputs[*].amount') AS amount, jsonb_path_query(value, '$.signature[0]') AS sig FROM transaction WHERE value @? '$.function.XHub.NonConfidentialTransfer.outputs[*].amount ? (@ > 0)' ORDER BY timestamp DESC";
-
-            let from_acc_result = sqlx::query(from_sql.as_str()).fetch_all(&mut conn).await?;
-            for row in from_acc_result {
-                let timestamp: i64 = row.try_get("timestamp")?;
-                let tx_hash: String = row.try_get("tx_hash")?;
-                let amount_val: Value = row.try_get("amount")?;
-                let signer_val: Value = row.try_get("signer")?;
-
-                let amount_str: String = serde_json::from_value(amount_val).unwrap();
-                let amount: u64 = amount_str.parse::<u64>().unwrap();
-                let signer: String = serde_json::from_value(signer_val).unwrap();
-                let pk = public_key_from_base64(&signer).unwrap();
-
-                receive_from.push(PrismItem {
-                    tx_hash,
-                    address: public_key_to_bech32(&pk),
-                    amount,
-                    timestamp,
-                });
-            }
-
-            let to_acc_result = sqlx::query(to_sql).fetch_all(&mut conn).await?;
-            for row in to_acc_result {
-                let sig_val: Value = row.try_get("sig")?;
-                let pk: [u8; 32] = serde_json::from_value(sig_val).unwrap();
-
-                let signer = format!("{:?}", H160::from_slice(&pk[4..24]));
-                if !signer.eq(&address.0) {
-                    continue;
-                }
-
-                let address: String = format!("{:?}", H160::from_slice(&pk[4..24]));
-                let timestamp: i64 = row.try_get("timestamp")?;
-                let tx_hash: String = row.try_get("tx_hash")?;
-                let amount_val: Value = row.try_get("amount")?;
-                let amount: u64 = serde_json::from_value(amount_val).unwrap();
-
-                send_to.push(PrismItem {
-                    tx_hash,
-                    address,
-                    amount,
-                    timestamp,
-                })
-            }
-        }
-    };
-
-    Ok(PrismRecordResponse::Ok(Json(PrismRecordResult {
-        code: 200,
-        message: "".to_string(),
-        data: Some(PrismRecord {
-            receive_from,
-            send_to,
-        }),
-    })))
-}
+// pub async fn get_prism_records(api: &Api, address: Path<String>) -> Result<PrismRecordResponse> {
+//     let mut conn = api.storage.lock().await.acquire().await?;
+//     let addr_bytes = address.0.as_bytes();
+//
+//     let mut receive_from: Vec<PrismItem> = vec![];
+//     let mut send_to: Vec<PrismItem> = vec![];
+//
+//     match "fra".as_bytes().eq(&addr_bytes[..3]) {
+//         true => {
+//             // native: fra...
+//             let pk_result = public_key_from_bech32(address.0.as_str());
+//             if pk_result.is_err() {
+//                 return Ok(PrismRecordResponse::BadRequest(Json(PrismRecordResult {
+//                     code: 400,
+//                     message: "invalid fra address".to_string(),
+//                     data: None,
+//                 })));
+//             }
+//             let pk = pk_result.unwrap();
+//             let base64_addr = public_key_to_base64(&pk);
+//
+//             let to_sql = format!("SELECT tx_hash, timestamp, jsonb_path_query(value,'$.body.operations[*].ConvertAccount.receiver.Ethereum') AS to, jsonb_path_query(value, '$.body.operations[*].ConvertAccount.value') AS amount FROM transaction WHERE value @? '$.body.operations[*].ConvertAccount.signer ? (@==\"{base64_addr}\")' ORDER BY timestamp DESC");
+//             let from_sql = format!("SELECT tx_hash, timestamp, jsonb_path_query(value, '$.function.XHub.NonConfidentialTransfer.outputs[*].amount') AS amount, jsonb_path_query(value, '$.signature[0]') as pk FROM transaction WHERE value @? '$.function.XHub.NonConfidentialTransfer.outputs[*].target ? (@==\"{base64_addr}\")' ORDER BY timestamp DESC");
+//
+//             let from_acc_result = sqlx::query(from_sql.as_str()).fetch_all(&mut conn).await?;
+//             for row in from_acc_result {
+//                 let timestamp: i64 = row.try_get("timestamp")?;
+//                 let tx_hash: String = row.try_get("tx_hash")?;
+//                 let amount_val: Value = row.try_get("amount")?;
+//                 let pk_val: Value = row.try_get("pk")?;
+//
+//                 let amount: u64 = serde_json::from_value(amount_val).unwrap();
+//                 let pk: [u8; 32] = serde_json::from_value(pk_val).unwrap();
+//                 let from: String = format!("{:?}", H160::from_slice(&pk[4..24]));
+//
+//                 receive_from.push(PrismItem {
+//                     tx_hash,
+//                     address: from,
+//                     amount,
+//                     timestamp,
+//                 });
+//             }
+//
+//             let to_acc_result = sqlx::query(to_sql.as_str()).fetch_all(&mut conn).await?;
+//             for row in to_acc_result {
+//                 let timestamp: i64 = row.try_get("timestamp")?;
+//                 let tx_hash: String = row.try_get("tx_hash")?;
+//                 let to_val: Value = row.try_get("to")?;
+//                 let amount_val: Value = row.try_get("amount")?;
+//
+//                 let amount_str: String = serde_json::from_value(amount_val).unwrap();
+//                 let amount: u64 = amount_str.parse::<u64>().unwrap();
+//                 let to: String = serde_json::from_value(to_val).unwrap();
+//
+//                 send_to.push(PrismItem {
+//                     tx_hash,
+//                     address: to,
+//                     amount,
+//                     timestamp,
+//                 })
+//             }
+//         }
+//         _ => {
+//             // evm: 0x...
+//             let from_sql = format!("SELECT tx_hash, timestamp, jsonb_path_query(value, '$.body.operations[*].ConvertAccount.value') AS amount, jsonb_path_query(value, '$.body.operations[*].ConvertAccount.signer') AS signer FROM transaction WHERE value @? '$.body.operations[*].ConvertAccount.receiver.Ethereum ? (@==\"{}\")' ORDER BY timestamp DESC", address.0);
+//             let to_sql = "SELECT tx_hash, timestamp, jsonb_path_query(value, '$.function.XHub.NonConfidentialTransfer.outputs[*].amount') AS amount, jsonb_path_query(value, '$.signature[0]') AS sig FROM transaction WHERE value @? '$.function.XHub.NonConfidentialTransfer.outputs[*].amount ? (@ > 0)' ORDER BY timestamp DESC";
+//
+//             let from_acc_result = sqlx::query(from_sql.as_str()).fetch_all(&mut conn).await?;
+//             for row in from_acc_result {
+//                 let timestamp: i64 = row.try_get("timestamp")?;
+//                 let tx_hash: String = row.try_get("tx_hash")?;
+//                 let amount_val: Value = row.try_get("amount")?;
+//                 let signer_val: Value = row.try_get("signer")?;
+//
+//                 let amount_str: String = serde_json::from_value(amount_val).unwrap();
+//                 let amount: u64 = amount_str.parse::<u64>().unwrap();
+//                 let signer: String = serde_json::from_value(signer_val).unwrap();
+//                 let pk = public_key_from_base64(&signer).unwrap();
+//
+//                 receive_from.push(PrismItem {
+//                     tx_hash,
+//                     address: public_key_to_bech32(&pk),
+//                     amount,
+//                     timestamp,
+//                 });
+//             }
+//
+//             let to_acc_result = sqlx::query(to_sql).fetch_all(&mut conn).await?;
+//             for row in to_acc_result {
+//                 let sig_val: Value = row.try_get("sig")?;
+//                 let pk: [u8; 32] = serde_json::from_value(sig_val).unwrap();
+//
+//                 let signer = format!("{:?}", H160::from_slice(&pk[4..24]));
+//                 if !signer.eq(&address.0) {
+//                     continue;
+//                 }
+//
+//                 let address: String = format!("{:?}", H160::from_slice(&pk[4..24]));
+//                 let timestamp: i64 = row.try_get("timestamp")?;
+//                 let tx_hash: String = row.try_get("tx_hash")?;
+//                 let amount_val: Value = row.try_get("amount")?;
+//                 let amount: u64 = serde_json::from_value(amount_val).unwrap();
+//
+//                 send_to.push(PrismItem {
+//                     tx_hash,
+//                     address,
+//                     amount,
+//                     timestamp,
+//                 })
+//             }
+//         }
+//     };
+//
+//     Ok(PrismRecordResponse::Ok(Json(PrismRecordResult {
+//         code: 200,
+//         message: "".to_string(),
+//         data: Some(PrismRecord {
+//             receive_from,
+//             send_to,
+//         }),
+//     })))
+// }
 
 pub async fn get_evm_tx(api: &Api, tx_hash: Path<String>) -> Result<TxResponse> {
     let mut conn = api.storage.lock().await.acquire().await?;
