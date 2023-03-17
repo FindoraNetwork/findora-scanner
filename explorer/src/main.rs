@@ -4,7 +4,9 @@ mod utils;
 use crate::service::address::AddressResponse;
 use crate::service::asset::AssetResponse;
 use crate::service::block::{BlocksResponse, FullBlockResponse, SimpleBlockResponse};
-use crate::service::chain::{AddressCountResponse, ChainStatisticsResponse, DistributeResponse};
+use crate::service::chain::{
+    AddressCountResponse, ChainStatisticsResponse, DistributeResponse, PrismSyncResponse,
+};
 use crate::service::price::{MarketChartResponse, SimplePriceResponse};
 use crate::service::staking::{
     ClaimResponse, DelegationAmountResponse, DelegationInfoResponse, DelegationResponse,
@@ -735,6 +737,17 @@ impl Api {
         end: Query<Option<i64>>,
     ) -> poem::Result<UndelegationAmountResponse> {
         service::staking::get_undelegation_amount(self, pubkey, start, end)
+            .await
+            .map_err(handle_fetch_one_err)
+    }
+
+    #[oai(
+        path = "/chain/prism/sync",
+        method = "get",
+        tag = "ApiTags::BlockChain"
+    )]
+    async fn prism_sync_info(&self) -> poem::Result<PrismSyncResponse> {
+        service::chain::prism_sync_info(self)
             .await
             .map_err(handle_fetch_one_err)
     }

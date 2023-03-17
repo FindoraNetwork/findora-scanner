@@ -238,3 +238,44 @@ pub async fn statistics(api: &Api, ty: Query<Option<i32>>) -> Result<ChainStatis
         data: Some(res_data),
     })))
 }
+
+#[derive(ApiResponse)]
+pub enum PrismSyncResponse {
+    #[oai(status = 200)]
+    Ok(Json<PrismResult>),
+}
+
+#[derive(Serialize, Deserialize, Default, Debug, Object)]
+pub struct PrismResult {
+    pub code: i32,
+    pub message: String,
+    pub data: PrismInfo,
+}
+
+#[derive(Serialize, Deserialize, Default, Debug, Object)]
+pub struct PrismInfo {
+    pub block: String,
+    pub height: i64,
+    pub timestamp: i64,
+}
+
+pub async fn prism_sync_info(api: &Api) -> Result<PrismSyncResponse> {
+    let mut conn = api.storage.lock().await.acquire().await?;
+
+    let sql_query =
+        "SELECT block_hash,height,timestamp FROM result order by timestamp desc limit 1"
+            .to_string();
+    let row = sqlx::query(sql_query.as_str()).fetch_one(&mut conn).await?;
+
+    let prism_info = PrismInfo {
+        block: row.try_get("block_hash")?,
+        height: row.try_get("height")?,
+        timestamp: row.try_get("timestamp")?,
+    };
+
+    Ok(PrismSyncResponse::Ok(Json(PrismResult {
+        code: 200,
+        message: "".to_string(),
+        data: prism_info,
+    })))
+}
