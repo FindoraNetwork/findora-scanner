@@ -909,9 +909,10 @@ pub async fn get_txs(
             })));
         }
         let pk = pk.unwrap();
+        let base64_pk = public_key_to_base64(&pk);
         params.push(format!(
-            "(value @? '$.body.operations[*].TransferAsset.body.transfer.inputs[*].public_key ? (@==\"{}\")') ",
-            public_key_to_base64(&pk)));
+            "(value @? '$.body.operations[*].TransferAsset.body.transfer.inputs[*].public_key ? (@==\"{}\")') OR (value @? '$.body.operations[*].ConvertAccount.signer ? (@==\"{}\")')",
+            base64_pk, base64_pk));
     }
     if let Some(to_address) = to.0 {
         let pk = public_key_from_bech32(to_address.as_str());
