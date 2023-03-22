@@ -148,10 +148,12 @@ pub struct Transaction {
 pub struct TxResult {
     pub tx_hash: String,
     pub block_hash: String,
+    pub sender: String,
+    pub receiver: String,
+    pub asset: String,
+    pub amount: String,
     pub height: i64,
     pub timestamp: i64,
-    pub ty: i32,
-    pub code: i64,
     pub value: Value,
 }
 

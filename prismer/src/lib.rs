@@ -7,6 +7,7 @@ pub mod error;
 pub mod prismer;
 pub mod rpc;
 pub mod tx;
+pub mod utils;
 
 pub use error::{Error, Result};
 
