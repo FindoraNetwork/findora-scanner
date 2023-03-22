@@ -1,22 +1,29 @@
-use std::time::Duration;
-
+use crate::utils::bech32_encode;
+use crate::{db, tx};
 use crate::{Error, Result};
 use chrono::NaiveDateTime;
-use serde::de::DeserializeOwned;
-use serde::{Deserialize, Serialize};
-use sha2::Digest;
-use sqlx::PgPool;
-
+use ethabi::{Event as EthEvent, EventParam, Hash, ParamType, RawLog};
+use ethereum::LegacyTransaction;
 use module::rpc::{
     block::BlockRPC as ModuleBlockRPC, tx::Transaction as ModuleTx, JsonRpcResponse, TdRpcResult,
 };
-
-use crate::{db, tx};
-
 use module::schema::{DelegationInfo, TxResult};
-
+use module::utils::crypto::recover_signer;
 use reqwest::{Client, ClientBuilder, Url};
+use rlp::{Encodable, RlpStream};
+use serde::de::DeserializeOwned;
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use sha2::Digest;
+use sqlx::PgPool;
+use std::str::FromStr;
+use std::string::ToString;
+use std::time::Duration;
+
+const DEPOSIT_ASSET: &str = "DepositAsset";
+// DepositAsset(bytes32,bytes,uint256,uint8,uint256);
+const DEPOSIT_ASSET_EVENT_HASH: &str =
+    "0xaae31ca36c1ef3c9daa9d5efff8c47306109c0f7cf997e61d766ba15d27e071e";
 
 pub struct TendermintRPC {
     pub rpc: Url,
@@ -98,9 +105,54 @@ pub struct RPCCaller {
 }
 
 #[derive(Serialize, Deserialize)]
+pub struct TxCallLog {
+    pub data: Vec<u8>,
+    pub topics: Vec<String>,
+    pub address: String,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct TxCall {
+    pub logs: Vec<TxCallLog>,
+    pub value: Value,
+    pub used_gas: String,
+    pub exit_reason: Value,
+}
+
+#[derive(Serialize, Deserialize)]
 pub struct TxResultData {
     #[serde(rename = "Call")]
-    pub call: Option<Value>,
+    pub call: Option<TxCall>,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct Ethereum {
+    #[serde(rename = "Ethereum")]
+    pub ethereum: Transact,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct Transact {
+    #[serde(rename = "Transact")]
+    pub transact: LegacyTransaction,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct EvmTx {
+    pub function: Ethereum,
+}
+
+impl Encodable for EvmTx {
+    fn rlp_append(&self, s: &mut RlpStream) {
+        self.function.ethereum.transact.rlp_append(s)
+    }
+}
+
+impl EvmTx {
+    pub fn recover_signer(&self) -> Result<String> {
+        let signer = recover_signer(&self.function.ethereum.transact).unwrap();
+        Ok(format!("{:?}", signer))
+    }
 }
 
 impl RPCCaller {
@@ -139,34 +191,95 @@ impl RPCCaller {
                 let bin_data = base64::decode(s)?;
                 let result_data: TxResultData = serde_json::from_slice(&bin_data)?;
                 let result: Value = serde_json::to_value(&result_data)?;
-                match tx::try_tx_catalog(&bytes) {
-                    tx::TxCatalog::EvmTx => {
-                        res.push(TxResult {
-                            tx_hash: txid,
-                            block_hash: block_hash.clone(),
-                            height,
-                            timestamp: timestamp.timestamp(),
-                            code: tx.tx_result.code,
-                            ty: 1,
-                            value: result,
-                        });
+                if let tx::TxCatalog::EvmTx = tx::try_tx_catalog(&bytes) {
+                    if let Some(call) = result_data.call {
+                        let tx_value: Value = serde_json::from_slice(tx::unwrap(&bytes)?)?;
+                        for log in call.logs {
+                            for topic in log.topics {
+                                if topic.eq(DEPOSIT_ASSET_EVENT_HASH) {
+                                    let evm_tx: EvmTx =
+                                        serde_json::from_value(tx_value.clone()).unwrap();
+                                    let signer = evm_tx.recover_signer().unwrap();
+
+                                    let params: Vec<EventParam> = vec![
+                                        EventParam {
+                                            name: "asset".to_string(),
+                                            kind: ParamType::FixedBytes(32),
+                                            indexed: false,
+                                        },
+                                        EventParam {
+                                            name: "receiver".to_string(),
+                                            kind: ParamType::Bytes,
+                                            indexed: false,
+                                        },
+                                        EventParam {
+                                            name: "amount".to_string(),
+                                            kind: ParamType::Uint(256),
+                                            indexed: false,
+                                        },
+                                        EventParam {
+                                            name: "decimal".to_string(),
+                                            kind: ParamType::Uint(8),
+                                            indexed: false,
+                                        },
+                                        EventParam {
+                                            name: "max_supply".to_string(),
+                                            kind: ParamType::Uint(256),
+                                            indexed: false,
+                                        },
+                                    ];
+
+                                    let e = EthEvent {
+                                        name: DEPOSIT_ASSET.to_string(),
+                                        inputs: params,
+                                        anonymous: false,
+                                    };
+
+                                    let h = Hash::from_str(DEPOSIT_ASSET_EVENT_HASH).unwrap();
+                                    let raw_log = RawLog {
+                                        topics: vec![h],
+                                        data: log.data.clone(),
+                                    };
+                                    let log_res = e.parse_log(raw_log).unwrap();
+                                    // asset code
+                                    let asset_bytes =
+                                        log_res.params[0].value.clone().into_fixed_bytes().unwrap();
+                                    let asset =
+                                        base64::encode_config(&asset_bytes, base64::URL_SAFE);
+
+                                    // receiver address
+                                    let receiver_bytes =
+                                        log_res.params[1].value.clone().into_bytes().unwrap();
+                                    let receiver = bech32_encode(&receiver_bytes);
+
+                                    // amount
+                                    let amount = log_res.params[2]
+                                        .value
+                                        .clone()
+                                        .into_uint()
+                                        .unwrap()
+                                        .as_u128();
+
+                                    res.push(TxResult {
+                                        tx_hash: txid.clone(),
+                                        block_hash: block_hash.clone(),
+                                        sender: signer,
+                                        receiver,
+                                        asset,
+                                        amount: amount.to_string(),
+                                        height,
+                                        timestamp: timestamp.timestamp(),
+                                        value: result.clone(),
+                                    });
+
+                                    break;
+                                }
+                            }
+                        }
                     }
-                    tx::TxCatalog::FindoraTx => {
-                        res.push(TxResult {
-                            tx_hash: txid,
-                            block_hash: block_hash.clone(),
-                            height,
-                            timestamp: timestamp.timestamp(),
-                            code: tx.tx_result.code,
-                            ty: 0,
-                            value: result,
-                        });
-                    }
-                    tx::TxCatalog::Unknown => {}
                 }
             }
         }
-
         Ok(res)
     }
 

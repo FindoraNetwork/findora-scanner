@@ -24,16 +24,21 @@ CREATE TABLE transaction (
      PRIMARY KEY(tx_hash)
 );
 
-CREATE TABLE result (
-     tx_hash VARCHAR(255) NOT NULL,
-     block_hash VARCHAR(255) NOT NULL,
-     height BIGINT NOT NULL,
-     timestamp BIGINT NOT NULL,
-     code BIGINT NOT NULL,
-     ty INT NOT NULL,
-     value JSONB NOT NULL,
-     PRIMARY KEY(tx_hash)
+CREATE TABLE e2n (
+    tx_hash VARCHAR(255) NOT NULL,
+    block_hash VARCHAR(255) NOT NULL,
+    sender VARCHAR(255) NOT NULL,
+    receiver VARCHAR(255) NOT NULL,
+    asset VARCHAR(255) NOT NULL,
+    amount VARCHAR(255) NOT NULL,
+    height BIGINT NOT NULL,
+    timestamp BIGINT NOT NULL,
+    value JSONB NOT NULL,
+    Primary Key (tx_hash)
 );
+
+CREATE INDEX e2n_sender_index ON e2n (sender);
+CREATE INDEX e2n_receiver_index ON e2n (receiver);
 
 CREATE TABLE validators (
     address VARCHAR(255) NOT NULL,
@@ -58,7 +63,7 @@ CREATE TABLE last_height (
     PRIMARY KEY(tip)
 );
 
-CREATE TABLE result_last_height (
+CREATE TABLE e2n_last_height (
     tip VARCHAR(255) NOT NULL,
     height BIGINT NOT NULL,
     PRIMARY KEY(tip)

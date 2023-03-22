@@ -254,23 +254,17 @@ pub struct PrismResult {
 
 #[derive(Serialize, Deserialize, Default, Debug, Object)]
 pub struct PrismInfo {
-    pub block: String,
     pub height: i64,
-    pub timestamp: i64,
 }
 
 pub async fn prism_sync_info(api: &Api) -> Result<PrismSyncResponse> {
     let mut conn = api.storage.lock().await.acquire().await?;
 
-    let sql_query =
-        "SELECT block_hash,height,timestamp FROM result order by timestamp desc limit 1"
-            .to_string();
+    let sql_query = "SELECT height FROM e2n_last_height".to_string();
     let row = sqlx::query(sql_query.as_str()).fetch_one(&mut conn).await?;
 
     let prism_info = PrismInfo {
-        block: row.try_get("block_hash")?,
         height: row.try_get("height")?,
-        timestamp: row.try_get("timestamp")?,
     };
 
     Ok(PrismSyncResponse::Ok(Json(PrismResult {

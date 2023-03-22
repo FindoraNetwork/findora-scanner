@@ -13,9 +13,7 @@ use crate::service::staking::{
     SimpleDelegationResponse, UnDelegationResponse, UndelegationAmountResponse,
     UndelegationResponse,
 };
-use crate::service::tx::{
-    ClaimAmountResponse, PrismRecordResponseNew, TxResponse, TxsResponse, V2PrismRecordResponse,
-};
+use crate::service::tx::{ClaimAmountResponse, TxResponse, TxsResponse, V2PrismRecordResponse};
 use crate::service::validator::{
     CirculatingSupplyResponse, DelegatorListResponse, ValidatorDelegationResponse,
     ValidatorDetailResponse, ValidatorHistoryResponse, ValidatorListResponse,
@@ -499,48 +497,14 @@ impl Api {
             .map_err(handle_fetch_one_err)
     }
 
-    // #[oai(
-    //     path = "/tx/prism/records/:address",
-    //     method = "get",
-    //     tag = "ApiTags::Transaction"
-    // )]
-    // async fn get_prism_records(
-    //     &self,
-    //     /// bech32 address or RIMP160 address.
-    //     address: Path<String>,
-    // ) -> poem::Result<PrismRecordResponse> {
-    //     service::tx::get_prism_records(self, address)
-    //         .await
-    //         .map_err(handle_fetch_one_err)
-    // }
-
-    // #[oai(
-    //     path = "/tx/prism/records/receive",
-    //     method = "get",
-    //     tag = "ApiTags::Transaction"
-    // )]
-    // async fn get_prism_records_receive(
-    //     &self,
-    //     /// bech32 address or RIMP160 address.
-    //     address: Query<String>,
-    //     /// page index, the default is 1.
-    //     page: Query<Option<i64>>,
-    //     /// page size, the default is 10.
-    //     page_size: Query<Option<i64>>,
-    // ) -> poem::Result<PrismRecordResponseNew> {
-    //     service::tx::get_prism_records_receive_from(self, address, page, page_size)
-    //         .await
-    //         .map_err(handle_fetch_one_err)
-    // }
-
     #[oai(
         path = "/tx/prism/records/receive",
         method = "get",
         tag = "ApiTags::Transaction"
     )]
-    async fn get_prism_records_receive_v2(
+    async fn get_prism_records_receive(
         &self,
-        /// bech32 address, e.g. fra1rkvlrs8j8y7rlud9qh6ndg5nr4ag7ar4640dr8h0ys6zfrwv25as42zptu
+        /// query evm to native txs received at the address, e.g. fra1rkvlrs8j8y7rlud9qh6ndg5nr4ag7ar4640dr8h0ys6zfrwv25as42zptu.
         address: Query<String>,
         /// page index, the default is 1.
         page: Query<Option<i64>>,
@@ -559,14 +523,14 @@ impl Api {
     )]
     async fn get_prism_records_send(
         &self,
-        /// bech32 address or RIMP160 addrss, e.g. fra18fnyetvs2kc035xz78kyfcygmej8pk5h2kwczy03w6uewdphzfxsk74dym or 0x6f6050950cfa13f612388cd793242458acca4aa7
+        /// query evm to native txs sent from the address, e.g. 0x6f6050950cfa13f612388cd793242458acca4aa7.
         address: Query<String>,
         /// page index, the default is 1.
         page: Query<Option<i64>>,
         /// page size, the default is 10.
         page_size: Query<Option<i64>>,
-    ) -> poem::Result<PrismRecordResponseNew> {
-        service::tx::get_prism_records_send_to(self, address, page, page_size)
+    ) -> poem::Result<V2PrismRecordResponse> {
+        service::tx::get_prism_records_send(self, address, page, page_size)
             .await
             .map_err(handle_fetch_one_err)
     }
