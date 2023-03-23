@@ -523,7 +523,7 @@ impl Api {
     )]
     async fn get_prism_records_send(
         &self,
-        /// query evm to native txs sent from the address, e.g. 0x6f6050950cfa13f612388cd793242458acca4aa7.
+        /// query native to evm txs sent from the address, e.g. fra18fnyetvs2kc035xz78kyfcygmej8pk5h2kwczy03w6uewdphzfxsk74dym.
         address: Query<String>,
         /// page index, the default is 1.
         page: Query<Option<i64>>,
