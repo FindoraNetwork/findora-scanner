@@ -290,41 +290,54 @@ pub async fn get_prism_records_send(
     let page_size = page_size.0.unwrap_or(10);
     let mut items: Vec<V2PrismItem> = vec![];
 
+    let pk = public_key_from_bech32(address.as_str());
+    if pk.is_err() {
+        return Ok(V2PrismRecordResponse::BadRequest(Json(
+            V2PrismRecordResult {
+                code: 400,
+                message: "invalid bech32 address".to_string(),
+                data: None,
+            },
+        )));
+    }
+
+    let pk = pk.unwrap();
+    let base64_addr = public_key_to_base64(&pk);
+
     let sql_counts = format!(
-        "SELECT count(*) AS cnt FROM e2n WHERE sender=\'{}\'",
-        address.0
-    );
+        "SELECT count(*) AS cnt FROM transaction WHERE value @? '$.body.operations[*].ConvertAccount.signer ? (@==\"{}\")'", base64_addr);
     let row_counts = sqlx::query(sql_counts.as_str())
         .fetch_one(&mut conn)
         .await?;
     let total: i64 = row_counts.try_get("cnt")?;
 
-    let sql_query = format!("SELECT tx_hash,block_hash,sender,receiver,asset,amount,height,timestamp,value FROM e2n WHERE sender=\'{}\' ORDER BY timestamp DESC LIMIT {} OFFSET {}", address.0, page_size, (page-1)*page_size);
+    let sql_query = format!("SELECT tx_hash,block_hash,height,timestamp,jsonb_path_query(value,'$.body.operations[*].ConvertAccount') AS ca FROM transaction WHERE value @? '$.body.operations[*].ConvertAccount.signer ? (@==\"{}\")' ORDER BY timestamp DESC LIMIT {} OFFSET {}", base64_addr, page_size, (page-1)*page_size);
+
     let rows = sqlx::query(sql_query.as_str()).fetch_all(&mut conn).await?;
     for row in rows {
         let tx_hash: String = row.try_get("tx_hash")?;
         let block_hash: String = row.try_get("block_hash")?;
-        let sender: String = row.try_get("sender")?;
-        let receiver: String = row.try_get("receiver")?;
-        let asset: String = row.try_get("asset")?;
-        let amount: String = row.try_get("amount")?;
         let height: i64 = row.try_get("height")?;
         let timestamp: i64 = row.try_get("timestamp")?;
+        let asset = "".to_string();
 
-        let result_val: Value = row.try_get("value")?;
-        let call_data: CallData = serde_json::from_value(result_val.clone())?;
-        let result_bin = serde_json::to_vec(&call_data)?;
+        let ca_val: Value = row.try_get("ca")?;
+        let ca: ConvertAccount = serde_json::from_value(ca_val)?;
+        let ca_bin = serde_json::to_vec(&ca)?;
+
+        let receiver: String = ca.receiver.ethereum;
+        let amount: String = ca.value;
 
         items.push(V2PrismItem {
             block_hash,
             tx_hash,
-            from: sender,
+            from: address.0.clone(),
             to: receiver,
             asset,
             amount,
             height,
             timestamp,
-            data: base64::encode(&result_bin),
+            data: base64::encode(&ca_bin),
         });
     }
 
@@ -623,8 +636,7 @@ pub async fn get_txs(
         let pk = pk.unwrap();
         let base64_pk = public_key_to_base64(&pk);
         params.push(format!(
-            "(value @? '$.body.operations[*].TransferAsset.body.transfer.inputs[*].public_key ? (@==\"{}\")') OR (value @? '$.body.operations[*].ConvertAccount.signer ? (@==\"{}\")')",
-            base64_pk, base64_pk));
+            "(value @? '$.body.operations[*].TransferAsset.body.transfer.inputs[*].public_key ? (@==\"{}\")') ", base64_pk));
     }
     if let Some(to_address) = to.0 {
         let pk = public_key_from_bech32(to_address.as_str());
