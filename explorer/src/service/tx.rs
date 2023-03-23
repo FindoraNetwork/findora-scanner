@@ -261,6 +261,7 @@ pub struct ConvertAccountReceiver {
 #[derive(Serialize, Deserialize, Debug, Default, Clone, Object)]
 pub struct ConvertAccount {
     pub nonce: Value,
+    pub asset_type: Option<Vec<u8>>,
     pub receiver: ConvertAccountReceiver,
     pub signer: String,
     pub value: String,
@@ -319,10 +320,16 @@ pub async fn get_prism_records_send(
         let block_hash: String = row.try_get("block_hash")?;
         let height: i64 = row.try_get("height")?;
         let timestamp: i64 = row.try_get("timestamp")?;
-        let asset = "".to_string();
 
         let ca_val: Value = row.try_get("ca")?;
         let ca: ConvertAccount = serde_json::from_value(ca_val)?;
+        let asset: String;
+        if let Some(asset_bin) = &ca.asset_type {
+            asset = base64::encode_config(asset_bin, base64::URL_SAFE);
+        } else {
+            asset = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=".to_string();
+        }
+
         let ca_bin = serde_json::to_vec(&ca)?;
 
         let receiver: String = ca.receiver.ethereum;
