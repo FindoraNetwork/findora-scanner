@@ -183,14 +183,14 @@ pub async fn statistics(api: &Api, ty: Query<Option<i32>>) -> Result<ChainStatis
     let evm_addr_cnt_sql =
         "SELECT count(*) AS cnt FROM transaction WHERE (value @? '$.function.Ethereum') AND ty=1"
             .to_string();
-    let native_addr_cnt_sql = "SELECT count(*) AS cnt FROM transaction WHERE (value @? '$.body.operations[*].TransferAsset.body.transfer.*.public_key') AND ty=0".to_string();
+    let native_addr_cnt_sql = "select distinct jsonb_path_query(value,'$.body.operations[*].TransferAsset.body.transfer.*.public_key') from transaction where ty=0".to_string();
     let addr_counts;
     match ty.0 {
         Some(0) => {
-            let native_counts_row = sqlx::query(native_addr_cnt_sql.as_str())
-                .fetch_one(&mut conn)
+            let native_counts_rows = sqlx::query(native_addr_cnt_sql.as_str())
+                .fetch_all(&mut conn)
                 .await?;
-            addr_counts = native_counts_row.try_get("cnt")?;
+            addr_counts = native_counts_rows.len() as i64;
         }
         Some(1) => {
             let evm_counts_row = sqlx::query(evm_addr_cnt_sql.as_str())
@@ -202,12 +202,12 @@ pub async fn statistics(api: &Api, ty: Query<Option<i32>>) -> Result<ChainStatis
             let evm_counts_row = sqlx::query(evm_addr_cnt_sql.as_str())
                 .fetch_one(&mut conn)
                 .await?;
-            let native_counts_row = sqlx::query(native_addr_cnt_sql.as_str())
-                .fetch_one(&mut conn)
+            let native_counts_rows = sqlx::query(native_addr_cnt_sql.as_str())
+                .fetch_all(&mut conn)
                 .await?;
             let evm_counts: i64 = evm_counts_row.try_get("cnt")?;
-            let native_counts: i64 = native_counts_row.try_get("cnt")?;
-            addr_counts = evm_counts + native_counts;
+            let native_counts = native_counts_rows.len();
+            addr_counts = evm_counts + native_counts as i64;
         }
     }
 
@@ -228,7 +228,7 @@ pub async fn statistics(api: &Api, ty: Query<Option<i32>>) -> Result<ChainStatis
     let row = sqlx::query(sql_str.as_str()).fetch_one(&mut conn).await?;
     let daily_txs = row.try_get("cnt")?;
 
-    res_data.active_addresses = addr_counts / 10;
+    res_data.active_addresses = addr_counts;
     res_data.total_txs = total_txs;
     res_data.daily_txs = daily_txs;
 
