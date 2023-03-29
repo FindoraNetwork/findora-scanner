@@ -34,7 +34,6 @@ use tokio::sync::Mutex;
 
 #[allow(dead_code)]
 pub struct Api {
-    redis_client: redis::Client,
     platform: TendermintRPC,
     tendermint: TendermintRPC,
     storage: Mutex<Pool<Postgres>>,
@@ -444,7 +443,7 @@ impl Api {
         ids: Query<String>,
         vs_currencies: Query<String>,
     ) -> poem::Result<SimplePriceResponse> {
-        service::price::simple_price(self, ids, vs_currencies).await
+        service::price::simple_price(ids, vs_currencies).await
     }
 
     #[oai(
@@ -459,7 +458,7 @@ impl Api {
         interval: Query<Option<String>>,
         days: Query<i32>,
     ) -> poem::Result<MarketChartResponse> {
-        service::price::market_chart(self, id, vs_currency, interval, days).await
+        service::price::market_chart(id, vs_currency, interval, days).await
     }
 
     #[oai(path = "/address/count", method = "get", tag = "ApiTags::Address")]
@@ -763,10 +762,7 @@ async fn main() -> Result<()> {
         config.rpc.platform.to_string().parse().unwrap(),
     );
 
-    let rds_client = redis::Client::open("redis://127.0.0.1").unwrap();
-
     let api = Api {
-        redis_client: rds_client,
         platform: platform_rpc_client,
         tendermint: tendermint_rpc_client,
         storage: Mutex::new(pool),
