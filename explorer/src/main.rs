@@ -774,12 +774,24 @@ async fn main() -> Result<()> {
     let ui = api_service.swagger_ui();
 
     let server_addr = format!("{}:{}", config.server.addr, config.server.port);
+    let cors = Cors::new()
+        .allow_headers([
+            "Origin",
+            "X-Requested-With",
+            "Content-Type",
+            "Accept",
+            "Authorization",
+        ])
+        .allow_methods(["POST", "PUT", "DELETE", "GET", "OPTIONS"])
+        .allow_origin("*")
+        .allow_credentials(true);
+
     Server::new(TcpListener::bind(server_addr))
         .run(
             Route::new()
                 .nest("/api", api_service)
                 .nest("/", ui)
-                .with(Cors::new()),
+                .with(cors),
         )
         .await?;
 
