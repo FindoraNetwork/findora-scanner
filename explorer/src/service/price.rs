@@ -65,12 +65,21 @@ pub async fn simple_price(
             },
         )));
     }
-    let resp2 = resp1.unwrap().json::<Value>().await.unwrap();
+    let resp2 = resp1.unwrap().json::<Value>().await;
+    if let Err(e) = resp2 {
+        return Ok(SimplePriceResponse::InternalError(Json(
+            SimplePriceResult {
+                code: 500,
+                message: e.to_string(),
+                data: Default::default(),
+            },
+        )));
+    }
 
     Ok(SimplePriceResponse::Ok(Json(SimplePriceResult {
         code: 200,
         message: "".to_string(),
-        data: resp2,
+        data: resp2.unwrap(),
     })))
 }
 
@@ -102,11 +111,19 @@ pub async fn market_chart(
             },
         )));
     }
-    let resp2 = resp1.unwrap().json::<Value>().await.unwrap();
-
+    let resp2 = resp1.unwrap().json::<Value>().await;
+    if let Err(e) = resp2 {
+        return Ok(MarketChartResponse::InternalError(Json(
+            MarketChartResult {
+                code: 500,
+                message: e.to_string(),
+                data: Default::default(),
+            },
+        )));
+    }
     Ok(MarketChartResponse::Ok(Json(MarketChartResult {
         code: 200,
         message: "".to_string(),
-        data: resp2,
+        data: resp2.unwrap(),
     })))
 }
