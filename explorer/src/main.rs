@@ -781,6 +781,7 @@ async fn main() -> Result<()> {
             "Content-Type",
             "Accept",
             "Authorization",
+            "Token",
         ])
         .allow_methods(["POST", "PUT", "DELETE", "GET", "OPTIONS"])
         .allow_origin("*")
