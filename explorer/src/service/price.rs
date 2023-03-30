@@ -55,22 +55,22 @@ pub async fn simple_price(
         "https://api.coingecko.com/api/v3/simple/price?ids={}&vs_currencies={}",
         ids.0, vs_currencies.0
     );
-    let resp = reqwest::get(url).await.unwrap().text().await;
-    if let Err(e) = resp {
+    let resp1 = reqwest::get(url).await;
+    if let Err(e) = resp1 {
         return Ok(SimplePriceResponse::InternalError(Json(
             SimplePriceResult {
                 code: 500,
                 message: e.to_string(),
-                data: Value::default(),
+                data: Default::default(),
             },
         )));
     }
-    let v: Value = serde_json::from_str(resp.unwrap().as_str()).unwrap();
+    let resp2 = resp1.unwrap().json::<Value>().await.unwrap();
 
     Ok(SimplePriceResponse::Ok(Json(SimplePriceResult {
         code: 200,
         message: "".to_string(),
-        data: v,
+        data: resp2,
     })))
 }
 
@@ -92,21 +92,21 @@ pub async fn market_chart(
     if let Some(itv) = interval.0 {
         url = format!("https://api.coingecko.com/api/v3/coins/{}/market_chart?vs_currency={}&days={}&interval={}", id.0, vs_currency.0, days.0, itv);
     }
-    let resp = reqwest::get(url).await.unwrap().text().await;
-    if let Err(e) = resp {
+    let resp1 = reqwest::get(url).await;
+    if let Err(e) = resp1 {
         return Ok(MarketChartResponse::InternalError(Json(
             MarketChartResult {
                 code: 500,
                 message: e.to_string(),
-                data: Value::default(),
+                data: Default::default(),
             },
         )));
     }
-    let v: Value = serde_json::from_str(resp.unwrap().as_str()).unwrap();
+    let resp2 = resp1.unwrap().json::<Value>().await.unwrap();
 
     Ok(MarketChartResponse::Ok(Json(MarketChartResult {
         code: 200,
         message: "".to_string(),
-        data: v,
+        data: resp2,
     })))
 }
