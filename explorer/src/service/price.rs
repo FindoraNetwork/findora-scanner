@@ -65,7 +65,7 @@ pub async fn simple_price(
             },
         )));
     }
-    let resp2 = resp1.unwrap().json::<Value>().await;
+    let resp2 = resp1.unwrap().json().await;
     if let Err(e) = resp2 {
         return Ok(SimplePriceResponse::InternalError(Json(
             SimplePriceResult {
@@ -111,7 +111,7 @@ pub async fn market_chart(
             },
         )));
     }
-    let resp2 = resp1.unwrap().json::<Value>().await;
+    let resp2 = resp1.unwrap().json().await;
     if let Err(e) = resp2 {
         return Ok(MarketChartResponse::InternalError(Json(
             MarketChartResult {
