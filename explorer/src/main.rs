@@ -778,10 +778,19 @@ async fn main() -> Result<()> {
         .allow_headers([
             "Origin",
             "X-Requested-With",
+            "X-CSRF-Token",
             "Content-Type",
             "Accept",
             "Authorization",
             "Token",
+        ])
+        .expose_headers([
+            "Content-Length",
+            "Access-Control-Allow-Origin",
+            "Access-Control-Allow-Headers",
+            "link",
+            "per-page",
+            "total",
         ])
         .allow_methods(["POST", "PUT", "DELETE", "GET", "OPTIONS"])
         .allow_origin("*")
