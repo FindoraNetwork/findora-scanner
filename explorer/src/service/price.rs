@@ -20,7 +20,17 @@ pub enum SimplePriceResponse {
 pub struct SimplePriceResult {
     pub code: i32,
     pub message: String,
-    pub data: Value,
+    pub data: SimplePrice,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, Object)]
+pub struct SimplePrice {
+    pub findora: FraPrice,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, Object)]
+pub struct FraPrice {
+    pub usd: f64,
 }
 
 #[derive(ApiResponse)]
@@ -39,7 +49,7 @@ pub enum MarketChartResponse {
 pub struct MarketChartResult {
     pub code: i32,
     pub message: String,
-    pub data: Value,
+    pub data: FraMarketChart,
 }
 
 #[allow(clippy::let_unit_value)]
@@ -65,7 +75,7 @@ pub async fn simple_price(
             },
         )));
     }
-    let resp2 = resp1.unwrap().json().await;
+    let resp2 = resp1.unwrap().json::<SimplePrice>().await;
     if let Err(e) = resp2 {
         return Ok(SimplePriceResponse::InternalError(Json(
             SimplePriceResult {
@@ -81,6 +91,13 @@ pub async fn simple_price(
         message: "".to_string(),
         data: resp2.unwrap(),
     })))
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, Object)]
+pub struct FraMarketChart {
+    pub market_caps: Value,
+    pub prices: Value,
+    pub total_volumes: Value,
 }
 
 #[allow(clippy::let_unit_value)]
@@ -111,7 +128,7 @@ pub async fn market_chart(
             },
         )));
     }
-    let resp2 = resp1.unwrap().json().await;
+    let resp2 = resp1.unwrap().text().await;
     if let Err(e) = resp2 {
         return Ok(MarketChartResponse::InternalError(Json(
             MarketChartResult {
@@ -121,9 +138,13 @@ pub async fn market_chart(
             },
         )));
     }
+
+    let r = resp2.unwrap();
+    let fmc: FraMarketChart = serde_json::from_str(r.as_str()).unwrap();
+
     Ok(MarketChartResponse::Ok(Json(MarketChartResult {
         code: 200,
         message: "".to_string(),
-        data: resp2.unwrap(),
+        data: fmc,
     })))
 }
