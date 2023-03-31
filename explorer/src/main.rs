@@ -774,27 +774,7 @@ async fn main() -> Result<()> {
     let ui = api_service.swagger_ui();
 
     let server_addr = format!("{}:{}", config.server.addr, config.server.port);
-    let cors = Cors::new()
-        .allow_headers([
-            "Origin",
-            "X-Requested-With",
-            "X-CSRF-Token",
-            "Content-Type",
-            "Accept",
-            "Authorization",
-            "Token",
-        ])
-        .expose_headers([
-            "Content-Length",
-            "Access-Control-Allow-Origin",
-            "Access-Control-Allow-Headers",
-            "link",
-            "per-page",
-            "total",
-        ])
-        .allow_methods(["POST", "PUT", "DELETE", "GET", "OPTIONS"])
-        .allow_origin("*")
-        .allow_credentials(true);
+    let cors = Cors::new();
 
     Server::new(TcpListener::bind(server_addr))
         .run(
