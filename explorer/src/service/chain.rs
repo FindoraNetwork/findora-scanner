@@ -273,3 +273,38 @@ pub async fn prism_sync_info(api: &Api) -> Result<PrismSyncResponse> {
         data: prism_info,
     })))
 }
+
+#[derive(ApiResponse)]
+pub enum DelegateAddressNumResponse {
+    #[oai(status = 200)]
+    Ok(Json<DelegateAddressNumResult>),
+}
+
+#[derive(Serialize, Deserialize, Default, Debug, Object)]
+pub struct DelegateAddressNumResult {
+    pub code: i32,
+    pub message: String,
+    pub data: DelegateAddressNum,
+}
+
+#[derive(Serialize, Deserialize, Default, Debug, Object)]
+pub struct DelegateAddressNum {
+    num: u64,
+}
+
+pub async fn delegation_address_num(api: &Api) -> Result<DelegateAddressNumResponse> {
+    let mut conn = api.storage.lock().await.acquire().await?;
+
+    let sql_query = "select jsonb_path_query(value,'$.body.operations[*].Delegation.pubkey') as pk from transaction".to_string();
+    let row = sqlx::query(sql_query.as_str()).fetch_all(&mut conn).await?;
+
+    let res = DelegateAddressNumResult {
+        code: 200,
+        message: "".to_string(),
+        data: DelegateAddressNum {
+            num: row.len() as u64,
+        },
+    };
+
+    Ok(DelegateAddressNumResponse::Ok(Json(res)))
+}

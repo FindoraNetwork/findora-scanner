@@ -5,7 +5,8 @@ use crate::service::address::AddressResponse;
 use crate::service::asset::AssetResponse;
 use crate::service::block::{BlocksResponse, FullBlockResponse, SimpleBlockResponse};
 use crate::service::chain::{
-    AddressCountResponse, ChainStatisticsResponse, DistributeResponse, PrismSyncResponse,
+    AddressCountResponse, ChainStatisticsResponse, DelegateAddressNumResponse, DistributeResponse,
+    PrismSyncResponse,
 };
 use crate::service::price::{MarketChartResponse, SimplePriceResponse};
 use crate::service::staking::{
@@ -711,6 +712,17 @@ impl Api {
     )]
     async fn prism_sync_info(&self) -> poem::Result<PrismSyncResponse> {
         service::chain::prism_sync_info(self)
+            .await
+            .map_err(handle_fetch_one_err)
+    }
+
+    #[oai(
+        path = "/chain/delegation/address/num",
+        method = "get",
+        tag = "ApiTags::BlockChain"
+    )]
+    async fn delegation_address_num(&self) -> poem::Result<DelegateAddressNumResponse> {
+        service::chain::delegation_address_num(self)
             .await
             .map_err(handle_fetch_one_err)
     }
