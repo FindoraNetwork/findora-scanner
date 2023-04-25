@@ -200,7 +200,7 @@ pub async fn validator_list(api: &Api) -> Result<ValidatorListResponse> {
         return Ok(ValidatorListResponse::Ok(Json(ValidatorListResult {
             code: 200,
             message: format!(
-                "syncing blocks, current height is {}, newest block height is {}",
+                "syncing blocks, current height is {}, the newest block height is {}",
                 latest_height, validator_data.cur_height
             ),
             data: None,
