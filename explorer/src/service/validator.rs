@@ -192,24 +192,10 @@ pub async fn validator_list(api: &Api) -> Result<ValidatorListResponse> {
 
     let validator_data: ValidatorListData = serde_json::from_value(res).unwrap();
 
-    // query latest block in db
-    let sql_height = "SELECT height from last_height";
-    let row_latest_height = sqlx::query(sql_height).fetch_one(&mut conn).await?;
-    let latest_height: i64 = row_latest_height.try_get("height")?;
-    if latest_height < validator_data.cur_height {
-        return Ok(ValidatorListResponse::Ok(Json(ValidatorListResult {
-            code: 200,
-            message: format!(
-                "syncing blocks, current height is {}, the newest block height is {}",
-                latest_height, validator_data.cur_height
-            ),
-            data: None,
-        })));
-    }
-
+    let cur_height: i64 = validator_data.cur_height - 5;
     let sql = format!(
         "SELECT address FROM block_generation WHERE height={} AND signature is not null",
-        validator_data.cur_height.clone()
+        cur_height
     );
 
     let mut wrap_validator_data = validator_data.wrap();
