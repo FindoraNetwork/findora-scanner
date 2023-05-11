@@ -7,9 +7,12 @@ sudo apt install postgresql
 ```
 ## Usage of Scanner.
 
+### ENV vars
 Before use scanner, you should set environment variable `DATABASE_URL` correctly. The format of it is `postgres://<Owner>:<Password>@<Host>/<DatabaseName>`.
 
 Set environment variable `RUST_LOG=scanner=info` to show logs.
+
+`INTERVAL=10` is the interval of scanning blocks. If not set, the default is 15.
 
 ### Scan a single block.
 

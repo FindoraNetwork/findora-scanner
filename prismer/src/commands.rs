@@ -2,6 +2,7 @@ use crate::{db, prismer::RangeScanner, rpc::RPCCaller};
 use clap::Parser;
 use reqwest::Url;
 use sqlx::PgPool;
+use std::env;
 use std::time::Duration;
 
 #[derive(Parser)]
@@ -15,7 +16,7 @@ use crate::{Error, Result};
 const DEFAULT_TIMEOUT_SECS: u64 = 32;
 const DEFAULT_RETIES: usize = 3;
 const DEFAULT_CONCURRENCY: usize = 8;
-const DEFAULT_INTERVAL: Duration = Duration::from_secs(5);
+//const DEFAULT_INTERVAL: Duration = Duration::from_secs(15);
 
 /// load block at specific height.
 #[derive(Parser, Debug)]
@@ -143,10 +144,14 @@ impl Subscribe {
     pub async fn run(&self) -> Result<()> {
         let (rpc, pool) = prepare(&self.server).await?;
         let timeout = Duration::from_secs(self.timeout.unwrap_or(DEFAULT_TIMEOUT_SECS));
-        let interval = self
-            .interval
-            .map(Duration::from_secs)
-            .unwrap_or(DEFAULT_INTERVAL);
+
+        let itv = env::var("INTERVAL")
+            .ok()
+            .unwrap_or(String::from("15"))
+            .parse::<u64>()?;
+        let interval = Duration::from_secs(itv);
+        info!("interval={:?}", interval);
+
         let retries = self.retries.unwrap_or(DEFAULT_RETIES);
 
         let mut cursor = if let Some(h) = self.start {
