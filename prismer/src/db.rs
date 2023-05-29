@@ -1,4 +1,4 @@
-use module::schema::TxResult;
+use module::schema::PrismTxResult;
 use sqlx::{Error, PgPool, Row};
 
 pub use sqlx::Error as SqlxError;
@@ -14,9 +14,9 @@ pub async fn connect() -> Result<PgPool, Error> {
 }
 
 #[cfg(not(feature = "static-check"))]
-pub async fn save(res: Vec<TxResult>, pool: &PgPool) -> Result<(), Error> {
+pub async fn save(res: Vec<PrismTxResult>, pool: &PgPool) -> Result<(), Error> {
     for tr in res {
-        sqlx::query("INSERT INTO e2n VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) ON CONFLICT(tx_hash) DO UPDATE SET tx_hash=$1,block_hash=$2,sender=$3,receiver=$4,asset=$5,amount=$6,height=$7,timestamp=$8,value=$9")
+        sqlx::query("INSERT INTO e2n VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) ON CONFLICT(tx_hash) DO UPDATE SET tx_hash=$1,block_hash=$2,sender=$3,receiver=$4,asset=$5,amount=$6,height=$7,timestamp=$8,decimal=$9,max_supply=$10,value=$11")
             .bind(&tr.tx_hash)
             .bind(&tr.block_hash)
             .bind(&tr.sender)
@@ -25,6 +25,8 @@ pub async fn save(res: Vec<TxResult>, pool: &PgPool) -> Result<(), Error> {
             .bind(&tr.amount)
             .bind(tr.height)
             .bind(tr.timestamp)
+            .bind(tr.decimal)
+            .bind(tr.max_supply)
             .bind(&tr.value)
             .execute(pool)
             .await?;
@@ -33,11 +35,11 @@ pub async fn save(res: Vec<TxResult>, pool: &PgPool) -> Result<(), Error> {
 }
 
 #[cfg(feature = "static-check")]
-pub async fn save(res: Vec<TxResult>, pool: &PgPool) -> Result<(), Error> {
+pub async fn save(res: Vec<PrismTxResult>, pool: &PgPool) -> Result<(), Error> {
     for tr in res {
         sqlx::query!(
-                "INSERT INTO e2n VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) ON CONFLICT(tx_hash) DO UPDATE SET tx_hash=$1,block_hash=$2,sender=$3,receiver=$4,asset=$5,amount=$6,height=$7,timestamp=$8,value=$9",
-                &tr.tx_hash, &tr.block_hash, &tr.sender, &tr.receiver, &tr.asset, &tr.amount, &tr.height, &tr.timestamp, &tr.value
+                "INSERT INTO e2n VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) ON CONFLICT(tx_hash) DO UPDATE SET tx_hash=$1,block_hash=$2,sender=$3,receiver=$4,asset=$5,amount=$6,height=$7,timestamp=$8,decimal=$9,max_supply=$10,value=$11",
+                &tr.tx_hash, &tr.block_hash, &tr.sender, &tr.receiver, &tr.asset, &tr.amount, &tr.height, &tr.timestamp, &tr.decimal, &tr.max_supply, &tr.value
             )
             .execute(pool)
             .await?;
