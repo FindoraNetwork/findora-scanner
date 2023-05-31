@@ -15,6 +15,8 @@ use sha3::{Digest, Keccak256};
 use sqlx::Row;
 use std::ops::Add;
 
+const FRA_ASSET: &str = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+
 #[derive(ApiResponse)]
 pub enum TxResponse {
     #[oai(status = 200)]
@@ -157,6 +159,7 @@ pub struct V2PrismItem {
     pub to: String,
     pub asset: String,
     pub amount: String,
+    pub decimal: i8,
     pub height: i64,
     pub timestamp: i64,
     pub data: String,
@@ -227,6 +230,11 @@ pub async fn get_prism_received(
         let call_data: CallData = serde_json::from_value(result_val.clone())?;
         let result_bin = serde_json::to_vec(&call_data)?;
 
+        let mut decimal = 6;
+        if asset.eq(FRA_ASSET) {
+            decimal = 18;
+        }
+
         items.push(V2PrismItem {
             block_hash,
             tx_hash,
@@ -234,6 +242,7 @@ pub async fn get_prism_received(
             to: receiver,
             asset,
             amount,
+            decimal,
             height,
             timestamp,
             data: base64::encode(&result_bin),
@@ -342,6 +351,7 @@ pub async fn get_prism_records_send(
             to: receiver,
             asset,
             amount,
+            decimal: 6,
             height,
             timestamp,
             data: base64::encode(&ca_bin),
