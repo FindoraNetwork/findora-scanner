@@ -208,7 +208,7 @@ pub async fn validator_list(api: &Api) -> Result<ValidatorListResponse> {
     }
 
     for v in &mut wrap_validator_data.validators {
-        if signers.contains(&v.addr) {
+        if v.rank <= 100 || signers.contains(&v.addr) {
             v.online = true
         }
     }
