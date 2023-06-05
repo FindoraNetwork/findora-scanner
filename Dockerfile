@@ -4,18 +4,10 @@ RUN apt-get update -y && apt-get install -y musl-tools libssl-dev pkg-config mak
 ENV OPENSSL_LIB_DIR="/usr/lib/x86_64-linux-gnu"
 ENV OPENSSL_INCLUDE_DIR="/usr/include/openssl"
 
-ARG TARGETPLATFORM
-RUN case "$TARGETPLATFORM" in \
-	"linux/amd64") echo x86_64-unknown-linux-musl > /rust_targets ;; \
-	*) exit 1 ;; \
-    esac
-
-RUN rustup target add $(cat /rust_targets)
-
 COPY . ./findora-scanner
 WORKDIR /findora-scanner
 RUN cargo update
-RUN cargo build --release --target $(cat /rust_targets)
+RUN cargo build --release
 
 RUN mkdir /findora-scanner-binaries
 RUN cp target/$(cat /rust_targets)/release/explorer /findora-scanner-binaries
