@@ -14,6 +14,7 @@ RUN rustup target add $(cat /rust_targets)
 
 COPY . ./findora-scanner
 WORKDIR /findora-scanner
+RUN cargo update
 RUN cargo build --release --target $(cat /rust_targets)
 
 RUN mkdir /findora-scanner-binaries
