@@ -129,7 +129,10 @@ pub async fn get_block_by_height(api: &Api, height: Path<i64>) -> Result<SimpleB
 /// return full block by given block hash.
 pub async fn get_full_block_by_hash(api: &Api, hash: Path<String>) -> Result<FullBlockResponse> {
     let mut conn = api.storage.lock().await.acquire().await?;
-    let str = format!("SELECT * FROM block WHERE block_hash = '{}'", hash.0);
+    let str = format!(
+        "SELECT * FROM block WHERE block_hash = '{}'",
+        hash.0.to_uppercase()
+    );
     let row = sqlx::query(str.as_str()).fetch_one(&mut conn).await?;
 
     let block_data = row.try_get("block_data")?;
@@ -149,7 +152,10 @@ pub async fn get_full_block_by_hash(api: &Api, hash: Path<String>) -> Result<Ful
 /// return simple block by given block hash.
 pub async fn get_block_by_hash(api: &Api, hash: Path<String>) -> Result<SimpleBlockResponse> {
     let mut conn = api.storage.lock().await.acquire().await?;
-    let str = format!("SELECT * FROM block WHERE block_hash = '{}'", hash.0);
+    let str = format!(
+        "SELECT * FROM block WHERE block_hash = '{}'",
+        hash.0.to_uppercase()
+    );
     let row = sqlx::query(str.as_str()).fetch_one(&mut conn).await?;
 
     let block_hash: String = row.try_get("block_hash")?;
