@@ -1,5 +1,5 @@
 FROM ghcr.io/findoranetwork/findora-scanner:latest AS fundation
-FROM docker.io/busybox:latest
+FROM debian:stable-slim
 
 COPY --from=fundation /etc/ssl/certs /etc/ssl/certs
 
