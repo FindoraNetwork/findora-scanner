@@ -147,7 +147,7 @@ impl Subscribe {
 
         let itv = env::var("INTERVAL")
             .ok()
-            .unwrap_or(String::from("5"))
+            .unwrap_or(String::from("15"))
             .parse::<u64>()?;
         let interval = Duration::from_secs(itv);
         info!("interval={:?}", interval);
