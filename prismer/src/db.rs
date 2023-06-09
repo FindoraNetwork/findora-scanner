@@ -1,4 +1,4 @@
-use module::schema::TxResult;
+use module::schema::PrismTxResult;
 use sqlx::{Error, PgPool, Row};
 
 pub use sqlx::Error as SqlxError;
@@ -14,15 +14,16 @@ pub async fn connect() -> Result<PgPool, Error> {
 }
 
 #[cfg(not(feature = "static-check"))]
-pub async fn save(res: Vec<TxResult>, pool: &PgPool) -> Result<(), Error> {
+pub async fn save(res: Vec<PrismTxResult>, pool: &PgPool) -> Result<(), Error> {
     for tr in res {
-        sqlx::query("INSERT INTO e2n VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) ON CONFLICT(tx_hash) DO UPDATE SET tx_hash=$1,block_hash=$2,sender=$3,receiver=$4,asset=$5,amount=$6,height=$7,timestamp=$8,value=$9")
+        sqlx::query("INSERT INTO e2n VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) ON CONFLICT(tx_hash) DO UPDATE SET tx_hash=$1,block_hash=$2,sender=$3,receiver=$4,asset=$5,amount=$6,decimal=$7,height=$8,timestamp=$9,value=$10")
             .bind(&tr.tx_hash)
             .bind(&tr.block_hash)
             .bind(&tr.sender)
             .bind(&tr.receiver)
             .bind(&tr.asset)
             .bind(&tr.amount)
+            .bind(tr.decimal)
             .bind(tr.height)
             .bind(tr.timestamp)
             .bind(&tr.value)
@@ -33,11 +34,11 @@ pub async fn save(res: Vec<TxResult>, pool: &PgPool) -> Result<(), Error> {
 }
 
 #[cfg(feature = "static-check")]
-pub async fn save(res: Vec<TxResult>, pool: &PgPool) -> Result<(), Error> {
+pub async fn save(res: Vec<PrismTxResult>, pool: &PgPool) -> Result<(), Error> {
     for tr in res {
         sqlx::query!(
-                "INSERT INTO e2n VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) ON CONFLICT(tx_hash) DO UPDATE SET tx_hash=$1,block_hash=$2,sender=$3,receiver=$4,asset=$5,amount=$6,height=$7,timestamp=$8,value=$9",
-                &tr.tx_hash, &tr.block_hash, &tr.sender, &tr.receiver, &tr.asset, &tr.amount, &tr.height, &tr.timestamp, &tr.value
+                "INSERT INTO e2n VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) ON CONFLICT(tx_hash) DO UPDATE SET tx_hash=$1,block_hash=$2,sender=$3,receiver=$4,asset=$5,amount=$6,decimal=$7,height=$8,timestamp=$9,value=$10",
+                &tr.tx_hash, &tr.block_hash, &tr.sender, &tr.receiver, &tr.asset, &tr.amount, &tr.decimal, &tr.height, &tr.timestamp, &tr.value
             )
             .execute(pool)
             .await?;
