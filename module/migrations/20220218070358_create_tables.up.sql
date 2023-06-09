@@ -31,6 +31,7 @@ CREATE TABLE e2n (
     receiver VARCHAR(255) NOT NULL,
     asset VARCHAR(255) NOT NULL,
     amount VARCHAR(255) NOT NULL,
+    decimal integer NOT NULL,
     height BIGINT NOT NULL,
     timestamp BIGINT NOT NULL,
     value JSONB NOT NULL,
@@ -39,6 +40,9 @@ CREATE TABLE e2n (
 
 CREATE INDEX e2n_sender_index ON e2n (sender);
 CREATE INDEX e2n_receiver_index ON e2n (receiver);
+CREATE INDEX e2n_tx_hash_index ON e2n(tx_hash);
+CREATE INDEX e2n_block_hash_index ON e2n(block_hash);
+CREATE INDEX e2n_height_index ON e2n(height);
 
 CREATE TABLE validators (
     address VARCHAR(255) NOT NULL,

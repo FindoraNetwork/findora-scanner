@@ -159,7 +159,7 @@ pub struct V2PrismItem {
     pub to: String,
     pub asset: String,
     pub amount: String,
-    pub decimal: i8,
+    pub decimal: i64,
     pub height: i64,
     pub timestamp: i64,
     pub data: String,
@@ -223,6 +223,7 @@ pub async fn get_prism_received(
         let receiver: String = row.try_get("receiver")?;
         let asset: String = row.try_get("asset")?;
         let amount: String = row.try_get("amount")?;
+        let mut decimal: i64 = row.try_get("decimal").unwrap_or(0);
         let height: i64 = row.try_get("height")?;
         let timestamp: i64 = row.try_get("timestamp")?;
 
@@ -230,7 +231,6 @@ pub async fn get_prism_received(
         let call_data: CallData = serde_json::from_value(result_val.clone())?;
         let result_bin = serde_json::to_vec(&call_data)?;
 
-        let mut decimal = 6;
         if asset.eq(FRA_ASSET) {
             decimal = 18;
         }
