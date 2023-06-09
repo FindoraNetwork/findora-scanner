@@ -7,7 +7,7 @@ use ethereum::LegacyTransaction;
 use module::rpc::{
     block::BlockRPC as ModuleBlockRPC, tx::Transaction as ModuleTx, JsonRpcResponse, TdRpcResult,
 };
-use module::schema::{DelegationInfo, TxResult};
+use module::schema::{DelegationInfo, PrismTxResult};
 use module::utils::crypto::recover_signer;
 use reqwest::{Client, ClientBuilder, Url};
 use rlp::{Encodable, RlpStream};
@@ -172,14 +172,14 @@ impl RPCCaller {
         }
     }
 
-    pub async fn load_height(&self, height: i64) -> Result<Vec<TxResult>> {
+    pub async fn load_height(&self, height: i64) -> Result<Vec<PrismTxResult>> {
         let block = self.rpc.load_block(height).await?;
         let block_hash = block.block_id.hash;
         let height = block.block.header.height.parse::<i64>()?;
         let timestamp =
             NaiveDateTime::parse_from_str(&block.block.header.time, "%Y-%m-%dT%H:%M:%S%.fZ")?;
 
-        let mut res: Vec<TxResult> = vec![];
+        let mut res: Vec<PrismTxResult> = vec![];
 
         for tx in block.block.data.txs.unwrap_or_default() {
             let bytes = base64::decode(&tx)?;
@@ -241,6 +241,7 @@ impl RPCCaller {
                                         data: log.data.clone(),
                                     };
                                     let log_res = e.parse_log(raw_log).unwrap();
+
                                     // asset code
                                     let asset_bytes =
                                         log_res.params[0].value.clone().into_fixed_bytes().unwrap();
@@ -260,13 +261,22 @@ impl RPCCaller {
                                         .unwrap()
                                         .as_u128();
 
-                                    res.push(TxResult {
+                                    // decimal
+                                    let decimal = log_res.params[3]
+                                        .value
+                                        .clone()
+                                        .into_uint()
+                                        .unwrap()
+                                        .as_usize();
+
+                                    res.push(PrismTxResult {
                                         tx_hash: txid.clone(),
                                         block_hash: block_hash.clone(),
                                         sender: signer,
                                         receiver,
                                         asset,
                                         amount: amount.to_string(),
+                                        decimal: decimal as i64,
                                         height,
                                         timestamp: timestamp.timestamp(),
                                         value: result.clone(),
@@ -283,7 +293,7 @@ impl RPCCaller {
         Ok(res)
     }
 
-    pub async fn load_height_retried(&self, height: i64) -> Result<Vec<TxResult>> {
+    pub async fn load_height_retried(&self, height: i64) -> Result<Vec<PrismTxResult>> {
         for i in 0..self.retries + 1 {
             match self.load_height(height).await {
                 Ok(r) => return Ok(r),

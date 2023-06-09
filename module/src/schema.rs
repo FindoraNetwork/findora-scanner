@@ -157,6 +157,20 @@ pub struct TxResult {
     pub value: Value,
 }
 
+#[derive(Serialize, Deserialize, Debug)]
+pub struct PrismTxResult {
+    pub tx_hash: String,
+    pub block_hash: String,
+    pub sender: String,
+    pub receiver: String,
+    pub asset: String,
+    pub amount: String,
+    pub decimal: i64,
+    pub height: i64,
+    pub timestamp: i64,
+    pub value: Value,
+}
+
 #[derive(Serialize, Deserialize, Debug, Default, Object)]
 pub struct TransactionResponse {
     pub tx_hash: String,
