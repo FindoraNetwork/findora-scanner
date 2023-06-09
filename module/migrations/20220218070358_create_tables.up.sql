@@ -31,7 +31,7 @@ CREATE TABLE e2n (
     receiver VARCHAR(255) NOT NULL,
     asset VARCHAR(255) NOT NULL,
     amount VARCHAR(255) NOT NULL,
-    decimal integer NOT NULL default (0),
+    decimal integer NOT NULL,
     height BIGINT NOT NULL,
     timestamp BIGINT NOT NULL,
     value JSONB NOT NULL,
