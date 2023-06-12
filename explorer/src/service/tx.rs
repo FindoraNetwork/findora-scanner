@@ -214,7 +214,7 @@ pub async fn get_prism_received(
         .await?;
     let total: i64 = row_counts.try_get("cnt")?;
 
-    let sql_query = format!("SELECT tx_hash,block_hash,sender,receiver,asset,amount,height,timestamp,value FROM e2n WHERE receiver=\'{}\' ORDER BY timestamp DESC LIMIT {} OFFSET {}", address.0, page_size, (page-1)*page_size);
+    let sql_query = format!("SELECT tx_hash,block_hash,sender,receiver,asset,amount,decimal,height,timestamp,value FROM e2n WHERE receiver=\'{}\' ORDER BY timestamp DESC LIMIT {} OFFSET {}", address.0, page_size, (page-1)*page_size);
     let rows = sqlx::query(sql_query.as_str()).fetch_all(&mut conn).await?;
     for row in rows {
         let tx_hash: String = row.try_get("tx_hash")?;
@@ -223,7 +223,7 @@ pub async fn get_prism_received(
         let receiver: String = row.try_get("receiver")?;
         let asset: String = row.try_get("asset")?;
         let amount: String = row.try_get("amount")?;
-        let mut decimal: i64 = row.try_get("decimal").unwrap_or(0);
+        let mut decimal: i32 = row.try_get("decimal")?;
         let height: i64 = row.try_get("height")?;
         let timestamp: i64 = row.try_get("timestamp")?;
 
@@ -242,7 +242,7 @@ pub async fn get_prism_received(
             to: receiver,
             asset,
             amount,
-            decimal,
+            decimal: decimal as i64,
             height,
             timestamp,
             data: base64::encode(&result_bin),
