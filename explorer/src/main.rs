@@ -251,7 +251,7 @@ impl Api {
         /// block height.
         height: Path<i64>,
     ) -> poem::Result<SimpleBlockResponse> {
-        service::block::get_block_by_height(self, height)
+        service::block::get_simple_block_by_height(self, height)
             .await
             .map_err(handle_fetch_one_err)
     }
@@ -277,7 +277,7 @@ impl Api {
         /// block hash.
         hash: Path<String>,
     ) -> poem::Result<SimpleBlockResponse> {
-        service::block::get_block_by_hash(self, hash)
+        service::block::get_simple_block_by_hash(self, hash)
             .await
             .map_err(handle_fetch_one_err)
     }

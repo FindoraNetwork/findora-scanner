@@ -7,7 +7,7 @@ use poem_openapi::{param::Path, payload::Json, ApiResponse, Object};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sqlx::types::chrono::NaiveDateTime;
-use sqlx::Row;
+use sqlx::{Error, Row};
 use std::ops::Add;
 
 #[derive(ApiResponse)]
@@ -78,8 +78,26 @@ pub struct BlocksData {
 /// return full block by given height.
 pub async fn get_full_block_by_height(api: &Api, height: Path<i64>) -> Result<FullBlockResponse> {
     let mut conn = api.storage.lock().await.acquire().await?;
+
     let str = format!("SELECT * FROM block WHERE height = {}", height.0);
-    let row = sqlx::query(str.as_str()).fetch_one(&mut conn).await?;
+    let row_result = sqlx::query(str.as_str()).fetch_one(&mut conn).await;
+    let row = match row_result {
+        Ok(row) => row,
+        Err(e) => {
+            return match e {
+                Error::RowNotFound => Ok(FullBlockResponse::NotFound(Json(FullBlock {
+                    code: 404,
+                    message: "block not found".to_string(),
+                    data: None,
+                }))),
+                _ => Ok(FullBlockResponse::InternalError(Json(FullBlock {
+                    code: 500,
+                    message: "internal error".to_string(),
+                    data: None,
+                }))),
+            }
+        }
+    };
 
     let block_data = row.try_get("block_data")?;
     let block_rpc: BlockRPC = serde_json::from_value(block_data).unwrap();
@@ -96,10 +114,31 @@ pub async fn get_full_block_by_height(api: &Api, height: Path<i64>) -> Result<Fu
 }
 
 /// return simple block by given height.
-pub async fn get_block_by_height(api: &Api, height: Path<i64>) -> Result<SimpleBlockResponse> {
+pub async fn get_simple_block_by_height(
+    api: &Api,
+    height: Path<i64>,
+) -> Result<SimpleBlockResponse> {
     let mut conn = api.storage.lock().await.acquire().await?;
+
     let str = format!("SELECT * FROM block WHERE height = {}", height.0);
-    let row = sqlx::query(str.as_str()).fetch_one(&mut conn).await?;
+    let row_result = sqlx::query(str.as_str()).fetch_one(&mut conn).await;
+    let row = match row_result {
+        Ok(row) => row,
+        Err(e) => {
+            return match e {
+                Error::RowNotFound => Ok(SimpleBlockResponse::NotFound(Json(SimpleBlock {
+                    code: 404,
+                    message: "block not found".to_string(),
+                    data: None,
+                }))),
+                _ => Ok(SimpleBlockResponse::InternalError(Json(SimpleBlock {
+                    code: 500,
+                    message: "internal error".to_string(),
+                    data: None,
+                }))),
+            }
+        }
+    };
 
     let block_hash: String = row.try_get("block_hash")?;
     let app_hash: String = row.try_get("app_hash")?;
@@ -129,11 +168,29 @@ pub async fn get_block_by_height(api: &Api, height: Path<i64>) -> Result<SimpleB
 /// return full block by given block hash.
 pub async fn get_full_block_by_hash(api: &Api, hash: Path<String>) -> Result<FullBlockResponse> {
     let mut conn = api.storage.lock().await.acquire().await?;
+
     let str = format!(
         "SELECT * FROM block WHERE block_hash = '{}'",
         hash.0.to_uppercase()
     );
-    let row = sqlx::query(str.as_str()).fetch_one(&mut conn).await?;
+    let row_result = sqlx::query(str.as_str()).fetch_one(&mut conn).await;
+    let row = match row_result {
+        Ok(row) => row,
+        Err(e) => {
+            return match e {
+                Error::RowNotFound => Ok(FullBlockResponse::NotFound(Json(FullBlock {
+                    code: 404,
+                    message: "block not found".to_string(),
+                    data: None,
+                }))),
+                _ => Ok(FullBlockResponse::NotFound(Json(FullBlock {
+                    code: 500,
+                    message: "internal error".to_string(),
+                    data: None,
+                }))),
+            }
+        }
+    };
 
     let block_data = row.try_get("block_data")?;
     let block_rpc: BlockRPC = serde_json::from_value(block_data).unwrap();
@@ -150,13 +207,35 @@ pub async fn get_full_block_by_hash(api: &Api, hash: Path<String>) -> Result<Ful
 }
 
 /// return simple block by given block hash.
-pub async fn get_block_by_hash(api: &Api, hash: Path<String>) -> Result<SimpleBlockResponse> {
+pub async fn get_simple_block_by_hash(
+    api: &Api,
+    hash: Path<String>,
+) -> Result<SimpleBlockResponse> {
     let mut conn = api.storage.lock().await.acquire().await?;
+
     let str = format!(
         "SELECT * FROM block WHERE block_hash = '{}'",
         hash.0.to_uppercase()
     );
-    let row = sqlx::query(str.as_str()).fetch_one(&mut conn).await?;
+
+    let row_result = sqlx::query(str.as_str()).fetch_one(&mut conn).await;
+    let row = match row_result {
+        Ok(row) => row,
+        Err(e) => {
+            return match e {
+                Error::RowNotFound => Ok(SimpleBlockResponse::NotFound(Json(SimpleBlock {
+                    code: 404,
+                    message: "block not found".to_string(),
+                    data: None,
+                }))),
+                _ => Ok(SimpleBlockResponse::InternalError(Json(SimpleBlock {
+                    code: 500,
+                    message: "internal error".to_string(),
+                    data: None,
+                }))),
+            }
+        }
+    };
 
     let block_hash: String = row.try_get("block_hash")?;
     let app_hash: String = row.try_get("app_hash")?;
