@@ -12,7 +12,7 @@ use poem_openapi::{param::Path, payload::Json, ApiResponse, Object};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sha3::{Digest, Keccak256};
-use sqlx::Row;
+use sqlx::{Error, Row};
 use std::ops::Add;
 
 const FRA_ASSET: &str = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
@@ -427,7 +427,25 @@ pub async fn get_tx(api: &Api, tx_hash: Path<String>) -> Result<TxResponse> {
         "SELECT * FROM transaction WHERE tx_hash = '{}'",
         tx_hash.0.to_lowercase()
     );
-    let row = sqlx::query(str.as_str()).fetch_one(&mut conn).await?;
+
+    let row_result = sqlx::query(str.as_str()).fetch_one(&mut conn).await;
+    let row = match row_result {
+        Err(e) => {
+            return match e {
+                Error::RowNotFound => Ok(TxResponse::NotFound(Json(TxRes {
+                    code: 404,
+                    message: "tx not found".to_string(),
+                    data: None,
+                }))),
+                _ => Ok(TxResponse::InternalError(Json(TxRes {
+                    code: 500,
+                    message: "internal error".to_string(),
+                    data: None,
+                }))),
+            }
+        }
+        Ok(row) => row,
+    };
 
     let tx_hash: String = row.try_get("tx_hash")?;
     let block_hash: String = row.try_get("block_hash")?;
