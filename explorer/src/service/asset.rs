@@ -78,7 +78,7 @@ pub async fn get_asset(api: &Api, address: Path<String>) -> Result<AssetResponse
         }
     };
 
-    let str = "SELECT jsonb_path_query(value,'$.body.operations[*].DefineAsset.body.asset'),tx_hash as asset FROM transaction".to_string();
+    let str = "SELECT jsonb_path_query(value,'$.body.operations[*].DefineAsset.body.asset') AS asset,tx_hash FROM transaction".to_string();
     let rows = sqlx::query(str.as_str()).fetch_all(&mut conn).await?;
     let mut asset = AssetDisplay::default();
     for row in rows {
