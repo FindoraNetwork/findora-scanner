@@ -107,3 +107,34 @@ pub async fn get_asset(api: &Api, address: Path<String>) -> Result<AssetResponse
         data: Some(asset),
     })))
 }
+
+#[derive(Serialize, Deserialize, Debug, Default, Object)]
+pub struct IssueAssetResult {
+    pub tx: String,
+    pub data: String,
+}
+
+#[derive(ApiResponse)]
+pub enum IssueAssetResponse {
+    #[oai(status = 200)]
+    Ok(Json<Vec<IssueAssetResult>>),
+}
+pub async fn get_issued_asset(api: &Api) -> Result<IssueAssetResponse> {
+    let mut conn = api.storage.lock().await.acquire().await?;
+
+    let str = "SELECT jsonb_path_query(value,'$.body.operations[*].IssueAsset.body') AS asset,tx_hash FROM transaction".to_string();
+    let rows = sqlx::query(str.as_str()).fetch_all(&mut conn).await?;
+
+    let mut res: Vec<IssueAssetResult> = vec![];
+    for row in rows {
+        let tx: String = row.try_get("tx_hash")?;
+        let v: Value = row.try_get("asset").unwrap();
+
+        res.push(IssueAssetResult {
+            tx,
+            data: v.to_string(),
+        });
+    }
+
+    Ok(IssueAssetResponse::Ok(Json(res)))
+}

@@ -2,7 +2,7 @@ mod service;
 mod utils;
 
 use crate::service::address::AddressResponse;
-use crate::service::asset::AssetResponse;
+use crate::service::asset::{AssetResponse, IssueAssetResponse};
 use crate::service::block::{BlocksResponse, FullBlockResponse, SimpleBlockResponse};
 use crate::service::chain::{
     AddressCountResponse, ChainStatisticsResponse, DelegateAddressNumResponse, DistributeResponse,
@@ -349,7 +349,14 @@ impl Api {
     ) -> poem::Result<AssetResponse> {
         service::asset::get_asset(self, code)
             .await
-            .map_err(utils::handle_fetch_one_err)
+            .map_err(handle_fetch_one_err)
+    }
+
+    #[oai(path = "/asset/issued", method = "get", tag = "ApiTags::Asset")]
+    async fn get_issued_asset(&self) -> poem::Result<IssueAssetResponse> {
+        service::asset::get_issued_asset(self)
+            .await
+            .map_err(handle_fetch_one_err)
     }
 
     #[oai(
