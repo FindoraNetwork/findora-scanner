@@ -1,7 +1,7 @@
 use crate::Api;
 use anyhow::Result;
 use module::utils::crypto::bech32enc;
-use poem_openapi::{param::Path, payload::Json, ApiResponse, Object};
+use poem_openapi::{param::Path, param::Query, payload::Json, ApiResponse, Object};
 use ruc::{d, RucResult};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -58,7 +58,9 @@ pub struct Asset {
 #[derive(Serialize, Deserialize, Debug, Default, Object)]
 pub struct AssetDisplay {
     pub issuer: String,
-    pub issued_at: String,
+    pub issued_at_block: String,
+    pub issued_at_tx: String,
+    pub issued_at_height: i64,
     pub memo: String,
     pub asset_rules: AssetRules,
     pub code: Code,
@@ -78,10 +80,12 @@ pub async fn get_asset(api: &Api, address: Path<String>) -> Result<AssetResponse
         }
     };
 
-    let str = "SELECT jsonb_path_query(value,'$.body.operations[*].DefineAsset.body.asset') AS asset,tx_hash FROM transaction".to_string();
+    let str = "SELECT jsonb_path_query(value,'$.body.operations[*].DefineAsset.body.asset') AS asset,tx_hash,block_hash,height FROM transaction".to_string();
     let rows = sqlx::query(str.as_str()).fetch_all(&mut conn).await?;
     let mut asset = AssetDisplay::default();
     for row in rows {
+        let height: i64 = row.try_get("height")?;
+        let block: String = row.try_get("block_hash")?;
         let tx: String = row.try_get("tx_hash")?;
         let v: Value = row.try_get("asset").unwrap();
         let a: Asset = serde_json::from_value(v).unwrap();
@@ -93,7 +97,9 @@ pub async fn get_asset(api: &Api, address: Path<String>) -> Result<AssetResponse
                 .unwrap();
             let issuer_addr = bech32enc(&XfrPublicKey::zei_to_bytes(&pk));
 
-            asset.issued_at = tx;
+            asset.issued_at_block = block;
+            asset.issued_at_tx = tx;
+            asset.issued_at_height = height;
             asset.memo = a.memo;
             asset.issuer = issuer_addr;
             asset.code = a.code;
@@ -108,33 +114,105 @@ pub async fn get_asset(api: &Api, address: Path<String>) -> Result<AssetResponse
     })))
 }
 
-#[derive(Serialize, Deserialize, Debug, Default, Object)]
-pub struct IssueAssetResult {
-    pub tx: String,
-    pub data: String,
-}
-
 #[derive(ApiResponse)]
 pub enum IssueAssetResponse {
     #[oai(status = 200)]
-    Ok(Json<Vec<IssueAssetResult>>),
+    Ok(Json<IssueAssetResult>),
+    #[oai(status = 404)]
+    NotFound(Json<IssueAssetResult>),
+    #[oai(status = 500)]
+    InternalError(Json<IssueAssetResult>),
 }
-pub async fn get_issued_asset(api: &Api) -> Result<IssueAssetResponse> {
+
+#[derive(Serialize, Deserialize, Debug, Default, Object)]
+pub struct IssueAssetResult {
+    pub code: i32,
+    pub message: String,
+    pub data: IssueAssetDisplay,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, Object)]
+pub struct IssueAssetDisplay {
+    pub page: i64,
+    pub page_size: i64,
+    pub total: i64,
+    pub assets: Vec<IssueAssetData>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, Object)]
+pub struct IssueAssetData {
+    pub issuer: String,
+    pub issued_at_block: String,
+    pub issued_at_tx: String,
+    pub issued_at_height: i64,
+    pub asset: IssueAsset,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, Object)]
+pub struct IssueAsset {
+    pub body: IssueAssetBody,
+    pub pubkey: PubKey,
+    pub signature: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, Object)]
+pub struct IssueAssetBody {
+    pub code: Code,
+    pub num_outputs: u64,
+    pub seq_num: u64,
+    pub records: Value,
+}
+
+pub async fn get_issued_asset_list(
+    api: &Api,
+    page: Query<Option<i64>>,
+    page_size: Query<Option<i64>>,
+) -> Result<IssueAssetResponse> {
     let mut conn = api.storage.lock().await.acquire().await?;
 
-    let str = "SELECT jsonb_path_query(value,'$.body.operations[*].IssueAsset.body') AS asset,tx_hash FROM transaction".to_string();
-    let rows = sqlx::query(str.as_str()).fetch_all(&mut conn).await?;
+    let page = page.0.unwrap_or(1);
+    let page_size = page_size.0.unwrap_or(10);
 
-    let mut res: Vec<IssueAssetResult> = vec![];
+    let sql_total =
+        "SELECT count(*) as cnt FROM transaction WHERE value @? '$.body.operations[*].IssueAsset'";
+    let row = sqlx::query(sql_total).fetch_one(&mut conn).await?;
+    let total: i64 = row.try_get("cnt")?;
+
+    let sql_query = format!("SELECT jsonb_path_query(value,'$.body.operations[*].IssueAsset') AS asset,block_hash,tx_hash,height FROM transaction ORDER BY height DESC LIMIT {} OFFSET {}", page_size, (page-1)*page_size);
+    let rows = sqlx::query(sql_query.as_str()).fetch_all(&mut conn).await?;
+    let mut assets: Vec<IssueAssetData> = vec![];
     for row in rows {
+        let block: String = row.try_get("block_hash")?;
         let tx: String = row.try_get("tx_hash")?;
+        let height: i64 = row.try_get("height")?;
         let v: Value = row.try_get("asset").unwrap();
+        let a: IssueAsset = serde_json::from_value(v).unwrap();
 
-        res.push(IssueAssetResult {
-            tx,
-            data: v.to_string(),
+        let pk = base64::decode_config(&a.pubkey.key, base64::URL_SAFE)
+            .c(d!())
+            .and_then(|bytes| XfrPublicKey::zei_from_bytes(&bytes).c(d!()))
+            .unwrap();
+        let issuer = bech32enc(&XfrPublicKey::zei_to_bytes(&pk));
+
+        assets.push(IssueAssetData {
+            issuer,
+            issued_at_block: block,
+            issued_at_tx: tx,
+            issued_at_height: height,
+            asset: a,
         });
     }
 
-    Ok(IssueAssetResponse::Ok(Json(res)))
+    let result = IssueAssetResult {
+        code: 200,
+        message: "".to_string(),
+        data: IssueAssetDisplay {
+            page,
+            page_size,
+            total,
+            assets,
+        },
+    };
+
+    Ok(IssueAssetResponse::Ok(Json(result)))
 }

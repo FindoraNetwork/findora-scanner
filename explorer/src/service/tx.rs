@@ -15,7 +15,7 @@ use sha3::{Digest, Keccak256};
 use sqlx::{Error, Row};
 use std::ops::Add;
 
-const FRA_ASSET: &str = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+pub const FRA_ASSET: &str = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
 
 #[derive(ApiResponse)]
 pub enum TxResponse {
@@ -51,10 +51,10 @@ pub struct TxsRes {
 
 #[derive(Serialize, Deserialize, Debug, Default, Object)]
 pub struct TxsData {
-    page: i64,
-    page_size: i64,
-    total: i64,
-    txs: Vec<TransactionResponse>,
+    pub page: i64,
+    pub page_size: i64,
+    pub total: i64,
+    pub txs: Vec<TransactionResponse>,
 }
 
 #[derive(ApiResponse)]
@@ -72,10 +72,10 @@ pub struct PmtxsRes {
 
 #[derive(Serialize, Deserialize, Debug, Default, Object)]
 pub struct PmtxsData {
-    page: i64,
-    page_size: i64,
-    total: i64,
-    txs: Vec<PrismTransaction>,
+    pub page: i64,
+    pub page_size: i64,
+    pub total: i64,
+    pub txs: Vec<PrismTransaction>,
 }
 
 #[derive(ApiResponse)]

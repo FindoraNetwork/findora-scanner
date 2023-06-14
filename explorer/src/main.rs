@@ -352,9 +352,13 @@ impl Api {
             .map_err(handle_fetch_one_err)
     }
 
-    #[oai(path = "/asset/issued", method = "get", tag = "ApiTags::Asset")]
-    async fn get_issued_asset(&self) -> poem::Result<IssueAssetResponse> {
-        service::asset::get_issued_asset(self)
+    #[oai(path = "/asset/issued/list", method = "get", tag = "ApiTags::Asset")]
+    async fn get_issued_asset(
+        &self,
+        page: Query<Option<i64>>,
+        page_size: Query<Option<i64>>,
+    ) -> poem::Result<IssueAssetResponse> {
+        service::asset::get_issued_asset_list(self, page, page_size)
             .await
             .map_err(handle_fetch_one_err)
     }
