@@ -25,7 +25,7 @@ pub enum AssetResponse {
 pub struct AssetResult {
     pub code: i32,
     pub message: String,
-    pub data: Option<AssetDisplay>,
+    pub data: Vec<AssetDisplay>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Default, Object)]
@@ -75,14 +75,15 @@ pub async fn get_asset(api: &Api, address: Path<String>) -> Result<AssetResponse
             return Ok(AssetResponse::BadRequest(Json(AssetResult {
                 code: 400,
                 message: "invalid base64 asset code".to_string(),
-                data: None,
+                data: vec![],
             })));
         }
     };
 
-    let str = "SELECT jsonb_path_query(value,'$.body.operations[*].DefineAsset.body.asset') AS asset,tx_hash,block_hash,height FROM transaction".to_string();
-    let rows = sqlx::query(str.as_str()).fetch_all(&mut conn).await?;
-    let mut asset = AssetDisplay::default();
+    let sql_query = "SELECT jsonb_path_query(value,'$.body.operations[*].DefineAsset.body.asset') AS asset,tx_hash,block_hash,height FROM transaction".to_string();
+    let rows = sqlx::query(sql_query.as_str()).fetch_all(&mut conn).await?;
+
+    let mut assets: Vec<AssetDisplay> = vec![];
     for row in rows {
         let height: i64 = row.try_get("height")?;
         let block: String = row.try_get("block_hash")?;
@@ -97,20 +98,22 @@ pub async fn get_asset(api: &Api, address: Path<String>) -> Result<AssetResponse
                 .unwrap();
             let issuer_addr = bech32enc(&XfrPublicKey::zei_to_bytes(&pk));
 
-            asset.issued_at_block = block;
-            asset.issued_at_tx = tx;
-            asset.issued_at_height = height;
-            asset.memo = a.memo;
-            asset.issuer = issuer_addr;
-            asset.code = a.code;
-            asset.asset_rules = a.asset_rules;
+            assets.push(AssetDisplay {
+                issuer: issuer_addr,
+                issued_at_block: block,
+                issued_at_tx: tx,
+                issued_at_height: height,
+                memo: a.memo,
+                asset_rules: a.asset_rules,
+                code: a.code,
+            });
         }
     }
 
     Ok(AssetResponse::Ok(Json(AssetResult {
         code: 200,
         message: "".to_string(),
-        data: Some(asset),
+        data: assets,
     })))
 }
 
