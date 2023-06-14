@@ -57,22 +57,11 @@ pub struct Asset {
 
 #[derive(Serialize, Deserialize, Debug, Default, Object)]
 pub struct AssetDisplay {
+    pub issuer: String,
+    pub issued_at: String,
+    pub memo: String,
     pub asset_rules: AssetRules,
     pub code: Code,
-    pub issuer: String,
-    pub memo: String,
-}
-
-#[derive(Serialize, Deserialize, Debug, Default)]
-pub struct Body {
-    pub asset: Asset,
-}
-
-#[derive(Serialize, Deserialize, Debug, Default)]
-pub struct DefineAsset {
-    pub body: Body,
-    pub pubkey: PubKey,
-    pub signature: String,
 }
 
 pub async fn get_asset(api: &Api, address: Path<String>) -> Result<AssetResponse> {
@@ -93,6 +82,7 @@ pub async fn get_asset(api: &Api, address: Path<String>) -> Result<AssetResponse
     let rows = sqlx::query(str.as_str()).fetch_all(&mut conn).await?;
     let mut asset = AssetDisplay::default();
     for row in rows {
+        let tx: String = row.try_get("tx_hash")?;
         let v: Value = row.try_get("asset").unwrap();
         let a: Asset = serde_json::from_value(v).unwrap();
 
@@ -103,6 +93,7 @@ pub async fn get_asset(api: &Api, address: Path<String>) -> Result<AssetResponse
                 .unwrap();
             let issuer_addr = bech32enc(&XfrPublicKey::zei_to_bytes(&pk));
 
+            asset.issued_at = tx;
             asset.memo = a.memo;
             asset.issuer = issuer_addr;
             asset.code = a.code;
