@@ -25,7 +25,7 @@ pub enum AssetResponse {
 pub struct AssetResult {
     pub code: i32,
     pub message: String,
-    pub data: Vec<AssetDisplay>,
+    pub data: Option<Vec<AssetDisplay>>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Default, Object)]
@@ -75,23 +75,24 @@ pub async fn get_asset(api: &Api, address: Path<String>) -> Result<AssetResponse
             return Ok(AssetResponse::BadRequest(Json(AssetResult {
                 code: 400,
                 message: "invalid base64 asset code".to_string(),
-                data: vec![],
+                data: None,
             })));
         }
     };
 
-    let sql_query = "SELECT jsonb_path_query(value,'$.body.operations[*].DefineAsset.body.asset') AS asset,tx_hash,block_hash,height FROM transaction".to_string();
+    let sql_query = "SELECT jsonb_path_query(value,'$.body.operations[*].DefineAsset.body.asset') AS asset,tx_hash,block_hash,height FROM transaction ORDER BY height DESC".to_string();
     let rows = sqlx::query(sql_query.as_str()).fetch_all(&mut conn).await?;
 
     let mut assets: Vec<AssetDisplay> = vec![];
     for row in rows {
-        let height: i64 = row.try_get("height")?;
-        let block: String = row.try_get("block_hash")?;
-        let tx: String = row.try_get("tx_hash")?;
         let v: Value = row.try_get("asset").unwrap();
         let a: Asset = serde_json::from_value(v).unwrap();
 
         if a.code.val.eq(&code) {
+            let height: i64 = row.try_get("height")?;
+            let block: String = row.try_get("block_hash")?;
+            let tx: String = row.try_get("tx_hash")?;
+
             let pk = base64::decode_config(&a.issuer.key, base64::URL_SAFE)
                 .c(d!())
                 .and_then(|bytes| XfrPublicKey::zei_from_bytes(&bytes).c(d!()))
@@ -113,7 +114,96 @@ pub async fn get_asset(api: &Api, address: Path<String>) -> Result<AssetResponse
     Ok(AssetResponse::Ok(Json(AssetResult {
         code: 200,
         message: "".to_string(),
-        data: assets,
+        data: Some(assets),
+    })))
+}
+
+#[derive(ApiResponse)]
+pub enum AssetListResponse {
+    #[oai(status = 200)]
+    Ok(Json<AssetListResult>),
+    #[oai(status = 400)]
+    BadRequest(Json<AssetListResult>),
+    #[oai(status = 404)]
+    NotFound(Json<AssetListResult>),
+    #[oai(status = 500)]
+    InternalError(Json<AssetListResult>),
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, Object)]
+pub struct AssetListResult {
+    pub code: i32,
+    pub message: String,
+    pub data: Option<AssetListData>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, Object)]
+pub struct AssetListData {
+    pub page: i64,
+    pub page_size: i64,
+    pub total: i64,
+    pub assets: Vec<AssetDisplay>,
+}
+
+pub async fn get_asset_list(
+    api: &Api,
+    page: Query<Option<i64>>,
+    page_size: Query<Option<i64>>,
+) -> Result<AssetListResponse> {
+    let mut conn = api.storage.lock().await.acquire().await?;
+
+    let page = page.0.unwrap_or(1);
+    let page_size = page_size.0.unwrap_or(10);
+    if page_size > 100 {
+        return Ok(AssetListResponse::BadRequest(Json(AssetListResult {
+            code: 400,
+            message: "invalid page size, the maximum page size is 100".to_string(),
+            data: None,
+        })));
+    }
+
+    let sql_total =
+        "SELECT count(*) as cnt FROM transaction WHERE value @? '$.body.operations[*].DefineAsset'";
+    let row = sqlx::query(sql_total).fetch_one(&mut conn).await?;
+    let total: i64 = row.try_get("cnt")?;
+
+    let sql_query = format!("SELECT jsonb_path_query(value,'$.body.operations[*].DefineAsset.body.asset') AS asset,tx_hash,block_hash,height FROM transaction ORDER BY height DESC LIMIT {} OFFSET {}", page_size, page_size*(page-1));
+    let rows = sqlx::query(sql_query.as_str()).fetch_all(&mut conn).await?;
+
+    let mut assets: Vec<AssetDisplay> = vec![];
+    for row in rows {
+        let height: i64 = row.try_get("height")?;
+        let block: String = row.try_get("block_hash")?;
+        let tx: String = row.try_get("tx_hash")?;
+
+        let v: Value = row.try_get("asset").unwrap();
+        let a: Asset = serde_json::from_value(v).unwrap();
+        let pk = base64::decode_config(&a.issuer.key, base64::URL_SAFE)
+            .c(d!())
+            .and_then(|bytes| XfrPublicKey::zei_from_bytes(&bytes).c(d!()))
+            .unwrap();
+        let issuer_addr = bech32enc(&XfrPublicKey::zei_to_bytes(&pk));
+
+        assets.push(AssetDisplay {
+            issuer: issuer_addr,
+            issued_at_block: block,
+            issued_at_tx: tx,
+            issued_at_height: height,
+            memo: a.memo,
+            asset_rules: a.asset_rules,
+            code: a.code,
+        });
+    }
+
+    Ok(AssetListResponse::Ok(Json(AssetListResult {
+        code: 200,
+        message: "".to_string(),
+        data: Some(AssetListData {
+            page,
+            page_size,
+            total,
+            assets,
+        }),
     })))
 }
 
@@ -121,6 +211,8 @@ pub async fn get_asset(api: &Api, address: Path<String>) -> Result<AssetResponse
 pub enum IssueAssetResponse {
     #[oai(status = 200)]
     Ok(Json<IssueAssetResult>),
+    #[oai(status = 400)]
+    BadRequest(Json<IssueAssetResult>),
     #[oai(status = 404)]
     NotFound(Json<IssueAssetResult>),
     #[oai(status = 500)]
@@ -131,7 +223,7 @@ pub enum IssueAssetResponse {
 pub struct IssueAssetResult {
     pub code: i32,
     pub message: String,
-    pub data: IssueAssetDisplay,
+    pub data: Option<IssueAssetDisplay>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Default, Object)]
@@ -176,6 +268,13 @@ pub async fn get_issued_asset_list(
 
     let page = page.0.unwrap_or(1);
     let page_size = page_size.0.unwrap_or(10);
+    if page_size > 100 {
+        return Ok(IssueAssetResponse::BadRequest(Json(IssueAssetResult {
+            code: 400,
+            message: "invalid page size, the maximum page size is 100".to_string(),
+            data: None,
+        })));
+    }
 
     let sql_total =
         "SELECT count(*) as cnt FROM transaction WHERE value @? '$.body.operations[*].IssueAsset'";
@@ -189,15 +288,15 @@ pub async fn get_issued_asset_list(
         let block: String = row.try_get("block_hash")?;
         let tx: String = row.try_get("tx_hash")?;
         let height: i64 = row.try_get("height")?;
+
         let v: Value = row.try_get("asset").unwrap();
         let a: IssueAsset = serde_json::from_value(v).unwrap();
-
         let pk = base64::decode_config(&a.pubkey.key, base64::URL_SAFE)
             .c(d!())
             .and_then(|bytes| XfrPublicKey::zei_from_bytes(&bytes).c(d!()))
             .unwrap();
         let issuer = bech32enc(&XfrPublicKey::zei_to_bytes(&pk));
-        let asset_code = base64::encode(&a.body.code.val);
+        let asset_code = base64::encode_config(&a.body.code.val, base64::URL_SAFE);
 
         assets.push(IssueAssetData {
             issuer,
@@ -209,16 +308,95 @@ pub async fn get_issued_asset_list(
         });
     }
 
-    let result = IssueAssetResult {
+    Ok(IssueAssetResponse::Ok(Json(IssueAssetResult {
         code: 200,
         message: "".to_string(),
-        data: IssueAssetDisplay {
+        data: Some(IssueAssetDisplay {
             page,
             page_size,
             total,
             assets,
-        },
+        }),
+    })))
+}
+
+#[derive(ApiResponse)]
+pub enum SingleIssueAssetResponse {
+    #[oai(status = 200)]
+    Ok(Json<SingleIssueAssetResult>),
+    #[oai(status = 400)]
+    BadRequest(Json<SingleIssueAssetResult>),
+    #[oai(status = 404)]
+    NotFound(Json<SingleIssueAssetResult>),
+    #[oai(status = 500)]
+    InternalError(Json<SingleIssueAssetResult>),
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, Object)]
+pub struct SingleIssueAssetResult {
+    pub code: i32,
+    pub message: String,
+    pub data: Option<IssueAssetData>,
+}
+
+pub async fn get_issued_asset(
+    api: &Api,
+    address: Path<String>,
+) -> Result<SingleIssueAssetResponse> {
+    let mut conn = api.storage.lock().await.acquire().await?;
+
+    let code_res = base64::decode_config(&address.0, base64::URL_SAFE);
+    let code = match code_res {
+        Ok(code) => code,
+        _ => {
+            return Ok(SingleIssueAssetResponse::BadRequest(Json(
+                SingleIssueAssetResult {
+                    code: 400,
+                    message: "invalid base64 asset code".to_string(),
+                    data: None,
+                },
+            )));
+        }
     };
 
-    Ok(IssueAssetResponse::Ok(Json(result)))
+    let sql_query = "SELECT jsonb_path_query(value,'$.body.operations[*].IssueAsset') AS asset,block_hash,tx_hash,height FROM transaction ORDER BY height DESC".to_string();
+    let rows = sqlx::query(sql_query.as_str()).fetch_all(&mut conn).await?;
+    for row in rows {
+        let v: Value = row.try_get("asset").unwrap();
+        let a: IssueAsset = serde_json::from_value(v).unwrap();
+
+        if a.body.code.val.eq(&code) {
+            let block: String = row.try_get("block_hash")?;
+            let tx: String = row.try_get("tx_hash")?;
+            let height: i64 = row.try_get("height")?;
+
+            let pk = base64::decode_config(&a.pubkey.key, base64::URL_SAFE)
+                .c(d!())
+                .and_then(|bytes| XfrPublicKey::zei_from_bytes(&bytes).c(d!()))
+                .unwrap();
+            let issuer = bech32enc(&XfrPublicKey::zei_to_bytes(&pk));
+            let asset_code = base64::encode_config(&a.body.code.val, base64::URL_SAFE);
+
+            return Ok(SingleIssueAssetResponse::Ok(Json(SingleIssueAssetResult {
+                code: 200,
+                message: "".to_string(),
+                data: Some(IssueAssetData {
+                    issuer,
+                    issued_at_block: block,
+                    issued_at_tx: tx,
+                    issued_at_height: height,
+                    asset_code,
+                    asset: a,
+                }),
+            })));
+        }
+    }
+
+    Ok(SingleIssueAssetResponse::NotFound(Json(
+        SingleIssueAssetResult {
+            code: 404,
+            message: "asset not found".to_string(),
+            data: None,
+        },
+    )))
 }

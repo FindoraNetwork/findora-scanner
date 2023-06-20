@@ -2,7 +2,9 @@ mod service;
 mod utils;
 
 use crate::service::address::AddressResponse;
-use crate::service::asset::{AssetResponse, IssueAssetResponse};
+use crate::service::asset::{
+    AssetListResponse, AssetResponse, IssueAssetResponse, SingleIssueAssetResponse,
+};
 use crate::service::block::{BlocksResponse, FullBlockResponse, SimpleBlockResponse};
 use crate::service::chain::{
     AddressCountResponse, ChainStatisticsResponse, DelegateAddressNumResponse, DistributeResponse,
@@ -45,7 +47,7 @@ impl Api {
     #[oai(path = "/tx/:tx_hash", method = "get", tag = "ApiTags::Transaction")]
     async fn get_tx(
         &self,
-        /// tx hash, e.g. c19fc22beb61030607367b42d4898a26ede1e6aa6b400330804c95b241f29bd0.
+        /// tx hash, e.g. c19fc22beb61030607367b42d4898a26ede1e6aa6b400330804c95b241f29bd0
         tx_hash: Path<String>,
     ) -> poem::Result<TxResponse> {
         service::tx::get_tx(self, tx_hash)
@@ -60,7 +62,7 @@ impl Api {
     )]
     async fn get_evm_tx(
         &self,
-        /// evm tx hash, e.g. 0x697c0492b64b8e786061818c12af46e9b62b9ee20e573d7549e7a82e94ef13cf.
+        /// evm tx hash, e.g. 0x697c0492b64b8e786061818c12af46e9b62b9ee20e573d7549e7a82e94ef13cf
         tx_hash: Path<String>,
     ) -> poem::Result<TxResponse> {
         service::tx::get_evm_tx(self, tx_hash)
@@ -71,7 +73,7 @@ impl Api {
     #[oai(path = "/txs/to", method = "get", tag = "ApiTags::Transaction")]
     async fn get_txs_send_to(
         &self,
-        /// bech32 address, e.g. fra1p4vy5n9mlkdys7xczegj398xtyvw2nawz00nnfh4yr7fpjh297cqsxfv7v.
+        /// bech32 address, e.g. fra1p4vy5n9mlkdys7xczegj398xtyvw2nawz00nnfh4yr7fpjh297cqsxfv7v
         address: Query<String>,
         /// page index, the default is 1.
         page: Query<Option<i64>>,
@@ -86,7 +88,7 @@ impl Api {
     #[oai(path = "/txs/from", method = "get", tag = "ApiTags::Transaction")]
     async fn get_txs_receive_from(
         &self,
-        /// bech32 address, e.g. fra1p4vy5n9mlkdys7xczegj398xtyvw2nawz00nnfh4yr7fpjh297cqsxfv7v.
+        /// bech32 address, e.g. fra1p4vy5n9mlkdys7xczegj398xtyvw2nawz00nnfh4yr7fpjh297cqsxfv7v
         address: Query<String>,
         /// page index, the default is 1.
         page: Query<Option<i64>>,
@@ -102,15 +104,15 @@ impl Api {
     #[oai(path = "/txs", method = "get", tag = "ApiTags::Transaction")]
     async fn get_txs(
         &self,
-        /// block hash, e.g. 4B7C22FA8FC6913E091DC324830181BBA1F01EBFF53049F958EA5AA65327BFE0.
+        /// block hash, e.g. 4B7C22FA8FC6913E091DC324830181BBA1F01EBFF53049F958EA5AA65327BFE0
         block_id: Query<Option<String>>,
         /// block height.
         height: Query<Option<i64>>,
-        /// bech32 address, e.g. fra1p4vy5n9mlkdys7xczegj398xtyvw2nawz00nnfh4yr7fpjh297cqsxfv7v.
+        /// bech32 address, e.g. fra1p4vy5n9mlkdys7xczegj398xtyvw2nawz00nnfh4yr7fpjh297cqsxfv7v
         address: Query<Option<String>>,
-        /// bech32 address, e.g. fra1p4vy5n9mlkdys7xczegj398xtyvw2nawz00nnfh4yr7fpjh297cqsxfv7v.
+        /// bech32 address, e.g. fra1p4vy5n9mlkdys7xczegj398xtyvw2nawz00nnfh4yr7fpjh297cqsxfv7v
         from: Query<Option<String>>,
-        /// bech32 address, e.g. fra1p4vy5n9mlkdys7xczegj398xtyvw2nawz00nnfh4yr7fpjh297cqsxfv7v.
+        /// bech32 address, e.g. fra1p4vy5n9mlkdys7xczegj398xtyvw2nawz00nnfh4yr7fpjh297cqsxfv7v
         to: Query<Option<String>>,
         /// transaction type.
         /// 0 - Findora native tx.
@@ -136,15 +138,15 @@ impl Api {
     #[oai(path = "/txs/raw", method = "get", tag = "ApiTags::Transaction")]
     async fn get_txs_no_wrap(
         &self,
-        /// block hash, e.g. 4B7C22FA8FC6913E091DC324830181BBA1F01EBFF53049F958EA5AA65327BFE0.
+        /// block hash, e.g. 4B7C22FA8FC6913E091DC324830181BBA1F01EBFF53049F958EA5AA65327BFE0
         block_id: Query<Option<String>>,
         /// block height.
         height: Query<Option<i64>>,
-        /// bech32 address, e.g. fra1p4vy5n9mlkdys7xczegj398xtyvw2nawz00nnfh4yr7fpjh297cqsxfv7v.
+        /// bech32 address, e.g. fra1p4vy5n9mlkdys7xczegj398xtyvw2nawz00nnfh4yr7fpjh297cqsxfv7v
         address: Query<Option<String>>,
-        /// bech32 address, e.g. fra1p4vy5n9mlkdys7xczegj398xtyvw2nawz00nnfh4yr7fpjh297cqsxfv7v.
+        /// bech32 address, e.g. fra1p4vy5n9mlkdys7xczegj398xtyvw2nawz00nnfh4yr7fpjh297cqsxfv7v
         from: Query<Option<String>>,
-        /// bech32 address, e.g. fra1p4vy5n9mlkdys7xczegj398xtyvw2nawz00nnfh4yr7fpjh297cqsxfv7v.
+        /// bech32 address, e.g. fra1p4vy5n9mlkdys7xczegj398xtyvw2nawz00nnfh4yr7fpjh297cqsxfv7v
         to: Query<Option<String>>,
         /// transaction type.
         /// 0 - Findora native tx.
@@ -174,7 +176,7 @@ impl Api {
     )]
     async fn get_triple_masking_txs(
         &self,
-        /// block hash, e.g. 4B7C22FA8FC6913E091DC324830181BBA1F01EBFF53049F958EA5AA65327BFE0.
+        /// block hash, e.g. 4B7C22FA8FC6913E091DC324830181BBA1F01EBFF53049F958EA5AA65327BFE0
         block_id: Query<Option<String>>,
         /// public key, e.g. b2fdE7jKfQg_XL2CT7jdw84XkTdpX3uiRgpgW-h6k6o=.
         pub_key: Query<Option<String>>,
@@ -229,7 +231,7 @@ impl Api {
     )]
     async fn get_prism_tx(
         &self,
-        /// Bridge Contract deploy address, e.g. 0x2B7835AE05C9Cb5EF086e3BFe249e2658b450E8d.
+        /// Bridge Contract deploy address, e.g. 0x2B7835AE05C9Cb5EF086e3BFe249e2658b450E8d
         address: Path<String>,
         /// starting timestamp.
         start_time: Query<Option<i64>>,
@@ -329,7 +331,7 @@ impl Api {
     #[oai(path = "/address/:address", method = "get", tag = "ApiTags::Address")]
     async fn get_address(
         &self,
-        /// bech32 address, e.g. fra1p4vy5n9mlkdys7xczegj398xtyvw2nawz00nnfh4yr7fpjh297cqsxfv7v.
+        /// bech32 address, e.g. fra1p4vy5n9mlkdys7xczegj398xtyvw2nawz00nnfh4yr7fpjh297cqsxfv7v
         address: Path<String>,
         /// page index, the default is 1.
         page: Query<Option<i64>>,
@@ -344,7 +346,7 @@ impl Api {
     #[oai(path = "/asset/:code", method = "get", tag = "ApiTags::Asset")]
     async fn get_asset(
         &self,
-        /// base64 asset code, e.g. AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=.
+        /// base64 asset code, e.g. AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
         code: Path<String>,
     ) -> poem::Result<AssetResponse> {
         service::asset::get_asset(self, code)
@@ -352,13 +354,35 @@ impl Api {
             .map_err(handle_fetch_one_err)
     }
 
+    #[oai(path = "/asset/list", method = "get", tag = "ApiTags::Asset")]
+    async fn get_asset_list(
+        &self,
+        page: Query<Option<i64>>,
+        page_size: Query<Option<i64>>,
+    ) -> poem::Result<AssetListResponse> {
+        service::asset::get_asset_list(self, page, page_size)
+            .await
+            .map_err(handle_fetch_one_err)
+    }
+
     #[oai(path = "/asset/issued/list", method = "get", tag = "ApiTags::Asset")]
-    async fn get_issued_asset(
+    async fn get_issued_asset_list(
         &self,
         page: Query<Option<i64>>,
         page_size: Query<Option<i64>>,
     ) -> poem::Result<IssueAssetResponse> {
         service::asset::get_issued_asset_list(self, page, page_size)
+            .await
+            .map_err(handle_fetch_one_err)
+    }
+
+    #[oai(path = "/asset/issued/:code", method = "get", tag = "ApiTags::Asset")]
+    async fn get_issued_asset(
+        &self,
+        /// base64 asset code, e.g. dPJSy9DnxJgUiMheXphWloPfnvKQDCl7LoNfhHjaimM=
+        code: Path<String>,
+    ) -> poem::Result<SingleIssueAssetResponse> {
+        service::asset::get_issued_asset(self, code)
             .await
             .map_err(handle_fetch_one_err)
     }
@@ -396,7 +420,7 @@ impl Api {
     )]
     async fn validator_detail(
         &self,
-        /// validator address, e.g. 917454FB61CFBDB1995BC57C7A821E41FFB1AF43.
+        /// validator address, e.g. 917454FB61CFBDB1995BC57C7A821E41FFB1AF43
         address: Path<String>,
     ) -> poem::Result<ValidatorDetailResponse> {
         service::validator::validator_detail(self, address)
@@ -422,7 +446,7 @@ impl Api {
     )]
     async fn validator_signed_count(
         &self,
-        /// validator address, e.g. 917454FB61CFBDB1995BC57C7A821E41FFB1AF43.
+        /// validator address, e.g. 917454FB61CFBDB1995BC57C7A821E41FFB1AF43
         address: Query<String>,
         /// page index, the default is 1.
         page: Query<Option<i64>>,
@@ -441,7 +465,7 @@ impl Api {
     )]
     async fn delegator_list(
         &self,
-        /// delegator address, e.g. 000E33AB7471186F3B1DE9FC08BB9C480F453590.
+        /// delegator address, e.g. 000E33AB7471186F3B1DE9FC08BB9C480F453590
         address: Path<String>,
     ) -> poem::Result<DelegatorListResponse> {
         service::validator::delegator_list(self, address)
@@ -500,7 +524,7 @@ impl Api {
     )]
     async fn validator_delegation(
         &self,
-        /// validator address, e.g. 000E33AB7471186F3B1DE9FC08BB9C480F453590.
+        /// validator address, e.g. 000E33AB7471186F3B1DE9FC08BB9C480F453590
         address: Query<String>,
     ) -> poem::Result<ValidatorDelegationResponse> {
         service::validator::validator_delegation(self, address)
@@ -515,7 +539,7 @@ impl Api {
     )]
     async fn get_prism_records_receive(
         &self,
-        /// query evm to native txs received at the address, e.g. fra1rkvlrs8j8y7rlud9qh6ndg5nr4ag7ar4640dr8h0ys6zfrwv25as42zptu.
+        /// query evm to native txs received at the address, e.g. fra1rkvlrs8j8y7rlud9qh6ndg5nr4ag7ar4640dr8h0ys6zfrwv25as42zptu
         address: Query<String>,
         /// page index, the default is 1.
         page: Query<Option<i64>>,
@@ -534,7 +558,7 @@ impl Api {
     )]
     async fn get_prism_records_send(
         &self,
-        /// query native to evm txs sent from the address, e.g. fra18fnyetvs2kc035xz78kyfcygmej8pk5h2kwczy03w6uewdphzfxsk74dym.
+        /// query native to evm txs sent from the address, e.g. fra18fnyetvs2kc035xz78kyfcygmej8pk5h2kwczy03w6uewdphzfxsk74dym
         address: Query<String>,
         /// page index, the default is 1.
         page: Query<Option<i64>>,
@@ -549,7 +573,7 @@ impl Api {
     #[oai(path = "/tx/delegation", method = "get", tag = "ApiTags::Transaction")]
     async fn get_delegation_tx(
         &self,
-        /// bech32 address, e.g. fra18fnyetvs2kc035xz78kyfcygmej8pk5h2kwczy03w6uewdphzfxsk74dym.
+        /// bech32 address, e.g. fra18fnyetvs2kc035xz78kyfcygmej8pk5h2kwczy03w6uewdphzfxsk74dym
         address: Query<String>,
         /// page index, the default is 1.
         page: Query<Option<i64>>,
@@ -568,7 +592,7 @@ impl Api {
     )]
     async fn get_undelegation(
         &self,
-        /// bech32 address, e.g. fra18fnyetvs2kc035xz78kyfcygmej8pk5h2kwczy03w6uewdphzfxsk74dym.
+        /// bech32 address, e.g. fra18fnyetvs2kc035xz78kyfcygmej8pk5h2kwczy03w6uewdphzfxsk74dym
         address: Query<String>,
         /// page index, the default is 1.
         page: Query<Option<i64>>,
@@ -583,7 +607,7 @@ impl Api {
     #[oai(path = "/staking/claim", method = "get", tag = "ApiTags::Staking")]
     async fn get_claim(
         &self,
-        /// bech32 address, e.g. fra1xczgryuz65as77gf8d5f07xd0wetd8qpm5hvgqkfgc60gxdjpmkshnq9ys.
+        /// bech32 address, e.g. fra1xczgryuz65as77gf8d5f07xd0wetd8qpm5hvgqkfgc60gxdjpmkshnq9ys
         address: Query<String>,
         /// page index, the default is 1.
         page: Query<Option<i64>>,
@@ -602,7 +626,7 @@ impl Api {
     )]
     async fn get_validator_history(
         &self,
-        /// validator address, e.g. 9E6717392EFDCFA101E33449A7C2A238251315B1.
+        /// validator address, e.g. 9E6717392EFDCFA101E33449A7C2A238251315B1
         address: Query<String>,
         /// page index, the default is 1.
         page: Query<Option<i64>>,

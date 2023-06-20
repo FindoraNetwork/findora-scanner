@@ -49,6 +49,7 @@ pub fn public_key_from_bech32(addr: &str) -> Result<XfrPublicKey> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use base64::URL_SAFE;
 
     #[tokio::test]
     async fn test_public_key_to_bech32() -> Result<()> {
@@ -72,10 +73,10 @@ mod tests {
     async fn test_asset_code() -> Result<()> {
         let asset_addr = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
         let asset_raw: Vec<u8> = vec![0u8; 32];
-        let res_code = base64::decode(asset_addr).unwrap();
+        let res_code = base64::decode_config(asset_addr, URL_SAFE).unwrap();
         assert_eq!(asset_raw, res_code);
 
-        let res_addr = base64::encode(&asset_raw);
+        let res_addr = base64::encode_config(&asset_raw, URL_SAFE);
         assert_eq!(asset_addr, res_addr);
         Ok(())
     }
