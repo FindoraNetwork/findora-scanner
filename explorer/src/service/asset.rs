@@ -148,6 +148,7 @@ pub struct IssueAssetData {
     pub issued_at_block: String,
     pub issued_at_tx: String,
     pub issued_at_height: i64,
+    pub asset_code: String,
     pub asset: IssueAsset,
 }
 
@@ -196,12 +197,14 @@ pub async fn get_issued_asset_list(
             .and_then(|bytes| XfrPublicKey::zei_from_bytes(&bytes).c(d!()))
             .unwrap();
         let issuer = bech32enc(&XfrPublicKey::zei_to_bytes(&pk));
+        let asset_code = base64::encode(&a.body.code.val);
 
         assets.push(IssueAssetData {
             issuer,
             issued_at_block: block,
             issued_at_tx: tx,
             issued_at_height: height,
+            asset_code,
             asset: a,
         });
     }
