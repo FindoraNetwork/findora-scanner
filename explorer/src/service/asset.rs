@@ -63,6 +63,7 @@ pub struct AssetDisplay {
     pub issued_at_height: i64,
     pub memo: String,
     pub asset_rules: AssetRules,
+    pub asset_code: String,
     pub code: Code,
 }
 
@@ -98,6 +99,7 @@ pub async fn get_asset(api: &Api, address: Path<String>) -> Result<AssetResponse
                 .and_then(|bytes| XfrPublicKey::zei_from_bytes(&bytes).c(d!()))
                 .unwrap();
             let issuer_addr = bech32enc(&XfrPublicKey::zei_to_bytes(&pk));
+            let asset_code = base64::encode_config(&a.code.val, base64::URL_SAFE);
 
             assets.push(AssetDisplay {
                 issuer: issuer_addr,
@@ -106,6 +108,7 @@ pub async fn get_asset(api: &Api, address: Path<String>) -> Result<AssetResponse
                 issued_at_height: height,
                 memo: a.memo,
                 asset_rules: a.asset_rules,
+                asset_code,
                 code: a.code,
             });
         }
@@ -183,6 +186,7 @@ pub async fn get_asset_list(
             .and_then(|bytes| XfrPublicKey::zei_from_bytes(&bytes).c(d!()))
             .unwrap();
         let issuer_addr = bech32enc(&XfrPublicKey::zei_to_bytes(&pk));
+        let asset_code = base64::encode_config(&a.code.val, base64::URL_SAFE);
 
         assets.push(AssetDisplay {
             issuer: issuer_addr,
@@ -191,6 +195,7 @@ pub async fn get_asset_list(
             issued_at_height: height,
             memo: a.memo,
             asset_rules: a.asset_rules,
+            asset_code,
             code: a.code,
         });
     }
