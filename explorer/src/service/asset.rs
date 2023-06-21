@@ -129,7 +129,7 @@ pub async fn get_asset(api: &Api, address: Path<String>) -> Result<AssetResponse
         }
     }
 
-    {
+    if assets.is_empty() {
         // get asset from node RPC.
         let asset_url = api
             .platform_server
