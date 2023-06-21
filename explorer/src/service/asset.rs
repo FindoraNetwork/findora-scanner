@@ -114,6 +114,7 @@ pub async fn get_asset(api: &Api, address: Path<String>) -> Result<AssetResponse
         }
     }
 
+    /*
     if assets.is_empty() {
         return Ok(AssetResponse::NotFound(Json(AssetResult {
             code: 404,
@@ -121,6 +122,7 @@ pub async fn get_asset(api: &Api, address: Path<String>) -> Result<AssetResponse
             data: None,
         })));
     }
+    */
 
     Ok(AssetResponse::Ok(Json(AssetResult {
         code: 200,
