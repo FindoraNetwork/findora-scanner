@@ -9,7 +9,6 @@
     database = "test"
 
 [rpc]
-    tendermint = "https://prod-forge.prod.findora.org:26657/"
-    platform = "https://prod-forge.prod.findora.org:8667/"
-
-
+    tendermint = "https://prod-mainnet.prod.findora.org:26657/"
+    platform = "https://prod-mainnet.prod.findora.org:8667/"
+    platform_server = "https://prod-mainnet.prod.findora.org:8668/"

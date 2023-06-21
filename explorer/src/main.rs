@@ -38,6 +38,7 @@ use tokio::sync::Mutex;
 #[allow(dead_code)]
 pub struct Api {
     platform: TendermintRPC,
+    platform_server: TendermintRPC,
     tendermint: TendermintRPC,
     storage: Mutex<Pool<Postgres>>,
 }
@@ -808,9 +809,14 @@ async fn main() -> Result<()> {
         Duration::from_secs(60),
         config.rpc.platform.to_string().parse().unwrap(),
     );
+    let platform_server_rpc_client = TendermintRPC::new(
+        Duration::from_secs(60),
+        config.rpc.platform_server.to_string().parse().unwrap(),
+    );
 
     let api = Api {
         platform: platform_rpc_client,
+        platform_server: platform_server_rpc_client,
         tendermint: tendermint_rpc_client,
         storage: Mutex::new(pool),
     };

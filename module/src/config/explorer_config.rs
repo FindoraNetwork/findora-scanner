@@ -27,6 +27,7 @@ pub struct PostgresConfig {
 #[derive(Debug, Deserialize, Serialize)]
 pub struct TendermintConfig {
     pub platform: String,
+    pub platform_server: String,
     pub tendermint: String,
 }
 
