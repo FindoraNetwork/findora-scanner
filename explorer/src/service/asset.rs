@@ -67,6 +67,21 @@ pub struct AssetDisplay {
     pub code: Code,
 }
 
+#[derive(Serialize, Deserialize, Debug, Default, Object)]
+pub struct Properties {
+    pub code: Code,
+    pub issuer: PubKey,
+    pub asset_rules: AssetRules,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, Object)]
+pub struct AssetRPCResult {
+    pub properties: Properties,
+    pub digest: [u8; 32],
+    pub units: u32,
+    pub confidential_units: [u8; 32],
+}
+
 pub async fn get_asset(api: &Api, address: Path<String>) -> Result<AssetResponse> {
     let mut conn = api.storage.lock().await.acquire().await?;
     let code_res = base64::decode_config(&address.0, base64::URL_SAFE);
@@ -114,15 +129,40 @@ pub async fn get_asset(api: &Api, address: Path<String>) -> Result<AssetResponse
         }
     }
 
-    /*
-    if assets.is_empty() {
-        return Ok(AssetResponse::NotFound(Json(AssetResult {
-            code: 404,
-            message: "asset not found".to_string(),
-            data: None,
-        })));
+    {
+        // get asset from node RPC.
+        let asset_url = api
+            .platform_server
+            .rpc
+            .join(format!("asset_token/{}", address.0).as_str())?;
+
+        let resp = api
+            .platform_server
+            .client
+            .get(asset_url)
+            .send()
+            .await?
+            .json::<AssetRPCResult>()
+            .await?;
+
+        let pk = base64::decode_config(&resp.properties.issuer.key, base64::URL_SAFE)
+            .c(d!())
+            .and_then(|bytes| XfrPublicKey::zei_from_bytes(&bytes).c(d!()))
+            .unwrap();
+        let issuer_addr = bech32enc(&XfrPublicKey::zei_to_bytes(&pk));
+        let asset_code = base64::encode_config(&resp.properties.code.val, base64::URL_SAFE);
+
+        assets.push(AssetDisplay {
+            issuer: issuer_addr,
+            issued_at_block: "".to_string(),
+            issued_at_tx: "".to_string(),
+            issued_at_height: 0,
+            memo: "".to_string(),
+            asset_rules: resp.properties.asset_rules,
+            asset_code,
+            code: resp.properties.code,
+        })
     }
-    */
 
     Ok(AssetResponse::Ok(Json(AssetResult {
         code: 200,
