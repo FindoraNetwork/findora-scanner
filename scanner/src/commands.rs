@@ -2,7 +2,7 @@ use crate::{db, rpc::RPCCaller, scanner::RangeScanner};
 use clap::Parser;
 use futures::TryStreamExt;
 use reqwest::Url;
-use sqlx::{PgPool, Row};
+use sqlx::PgPool;
 use std::env;
 use std::time::Duration;
 
@@ -219,7 +219,7 @@ impl Migrate {
         let mut conn = pool.acquire().await?;
 
         let mut cursor = sqlx::query("SELECT tx_hash FROM transaction").fetch(&mut conn);
-        while let Some(row) = cursor.try_next().await? {
+        while let Some(_row) = cursor.try_next().await? {
             // parse tx
         }
         Ok(())
