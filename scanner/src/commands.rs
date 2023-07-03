@@ -1,7 +1,8 @@
 use crate::{db, rpc::RPCCaller, scanner::RangeScanner};
 use clap::Parser;
+use futures::TryStreamExt;
 use reqwest::Url;
-use sqlx::PgPool;
+use sqlx::{PgPool, Row};
 use std::env;
 use std::time::Duration;
 
@@ -10,6 +11,7 @@ pub enum ScannerCmd {
     Scan(RangeScan),
     Load(Load),
     Subscribe(Subscribe),
+    Migrate(Migrate),
 }
 use crate::{Error, Result};
 
@@ -205,4 +207,21 @@ async fn prepare(rpc: &str) -> Result<(Url, PgPool)> {
     let rpc: Url = rpc.parse().map_err(|e| Error::from(format!("{e}")))?;
 
     Ok((rpc, pool))
+}
+
+#[derive(Parser)]
+#[clap(about, version, author)]
+pub struct Migrate {}
+
+impl Migrate {
+    pub async fn execute(&self) -> Result<()> {
+        let pool = db::connect().await?;
+        let mut conn = pool.acquire().await?;
+
+        let mut cursor = sqlx::query("SELECT tx_hash FROM transaction").fetch(&mut conn);
+        while let Some(row) = cursor.try_next().await? {
+            // parse tx
+        }
+        Ok(())
+    }
 }
