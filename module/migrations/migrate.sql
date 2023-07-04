@@ -5,6 +5,14 @@ drop table issued_assets;
 drop table stakings;
 drop table unstakings;
 drop table rewards;
+drop table tx_types;
+
+-- Tx Type
+create table tx_types(
+    tx varchar(64) not null,
+    ty integer not null,
+    primary key (tx)
+);
 
 -- Native Transfer
 create table native_txs(
@@ -15,9 +23,9 @@ create table native_txs(
     amount bigint not null,
     height bigint not null,
     timestamp bigint not null,
-    ty integer not null
+    ty integer not null,
+    primary key (tx)
 );
-create index nt_tx_index on native_txs(tx);
 create index nt_block_index on native_txs(block);
 create index nt_sender_index on native_txs(sender);
 create index unt_receiver_index on native_txs(receiver);
@@ -37,9 +45,9 @@ create table evm_txs(
     gas_limit bigint not null,
     height bigint not null,
     timestamp bigint not null,
-    ty integer
+    ty integer,
+    primary key (tx)
 );
-create index et_tx_index on evm_txs(tx);
 create index et_block_index on evm_txs(block);
 create index et_evm_tx_index on evm_txs(evm_tx);
 create index et_sender_index on evm_txs(sender);
@@ -56,9 +64,9 @@ create table created_assets(
     max_units integer not null,
     transferable boolean not null,
     updatable boolean not null,
-    transfer_multisig_rules jsonb
+    transfer_multisig_rules jsonb,
+    primary key (code)
 );
-create index ca_code_index on created_assets(code);
 create index ca_issuer_index on created_assets(creator);
 create index ca_created_at_index on created_assets(created_at);
 
@@ -67,9 +75,9 @@ create table issued_assets(
     asset_type varchar(44) not null,
     issuer varchar(62) not null,
     issued_at varchar(64) not null,
-    amount bigint not null
+    amount bigint not null,
+    primary key (asset_type)
 );
-create index ia_type_index on issued_assets(asset_type);
 create index ia_issuer_index on issued_assets(issuer);
 create index ia_issued_at_index on issued_assets(issued_at);
 
@@ -79,9 +87,9 @@ create table stakings(
     sender varchar(62) not null,
     amount bigint not null,
     target_validator varchar(40) not null,
-    new_validator varchar(62)
+    new_validator varchar(62),
+    primary key (tx)
 );
-create index stk_tx_index on stakings(tx);
 create index stk_sender_index on stakings(sender);
 create index stk_validator_index on stakings(target_validator);
 
@@ -91,9 +99,9 @@ create table unstakings(
     sender varchar(62) not null,
     amount bigint not null,
     target_validator varchar(40) not null,
-    new_validator varchar(62)
+    new_validator varchar(62),
+    primary key (tx)
 );
-create index unstk_tx_index on unstakings(tx);
 create index unstk_sender_index on unstakings(sender);
 create index unstk_validator_index on unstakings(target_validator);
 
@@ -101,7 +109,7 @@ create index unstk_validator_index on unstakings(target_validator);
 create table rewards(
     tx varchar(64) not null,
     sender varchar(62) not null,
-    amount bigint not null
+    amount bigint not null,
+    primary key (tx)
 );
-create index rd_tx_index on rewards(tx);
 create index rd_sender_index on rewards(sender);
