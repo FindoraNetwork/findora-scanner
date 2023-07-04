@@ -13,7 +13,7 @@ create table tx_types(
     ty integer not null,
     primary key (tx)
 );
-
+//zPmn33ByaExGhEV1Gp4waH-iCUm9XMsKRYVn56mOHEg=
 -- Native Transfer
 create table native_txs(
     tx varchar(64) not null,
@@ -75,7 +75,7 @@ create table issued_assets(
     asset_type varchar(44) not null,
     issuer varchar(62) not null,
     issued_at varchar(64) not null,
-    amount bigint not null,
+    amount varchar(89) not null,
     primary key (asset_type)
 );
 create index ia_issuer_index on issued_assets(issuer);
