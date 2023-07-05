@@ -1,8 +1,13 @@
 use crate::{db, rpc::RPCCaller, scanner::RangeScanner};
 use clap::Parser;
+use ethereum::TransactionAction;
+use ethereum_types::H256;
 use futures::TryStreamExt;
+use module::utils::crypto::recover_signer;
 use reqwest::Url;
-use sqlx::PgPool;
+use serde_json::Value;
+use sha3::{Digest, Keccak256};
+use sqlx::{PgPool, Row};
 use std::env;
 use std::time::Duration;
 
@@ -13,6 +18,7 @@ pub enum ScannerCmd {
     Subscribe(Subscribe),
     Migrate(Migrate),
 }
+use crate::types::{FindoraEVMTx, FindoraTxType};
 use crate::{Error, Result};
 
 const DEFAULT_TIMEOUT_SECS: u64 = 32;
@@ -218,9 +224,46 @@ impl Migrate {
         let pool = db::connect().await?;
         let mut conn = pool.acquire().await?;
 
-        let mut cursor = sqlx::query("SELECT tx_hash FROM transaction").fetch(&mut conn);
-        while let Some(_row) = cursor.try_next().await? {
-            // parse tx
+        let mut cursor =
+            sqlx::query("SELECT tx_hash,block_hash,height,timestamp,ty,value FROM transaction")
+                .fetch(&mut conn);
+        while let Some(row) = cursor.try_next().await? {
+            let tx: String = row.try_get("tx_hash")?;
+            let block: String = row.try_get("block_hash")?;
+            let height: i64 = row.try_get("height")?;
+            let timestamp: i64 = row.try_get("timestamp")?;
+            let ty: i32 = row.try_get("ty")?;
+            let v = row.try_get("value")?;
+            if ty == 1 {
+                let evm_tx: FindoraEVMTx = serde_json::from_value(v).unwrap();
+                let evm_tx_hash =
+                    H256::from_slice(Keccak256::digest(&rlp::encode(&evm_tx)).as_slice());
+                let signer = recover_signer(&evm_tx.function.ethereum.transact).unwrap();
+                let receiver = match evm_tx.function.ethereum.transact.action {
+                    TransactionAction::Call(to) => {
+                        format!("{to:?}")
+                    }
+                    _ => "".to_string(),
+                };
+
+                let v: Value = serde_json::to_value(&evm_tx).unwrap();
+                sqlx::query("INSERT INTO evm_txs VALUES($1,$2,$3,$4,$5,$6,$7,$8)")
+                    .bind(&tx)
+                    .bind(block)
+                    .bind(format!("{evm_tx_hash:?}").to_lowercase())
+                    .bind(format!("{signer:?}").to_uppercase())
+                    .bind(receiver)
+                    .bind(height)
+                    .bind(timestamp)
+                    .bind(v)
+                    .execute(&pool)
+                    .await?;
+                sqlx::query("INSERT INTO tx_types VALUES($1,$2)")
+                    .bind(tx)
+                    .bind(FindoraTxType::Evm as i32)
+                    .execute(&pool)
+                    .await?;
+            }
         }
         Ok(())
     }

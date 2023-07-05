@@ -23,7 +23,7 @@ create table native_txs(
     receiver varchar(62) not null,
     amount bigint not null,
     height bigint not null,
-    timestamp bigint not null
+    timestamp bigint not null,
     primary key (tx)
 );
 create index nt_block_index on native_txs(block);
@@ -39,12 +39,9 @@ create table evm_txs(
     evm_tx varchar(66) not null,
     sender varchar(42) not null,
     receiver varchar(42) not null,
-    nonce bigint not null,
-    amount bigint not null,
-    gas_price bigint not null,
-    gas_limit bigint not null,
     height bigint not null,
-    timestamp bigint not null
+    timestamp bigint not null,
+    content jsonb not null,
     primary key (tx)
 );
 create index et_block_index on evm_txs(block);
@@ -65,7 +62,7 @@ create table created_assets(
     updatable boolean not null,
     transfer_multisig_rules jsonb,
     timestamp bigint not null,
-    height bigint not null
+    height bigint not null,
     primary key (code)
 );
 create index ca_issuer_index on created_assets(creator);
@@ -80,7 +77,7 @@ create table issued_assets(
     issued_at_tx varchar(64) not null,
     amount varchar(89) not null,
     timestamp bigint not null,
-    height bigint not null
+    height bigint not null,
     primary key (code)
 );
 create index ia_issuer_index on issued_assets(issuer);
@@ -96,7 +93,7 @@ create table stakings(
     target_validator varchar(40) not null,
     new_validator varchar(62),
     timestamp bigint not null,
-    height bigint not null
+    height bigint not null,
     primary key (tx)
 );
 create index stk_sender_index on stakings(sender);
@@ -112,7 +109,7 @@ create table unstakings(
     target_validator varchar(40) not null,
     new_validator varchar(62),
     timestamp bigint not null,
-    height bigint not null
+    height bigint not null,
     primary key (tx)
 );
 create index unstk_sender_index on unstakings(sender);
@@ -126,7 +123,7 @@ create table rewards(
     sender varchar(62) not null,
     amount bigint not null,
     timestamp bigint not null,
-    height bigint not null
+    height bigint not null,
     primary key (tx)
 );
 create index rd_sender_index on rewards(sender);
@@ -141,7 +138,7 @@ create table n2e(
     asset varchar(44) not null,
     amount bigint not null,
     timestamp bigint not null,
-    height bigint not null
+    height bigint not null,
     primary key (tx)
 );
 create index n2e_sender_index on n2e(sender);
