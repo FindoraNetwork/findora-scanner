@@ -796,9 +796,11 @@ async fn main() -> Result<()> {
     );
     //let postgres_config=format!("host={} user={} password={}",config.postgres.addr, config.postgres.account, config.postgres.password);
     // std::env::set_var("DATABASE_URL", postgres_config);
-    let mut opt = PoolOptions::new();
-    opt = opt.max_connections(1000);
-    let pool = opt.connect(&postgres_config).await.unwrap();
+    let pool = PoolOptions::new()
+        .max_connections(100)
+        .connect(&postgres_config)
+        .await
+        .unwrap();
 
     // tendermint rpc
     let tendermint_rpc_client = TendermintRPC::new(

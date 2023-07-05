@@ -15,5 +15,6 @@ async fn main() -> Result<()> {
         ScannerCmd::Load(load) => load.execute().await,
         ScannerCmd::Scan(batch_scan) => batch_scan.execute().await,
         ScannerCmd::Subscribe(subscribe) => subscribe.run().await,
+        ScannerCmd::Migrate(migrate) => migrate.execute().await,
     }
 }
