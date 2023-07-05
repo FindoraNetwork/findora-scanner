@@ -6,6 +6,7 @@ drop table stakings;
 drop table unstakings;
 drop table rewards;
 drop table tx_types;
+drop table n2e;
 
 -- Tx Type
 create table tx_types(
@@ -13,7 +14,7 @@ create table tx_types(
     ty integer not null,
     primary key (tx)
 );
-//zPmn33ByaExGhEV1Gp4waH-iCUm9XMsKRYVn56mOHEg=
+
 -- Native Transfer
 create table native_txs(
     tx varchar(64) not null,
@@ -22,8 +23,7 @@ create table native_txs(
     receiver varchar(62) not null,
     amount bigint not null,
     height bigint not null,
-    timestamp bigint not null,
-    ty integer not null,
+    timestamp bigint not null
     primary key (tx)
 );
 create index nt_block_index on native_txs(block);
@@ -44,8 +44,7 @@ create table evm_txs(
     gas_price bigint not null,
     gas_limit bigint not null,
     height bigint not null,
-    timestamp bigint not null,
-    ty integer,
+    timestamp bigint not null
     primary key (tx)
 );
 create index et_block_index on evm_txs(block);
@@ -59,27 +58,35 @@ create index et_time_index on evm_txs(timestamp);
 create table created_assets(
     code varchar(44) not null,
     creator varchar(62) not null,
-    created_at varchar(64) not null,
+    created_at_tx varchar(64) not null,
     decimal integer not null,
     max_units integer not null,
     transferable boolean not null,
     updatable boolean not null,
     transfer_multisig_rules jsonb,
+    timestamp bigint not null,
+    height bigint not null
     primary key (code)
 );
 create index ca_issuer_index on created_assets(creator);
-create index ca_created_at_index on created_assets(created_at);
+create index ca_created_at_index on created_assets(created_at_tx);
+create index ca_time_index on created_assets(timestamp);
+create index ca_height_index on created_assets(height);
 
 -- IssueAsset
 create table issued_assets(
-    asset_type varchar(44) not null,
+    code varchar(44) not null,
     issuer varchar(62) not null,
-    issued_at varchar(64) not null,
+    issued_at_tx varchar(64) not null,
     amount varchar(89) not null,
-    primary key (asset_type)
+    timestamp bigint not null,
+    height bigint not null
+    primary key (code)
 );
 create index ia_issuer_index on issued_assets(issuer);
-create index ia_issued_at_index on issued_assets(issued_at);
+create index ia_issued_at_index on issued_assets(issued_at_tx);
+create index ia_time_index on issued_assets(timestamp);
+create index ia_height_index on issued_assets(height);
 
 -- Delegation
 create table stakings(
@@ -88,10 +95,14 @@ create table stakings(
     amount bigint not null,
     target_validator varchar(40) not null,
     new_validator varchar(62),
+    timestamp bigint not null,
+    height bigint not null
     primary key (tx)
 );
 create index stk_sender_index on stakings(sender);
 create index stk_validator_index on stakings(target_validator);
+create index stk_time_index on stakings(timestamp);
+create index stk_height_index on stakings(height);
 
 -- UnDelegation
 create table unstakings(
@@ -100,16 +111,40 @@ create table unstakings(
     amount bigint not null,
     target_validator varchar(40) not null,
     new_validator varchar(62),
+    timestamp bigint not null,
+    height bigint not null
     primary key (tx)
 );
 create index unstk_sender_index on unstakings(sender);
 create index unstk_validator_index on unstakings(target_validator);
+create index unstk_time_index on unstakings(timestamp);
+create index unstk_height_index on unstakings(height);
 
 -- Claim
 create table rewards(
     tx varchar(64) not null,
     sender varchar(62) not null,
     amount bigint not null,
+    timestamp bigint not null,
+    height bigint not null
     primary key (tx)
 );
 create index rd_sender_index on rewards(sender);
+create index rd_time_index on rewards(timestamp);
+create index rd_height_index on rewards(height);
+
+-- Native To EVM
+create table n2e(
+    tx varchar(64) not null,
+    sender varchar(62) not null,
+    receiver varchar(42) not null,
+    asset varchar(44) not null,
+    amount bigint not null,
+    timestamp bigint not null,
+    height bigint not null
+    primary key (tx)
+);
+create index n2e_sender_index on n2e(sender);
+create index n2e_receiver_index on n2e(receiver);
+create index n2e_time_index on n2e(timestamp);
+create index n2e_height_index on n2e(height);
