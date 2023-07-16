@@ -18,7 +18,8 @@ pub enum ScannerCmd {
     Subscribe(Subscribe),
     Migrate(Migrate),
 }
-use crate::types::{FindoraEVMTx, FindoraTxType};
+use crate::db::{save_evm_tx, save_tx_type};
+use crate::types::{FindoraEVMTx, FindoraTxType, TxValue};
 use crate::{Error, Result};
 
 const DEFAULT_TIMEOUT_SECS: u64 = 32;
@@ -247,22 +248,69 @@ impl Migrate {
                 };
 
                 let v: Value = serde_json::to_value(&evm_tx).unwrap();
-                sqlx::query("INSERT INTO evm_txs VALUES($1,$2,$3,$4,$5,$6,$7,$8)")
-                    .bind(&tx)
-                    .bind(block)
-                    .bind(format!("{evm_tx_hash:?}").to_lowercase())
-                    .bind(format!("{signer:?}").to_uppercase())
-                    .bind(receiver)
-                    .bind(height)
-                    .bind(timestamp)
-                    .bind(v)
-                    .execute(&pool)
-                    .await?;
-                sqlx::query("INSERT INTO tx_types VALUES($1,$2)")
-                    .bind(tx)
-                    .bind(FindoraTxType::Evm as i32)
-                    .execute(&pool)
-                    .await?;
+                let evm_tx_hash = format!("{evm_tx_hash:?}").to_lowercase();
+                let sender = format!("{signer:?}").to_lowercase();
+                let receiver = receiver.to_lowercase();
+                save_evm_tx(
+                    &tx,
+                    &block.to_lowercase(),
+                    evm_tx_hash.as_str(),
+                    sender.as_str(),
+                    receiver.as_str(),
+                    height,
+                    timestamp,
+                    v,
+                    &pool,
+                )
+                .await?;
+                save_tx_type(&tx, FindoraTxType::Evm as i32, &pool).await?;
+            } else {
+                let tx_str = serde_json::to_string(&v).unwrap();
+
+                if tx_str.contains("ConvertAccount") {
+                    let tx_val: TxValue = serde_json::from_value(v).unwrap();
+                    for v in tx_val.body.operations {
+                        let _s = serde_json::to_string(&v).unwrap();
+                    }
+
+                    // native to evm
+                    // let n2e_tx: ConvertAccount = serde_json::from_value(v).unwrap();
+                    // let asset: String;
+                    // if let Some(asset_bin) = &n2e_tx.asset_type {
+                    //     asset = base64::encode_config(asset_bin, base64::URL_SAFE);
+                    // } else {
+                    //     asset = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=".to_string();
+                    // }
+                    //
+                    // sqlx::query("INSERT INTO n2e VALUES($1,$2,$3,$4,$5,$6,$7)")
+                    //     .bind(&tx)
+                    //     .bind(block)
+                    //     .bind(n2e_tx.receiver.ethereum)
+                    //     .bind(asset)
+                    //     .bind(n2e_tx.value)
+                    //     .bind(height)
+                    //     .bind(timestamp)
+                    //     .execute(&pool)
+                    //     .await?;
+                    // sqlx::query("INSERT INTO tx_types VALUES($1,$2)")
+                    //     .bind(tx)
+                    //     .bind(FindoraTxType::NativeToEVM as i32)
+                    //     .execute(&pool)
+                    //     .await?;
+                }
+                // else if tx_str.contains("XHub") { // old: evm to native
+                // } else if tx_str.contains("Delegation") { // staking
+                // } else if tx_str.contains("UnDelegation") { // unstaking
+                // } else if tx_str.contains("Claim") { // rewards
+                // } else if tx_str.contains("DefineAsset") {
+                // } else if tx_str.contains("IssueAsset") {
+                // } else if tx_str.contains("AbarToBar") {
+                //     // TODO
+                // } else if tx_str.contains("BarToAbar") {
+                //     // TODO
+                // } else if tx_str.contains("TransferAnonAsset") {
+                //     // TODO
+                // }
             }
         }
         Ok(())

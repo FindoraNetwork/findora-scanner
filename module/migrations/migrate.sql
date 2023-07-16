@@ -136,9 +136,9 @@ create table n2e(
     sender varchar(62) not null,
     receiver varchar(42) not null,
     asset varchar(44) not null,
-    amount bigint not null,
-    timestamp bigint not null,
+    amount varchar(24) not null,
     height bigint not null,
+    timestamp bigint not null,
     primary key (tx)
 );
 create index n2e_sender_index on n2e(sender);

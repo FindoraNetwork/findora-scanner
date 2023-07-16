@@ -1,4 +1,5 @@
 use module::schema::{Block as ModuleBlock, DelegationInfo};
+use serde_json::Value;
 use sqlx::{Error, PgPool, Row};
 
 pub use sqlx::Error as SqlxError;
@@ -191,5 +192,43 @@ pub async fn save_delegations(h: i64, info: &DelegationInfo, pool: &PgPool) -> R
     .bind(&info)
     .execute(pool)
     .await?;
+    Ok(())
+}
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// migrate
+////////////////////////////////////////////////////////////////////////////////////////////////////
+#[allow(clippy::too_many_arguments)]
+pub async fn save_evm_tx(
+    tx: &str,
+    block: &str,
+    evm_tx_hash: &str,
+    sender: &str,
+    receiver: &str,
+    height: i64,
+    timestamp: i64,
+    v: Value,
+    pool: &PgPool,
+) -> Result<(), Error> {
+    sqlx::query("INSERT INTO evm_txs VALUES($1,$2,$3,$4,$5,$6,$7,$8) ON CONFLICT(tx) DO UPDATE SET tx=$1,block=$2,evm_tx=$3,sender=$4,receiver=$5,height=$6,timestamp=$7,content=$8")
+        .bind(tx)
+        .bind(block)
+        .bind(evm_tx_hash)
+        .bind(sender)
+        .bind(receiver)
+        .bind(height)
+        .bind(timestamp)
+        .bind(v)
+        .execute(pool)
+        .await?;
+    Ok(())
+}
+
+pub async fn save_tx_type(tx: &str, ty: i32, pool: &PgPool) -> Result<(), Error> {
+    sqlx::query("INSERT INTO tx_types VALUES($1,$2) ON CONFLICT(tx) DO UPDATE SET tx=$1,ty=$2")
+        .bind(tx)
+        .bind(ty)
+        .execute(pool)
+        .await?;
+
     Ok(())
 }
