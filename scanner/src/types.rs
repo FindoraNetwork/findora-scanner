@@ -157,3 +157,29 @@ pub struct DelegationBody {
     pub new_validator: Option<String>,
     pub validator: String,
 }
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// undelegation
+////////////////////////////////////////////////////////////////////////////////////////////////////
+#[derive(Serialize, Deserialize, Debug, Default, Clone)]
+pub struct UnDelegationOpt {
+    #[serde(rename = "UnDelegation")]
+    pub undelegation: UnDelegation,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, Clone)]
+pub struct UnDelegation {
+    pub body: UnDelegationBody,
+    pub pubkey: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, Clone)]
+pub struct UnDelegationBody {
+    pub pu: Option<Pu>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct Pu {
+    pub am: i64,
+    pub new_delegator_id: String,
+    pub target_validator: [u8; 20],
+}

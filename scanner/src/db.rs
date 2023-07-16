@@ -315,3 +315,29 @@ pub async fn save_delegation_tx(
 
     Ok(())
 }
+
+#[allow(clippy::too_many_arguments)]
+pub async fn save_unstaking_tx(
+    tx: &str,
+    block: &str,
+    sender: &str,
+    amount: i64,
+    target_validator: &str,
+    new_delegator: &str,
+    height: i64,
+    timestamp: i64,
+    pool: &PgPool,
+) -> Result<(), Error> {
+    sqlx::query("INSERT INTO unstakings VALUES($1,$2,$3,$4,$5,$6,$7,$8) ON CONFLICT(tx) DO UPDATE SET tx=$1,block=$2,sender=$3,amount=$4,target_validator=$5,new_delegator=$6,height=$7,timestamp=$8")
+        .bind(tx)
+        .bind(block)
+        .bind(sender)
+        .bind(amount)
+        .bind(target_validator)
+        .bind(new_delegator)
+        .bind(height)
+        .bind(timestamp)
+        .execute(pool)
+        .await?;
+    Ok(())
+}
