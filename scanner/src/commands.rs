@@ -270,7 +270,7 @@ impl Migrate {
                 if tx_str.contains("ConvertAccount") {
                     let tx_val: TxValue = serde_json::from_value(v).unwrap();
                     for v in tx_val.body.operations {
-                        let s = serde_json::to_string(&v).unwrap();
+                        let _s = serde_json::to_string(&v).unwrap();
                     }
 
                     // native to evm
@@ -297,19 +297,20 @@ impl Migrate {
                     //     .bind(FindoraTxType::NativeToEVM as i32)
                     //     .execute(&pool)
                     //     .await?;
-                } else if tx_str.contains("XHub") { // old: evm to native
-                } else if tx_str.contains("Delegation") { // staking
-                } else if tx_str.contains("UnDelegation") { // unstaking
-                } else if tx_str.contains("Claim") { // rewards
-                } else if tx_str.contains("DefineAsset") {
-                } else if tx_str.contains("IssueAsset") {
-                } else if tx_str.contains("AbarToBar") {
-                    // TODO
-                } else if tx_str.contains("BarToAbar") {
-                    // TODO
-                } else if tx_str.contains("TransferAnonAsset") {
-                    // TODO
                 }
+                // else if tx_str.contains("XHub") { // old: evm to native
+                // } else if tx_str.contains("Delegation") { // staking
+                // } else if tx_str.contains("UnDelegation") { // unstaking
+                // } else if tx_str.contains("Claim") { // rewards
+                // } else if tx_str.contains("DefineAsset") {
+                // } else if tx_str.contains("IssueAsset") {
+                // } else if tx_str.contains("AbarToBar") {
+                //     // TODO
+                // } else if tx_str.contains("BarToAbar") {
+                //     // TODO
+                // } else if tx_str.contains("TransferAnonAsset") {
+                //     // TODO
+                // }
             }
         }
         Ok(())
