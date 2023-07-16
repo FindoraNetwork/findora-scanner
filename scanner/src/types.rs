@@ -66,6 +66,12 @@ pub struct ConvertAccount {
     pub value: String,
 }
 
+#[derive(Serialize, Deserialize, Debug, Default, Clone)]
+pub struct ConvertAccountOperation {
+    #[serde(rename = "ConvertAccount")]
+    pub convert_account: ConvertAccount,
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // TransferAsset
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -80,8 +86,25 @@ pub struct TxBody {
 }
 
 #[derive(Serialize, Deserialize, Debug, Default, Clone)]
+pub struct TransferAssetOpt {
+    #[serde(rename = "TransferAsset")]
+    pub transfer_asset: TransferAsset,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, Clone)]
 pub struct TransferAsset {
     pub body: TransferBody,
+    pub body_signatures: Vec<BodySignature>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, Clone)]
+pub struct BodySignature {
+    pub address: SignatureKey,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, Clone)]
+pub struct SignatureKey {
+    pub key: String,
 }
 
 #[derive(Serialize, Deserialize, Debug, Default, Clone)]
