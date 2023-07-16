@@ -8,6 +8,7 @@ pub mod rpc;
 pub mod scanner;
 pub mod tx;
 mod types;
+mod util;
 
 pub use error::{Error, Result};
 

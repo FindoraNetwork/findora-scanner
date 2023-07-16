@@ -18,14 +18,19 @@ pub enum ScannerCmd {
     Subscribe(Subscribe),
     Migrate(Migrate),
 }
-use crate::db::{save_evm_tx, save_tx_type};
-use crate::types::{FindoraEVMTx, FindoraTxType, TxValue};
+use crate::db::{save_evm_tx, save_n2e_tx, save_native_tx, save_tx_type};
+use crate::types::{
+    ConvertAccountOperation, FindoraEVMTx, FindoraTxType, TransferAssetOpt, TxValue,
+};
+use crate::util::pubkey_to_fra_address;
 use crate::{Error, Result};
 
 const DEFAULT_TIMEOUT_SECS: u64 = 32;
 const DEFAULT_RETIES: usize = 3;
 const DEFAULT_CONCURRENCY: usize = 8;
 //const DEFAULT_INTERVAL: Duration = Duration::from_secs(15);
+
+const FRA_ASSET: &str = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
 
 /// load block at specific height.
 #[derive(Parser, Debug)]
@@ -248,15 +253,16 @@ impl Migrate {
                 };
 
                 let v: Value = serde_json::to_value(&evm_tx).unwrap();
-                let evm_tx_hash = format!("{evm_tx_hash:?}").to_lowercase();
-                let sender = format!("{signer:?}").to_lowercase();
-                let receiver = receiver.to_lowercase();
+                let evm_tx_hash = format!("{evm_tx_hash:?}");
+                let sender = format!("{signer:?}");
+                let amount = evm_tx.function.ethereum.transact.value.to_string();
                 save_evm_tx(
-                    &tx,
+                    &tx.to_lowercase(),
                     &block.to_lowercase(),
-                    evm_tx_hash.as_str(),
-                    sender.as_str(),
-                    receiver.as_str(),
+                    &evm_tx_hash.to_lowercase(),
+                    &sender.to_lowercase(),
+                    &receiver.to_lowercase(),
+                    &amount,
                     height,
                     timestamp,
                     v,
@@ -265,52 +271,61 @@ impl Migrate {
                 .await?;
                 save_tx_type(&tx, FindoraTxType::Evm as i32, &pool).await?;
             } else {
-                let tx_str = serde_json::to_string(&v).unwrap();
-
-                if tx_str.contains("ConvertAccount") {
-                    let tx_val: TxValue = serde_json::from_value(v).unwrap();
-                    for v in tx_val.body.operations {
-                        let _s = serde_json::to_string(&v).unwrap();
+                let tx_val: TxValue = serde_json::from_value(v).unwrap();
+                for op in tx_val.body.operations {
+                    let op_str = serde_json::to_string(&op).unwrap();
+                    if op_str.contains("ConvertAccount") {
+                        // convert account
+                        let opt: ConvertAccountOperation = serde_json::from_value(op).unwrap();
+                        let asset: String;
+                        if let Some(asset_bin) = &opt.convert_account.asset_type {
+                            asset = base64::encode_config(asset_bin, base64::URL_SAFE);
+                        } else {
+                            asset = FRA_ASSET.to_string();
+                        }
+                        save_n2e_tx(
+                            &tx.to_lowercase(),
+                            &block.to_lowercase(),
+                            &opt.convert_account.signer.to_lowercase(),
+                            &opt.convert_account.receiver.ethereum.to_lowercase(),
+                            &asset,
+                            &opt.convert_account.value,
+                            height,
+                            timestamp,
+                            &pool,
+                        )
+                        .await?;
+                        save_tx_type(&tx, FindoraTxType::NativeToEVM as i32, &pool).await?;
+                    } else {
+                        // transfer asset
+                        let opt: TransferAssetOpt = serde_json::from_value(op).unwrap();
+                        let pubkey = opt.transfer_asset.body_signatures[0].address.key.clone();
+                        let sender = pubkey_to_fra_address(&pubkey).unwrap();
+                        for output in opt.transfer_asset.body.transfer.outputs {
+                            if output.public_key.eq(FRA_ASSET) || output.public_key.eq(&pubkey) {
+                                continue;
+                            }
+                            let asset = base64::encode_config(
+                                &output.asset_type.non_confidential,
+                                base64::URL_SAFE,
+                            );
+                            let receiver = pubkey_to_fra_address(&output.public_key).unwrap();
+                            save_native_tx(
+                                &tx.to_lowercase(),
+                                &block.to_lowercase(),
+                                &sender.to_lowercase(),
+                                &receiver.to_lowercase(),
+                                &asset,
+                                &output.amount.non_confidential,
+                                height,
+                                timestamp,
+                                &pool,
+                            )
+                            .await?;
+                            save_tx_type(&tx, FindoraTxType::Native as i32, &pool).await?;
+                        }
                     }
-
-                    // native to evm
-                    // let n2e_tx: ConvertAccount = serde_json::from_value(v).unwrap();
-                    // let asset: String;
-                    // if let Some(asset_bin) = &n2e_tx.asset_type {
-                    //     asset = base64::encode_config(asset_bin, base64::URL_SAFE);
-                    // } else {
-                    //     asset = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=".to_string();
-                    // }
-                    //
-                    // sqlx::query("INSERT INTO n2e VALUES($1,$2,$3,$4,$5,$6,$7)")
-                    //     .bind(&tx)
-                    //     .bind(block)
-                    //     .bind(n2e_tx.receiver.ethereum)
-                    //     .bind(asset)
-                    //     .bind(n2e_tx.value)
-                    //     .bind(height)
-                    //     .bind(timestamp)
-                    //     .execute(&pool)
-                    //     .await?;
-                    // sqlx::query("INSERT INTO tx_types VALUES($1,$2)")
-                    //     .bind(tx)
-                    //     .bind(FindoraTxType::NativeToEVM as i32)
-                    //     .execute(&pool)
-                    //     .await?;
                 }
-                // else if tx_str.contains("XHub") { // old: evm to native
-                // } else if tx_str.contains("Delegation") { // staking
-                // } else if tx_str.contains("UnDelegation") { // unstaking
-                // } else if tx_str.contains("Claim") { // rewards
-                // } else if tx_str.contains("DefineAsset") {
-                // } else if tx_str.contains("IssueAsset") {
-                // } else if tx_str.contains("AbarToBar") {
-                //     // TODO
-                // } else if tx_str.contains("BarToAbar") {
-                //     // TODO
-                // } else if tx_str.contains("TransferAnonAsset") {
-                //     // TODO
-                // }
             }
         }
         Ok(())

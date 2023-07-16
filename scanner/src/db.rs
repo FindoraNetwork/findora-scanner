@@ -204,20 +204,22 @@ pub async fn save_evm_tx(
     evm_tx_hash: &str,
     sender: &str,
     receiver: &str,
+    amount: &str,
     height: i64,
     timestamp: i64,
-    v: Value,
+    content: Value,
     pool: &PgPool,
 ) -> Result<(), Error> {
-    sqlx::query("INSERT INTO evm_txs VALUES($1,$2,$3,$4,$5,$6,$7,$8) ON CONFLICT(tx) DO UPDATE SET tx=$1,block=$2,evm_tx=$3,sender=$4,receiver=$5,height=$6,timestamp=$7,content=$8")
+    sqlx::query("INSERT INTO evm_txs VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9) ON CONFLICT(tx) DO UPDATE SET tx=$1,block=$2,evm_tx=$3,sender=$4,receiver=$5,amount=$6,height=$7,timestamp=$8,content=$9")
         .bind(tx)
         .bind(block)
         .bind(evm_tx_hash)
         .bind(sender)
         .bind(receiver)
+        .bind(amount)
         .bind(height)
         .bind(timestamp)
-        .bind(v)
+        .bind(content)
         .execute(pool)
         .await?;
     Ok(())
@@ -227,6 +229,60 @@ pub async fn save_tx_type(tx: &str, ty: i32, pool: &PgPool) -> Result<(), Error>
     sqlx::query("INSERT INTO tx_types VALUES($1,$2) ON CONFLICT(tx) DO UPDATE SET tx=$1,ty=$2")
         .bind(tx)
         .bind(ty)
+        .execute(pool)
+        .await?;
+
+    Ok(())
+}
+
+#[allow(clippy::too_many_arguments)]
+pub async fn save_n2e_tx(
+    tx: &str,
+    block: &str,
+    sender: &str,
+    receiver: &str,
+    asset: &str,
+    amount: &str,
+    height: i64,
+    timestamp: i64,
+    pool: &PgPool,
+) -> Result<(), Error> {
+    sqlx::query("INSERT INTO n2e VALUES($1,$2,$3,$4,$5,$6,$7,$8) ON CONFLICT(tx) DO UPDATE SET tx=$1,block=$2,sender=$3,receiver=$4,asset=$5,amount=$6,height=$7,timestamp=$8")
+        .bind(tx)
+        .bind(block)
+        .bind(sender)
+        .bind(receiver)
+        .bind(asset)
+        .bind(amount)
+        .bind(height)
+        .bind(timestamp)
+        .execute(pool)
+        .await?;
+
+    Ok(())
+}
+
+#[allow(clippy::too_many_arguments)]
+pub async fn save_native_tx(
+    tx: &str,
+    block: &str,
+    sender: &str,
+    receiver: &str,
+    asset: &str,
+    amount: &str,
+    height: i64,
+    timestamp: i64,
+    pool: &PgPool,
+) -> Result<(), Error> {
+    sqlx::query("INSERT INTO native_txs VALUES($1,$2,$3,$4,$5,$6,$7,$8) ON CONFLICT(tx) DO UPDATE SET tx=$1,block=$2,sender=$3,receiver=$4,asset=$5,amount=$6,height=$7,timestamp=$8")
+        .bind(tx)
+        .bind(block)
+        .bind(sender)
+        .bind(receiver)
+        .bind(asset)
+        .bind(amount)
+        .bind(height)
+        .bind(timestamp)
         .execute(pool)
         .await?;
 

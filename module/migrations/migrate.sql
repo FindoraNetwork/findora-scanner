@@ -21,7 +21,8 @@ create table native_txs(
     block varchar(64) not null,
     sender varchar(62) not null,
     receiver varchar(62) not null,
-    amount bigint not null,
+    asset varchar(44) not null,
+    amount varchar(32) not null,
     height bigint not null,
     timestamp bigint not null,
     primary key (tx)
@@ -39,6 +40,7 @@ create table evm_txs(
     evm_tx varchar(66) not null,
     sender varchar(42) not null,
     receiver varchar(42) not null,
+    amount varchar(32) not null,
     height bigint not null,
     timestamp bigint not null,
     content jsonb not null,
@@ -133,10 +135,11 @@ create index rd_height_index on rewards(height);
 -- Native To EVM
 create table n2e(
     tx varchar(64) not null,
+    block varchar(64) not null,
     sender varchar(62) not null,
     receiver varchar(42) not null,
     asset varchar(44) not null,
-    amount varchar(24) not null,
+    amount varchar(32) not null,
     height bigint not null,
     timestamp bigint not null,
     primary key (tx)
