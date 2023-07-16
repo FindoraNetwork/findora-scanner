@@ -18,9 +18,12 @@ pub enum ScannerCmd {
     Subscribe(Subscribe),
     Migrate(Migrate),
 }
-use crate::db::{save_delegation_tx, save_evm_tx, save_n2e_tx, save_native_tx, save_tx_type};
+use crate::db::{
+    save_delegation_tx, save_evm_tx, save_n2e_tx, save_native_tx, save_tx_type, save_unstaking_tx,
+};
 use crate::types::{
     ConvertAccountOperation, DelegationOpt, FindoraEVMTx, FindoraTxType, TransferAssetOpt, TxValue,
+    UnDelegationOpt,
 };
 use crate::util::pubkey_to_fra_address;
 use crate::{Error, Result};
@@ -296,6 +299,36 @@ impl Migrate {
                         )
                         .await?;
                         save_tx_type(&tx, FindoraTxType::NativeToEVM as i32, &pool).await?;
+                    } else if op_str.contains("UnDelegation") {
+                        // unstaking
+                        let opt: UnDelegationOpt = serde_json::from_value(op).unwrap();
+                        let sender = pubkey_to_fra_address(&opt.undelegation.pubkey).unwrap();
+                        let (amount, new_delegator, target_validator) =
+                            match opt.undelegation.body.pu {
+                                Some(pu) => {
+                                    let target_validator_addr = hex::encode(pu.target_validator);
+                                    (
+                                        pu.am,
+                                        pu.new_delegator_id,
+                                        target_validator_addr.to_uppercase(),
+                                    )
+                                }
+                                _ => (0, "".to_string(), "".to_string()),
+                            };
+
+                        save_unstaking_tx(
+                            &tx.to_lowercase(),
+                            &block.to_lowercase(),
+                            &sender.to_lowercase(),
+                            amount,
+                            &target_validator,
+                            &new_delegator,
+                            height,
+                            timestamp,
+                            &pool,
+                        )
+                        .await?;
+                        save_tx_type(&tx, FindoraTxType::UnStaking as i32, &pool).await?;
                     } else if op_str.contains("Delegation") {
                         // staking
                         let opt: DelegationOpt = serde_json::from_value(op).unwrap();

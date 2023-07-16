@@ -111,9 +111,9 @@ create table unstakings(
     sender varchar(62) not null,
     amount bigint not null,
     target_validator varchar(40) not null,
-    new_validator varchar(62),
-    timestamp bigint not null,
+    new_delegator varchar(62),
     height bigint not null,
+    timestamp bigint not null,
     primary key (tx)
 );
 create index unstk_sender_index on unstakings(sender);
