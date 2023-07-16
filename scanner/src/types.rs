@@ -135,3 +135,25 @@ pub struct TransferAssetType {
     #[serde(rename = "NonConfidential")]
     pub non_confidential: Vec<u8>,
 }
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// delegation
+////////////////////////////////////////////////////////////////////////////////////////////////////
+#[derive(Serialize, Deserialize, Debug, Default, Clone)]
+pub struct DelegationOpt {
+    #[serde(rename = "Delegation")]
+    pub delegation: Delegation,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, Clone)]
+pub struct Delegation {
+    pub body: DelegationBody,
+    pub pubkey: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, Clone)]
+pub struct DelegationBody {
+    pub amount: i64,
+    pub new_validator: Option<String>,
+    pub validator: String,
+}
