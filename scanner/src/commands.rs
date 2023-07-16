@@ -18,9 +18,9 @@ pub enum ScannerCmd {
     Subscribe(Subscribe),
     Migrate(Migrate),
 }
-use crate::db::{save_evm_tx, save_n2e_tx, save_native_tx, save_tx_type};
+use crate::db::{save_delegation_tx, save_evm_tx, save_n2e_tx, save_native_tx, save_tx_type};
 use crate::types::{
-    ConvertAccountOperation, FindoraEVMTx, FindoraTxType, TransferAssetOpt, TxValue,
+    ConvertAccountOperation, DelegationOpt, FindoraEVMTx, FindoraTxType, TransferAssetOpt, TxValue,
 };
 use crate::util::pubkey_to_fra_address;
 use crate::{Error, Result};
@@ -296,6 +296,26 @@ impl Migrate {
                         )
                         .await?;
                         save_tx_type(&tx, FindoraTxType::NativeToEVM as i32, &pool).await?;
+                    } else if op_str.contains("Delegation") {
+                        // staking
+                        let opt: DelegationOpt = serde_json::from_value(op).unwrap();
+                        let sender = pubkey_to_fra_address(&opt.delegation.pubkey).unwrap();
+                        let new_validator =
+                            opt.delegation.body.new_validator.unwrap_or("".to_string());
+
+                        save_delegation_tx(
+                            &tx.to_lowercase(),
+                            &block.to_lowercase(),
+                            &sender.to_lowercase(),
+                            opt.delegation.body.amount,
+                            &opt.delegation.body.validator,
+                            &new_validator,
+                            height,
+                            timestamp,
+                            &pool,
+                        )
+                        .await?;
+                        save_tx_type(&tx, FindoraTxType::Staking as i32, &pool).await?;
                     } else {
                         // transfer asset
                         let opt: TransferAssetOpt = serde_json::from_value(op).unwrap();

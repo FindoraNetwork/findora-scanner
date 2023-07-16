@@ -90,22 +90,24 @@ create index ia_height_index on issued_assets(height);
 -- Delegation
 create table stakings(
     tx varchar(64) not null,
+    block varchar(64) not null,
     sender varchar(62) not null,
     amount bigint not null,
-    target_validator varchar(40) not null,
+    validator varchar(40) not null,
     new_validator varchar(62),
     timestamp bigint not null,
     height bigint not null,
     primary key (tx)
 );
 create index stk_sender_index on stakings(sender);
-create index stk_validator_index on stakings(target_validator);
+create index stk_validator_index on stakings(validator);
 create index stk_time_index on stakings(timestamp);
 create index stk_height_index on stakings(height);
 
 -- UnDelegation
 create table unstakings(
     tx varchar(64) not null,
+    block varchar(64) not null,
     sender varchar(62) not null,
     amount bigint not null,
     target_validator varchar(40) not null,
