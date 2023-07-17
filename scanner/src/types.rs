@@ -201,3 +201,50 @@ pub struct Claim {
 pub struct ClaimOptBody {
     pub amount: i64,
 }
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// define asset
+////////////////////////////////////////////////////////////////////////////////////////////////////
+#[derive(Serialize, Deserialize, Debug, Default)]
+pub struct DefineAssetOpt {
+    #[serde(rename = "DefineAsset")]
+    pub define_asset: DefineAsset,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default)]
+pub struct DefineAsset {
+    pub pubkey: Key,
+    pub body: DefineAssetBody,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default)]
+pub struct Key {
+    pub key: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default)]
+pub struct AssetCode {
+    pub val: [u8; 32],
+}
+
+#[derive(Serialize, Deserialize, Debug, Default)]
+pub struct AssetRules {
+    pub decimals: i64,
+    pub max_units: String,
+    pub transfer_multisig_rules: Option<Value>,
+    pub transferable: bool,
+    pub updatable: bool,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default)]
+pub struct DefineAssetBody {
+    pub asset: Asset,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default)]
+pub struct Asset {
+    pub asset_rules: AssetRules,
+    pub code: AssetCode,
+    pub issuer: Key,
+    pub memo: String,
+}

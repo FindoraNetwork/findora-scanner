@@ -274,7 +274,7 @@ pub async fn save_native_tx(
     timestamp: i64,
     pool: &PgPool,
 ) -> Result<(), Error> {
-    sqlx::query("INSERT INTO native_txs VALUES($1,$2,$3,$4,$5,$6,$7,$8) ON CONFLICT(tx,amount) DO UPDATE SET tx=$1,block=$2,sender=$3,receiver=$4,asset=$5,amount=$6,height=$7,timestamp=$8")
+    sqlx::query("INSERT INTO native_txs VALUES($1,$2,$3,$4,$5,$6,$7,$8) ON CONFLICT(tx,receiver,amount,asset) DO UPDATE SET tx=$1,block=$2,sender=$3,receiver=$4,asset=$5,amount=$6,height=$7,timestamp=$8")
         .bind(tx)
         .bind(block)
         .bind(sender)
@@ -358,6 +358,35 @@ pub async fn save_rewards_tx(
         .bind(amount)
         .bind(height)
         .bind(timestamp)
+        .execute(pool)
+        .await?;
+
+    Ok(())
+}
+
+#[allow(clippy::too_many_arguments)]
+pub async fn save_define_asset_tx(
+    asset: &str,
+    tx: &str,
+    block: &str,
+    issuer: &str,
+    max_units: &str,
+    decimal: i64,
+    height: i64,
+    timestamp: i64,
+    content: &Value,
+    pool: &PgPool,
+) -> Result<(), Error> {
+    sqlx::query("INSERT INTO defined_assets VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9) ON CONFLICT(asset) DO UPDATE SET asset=$1,tx=$2,block=$3,issuer=$4,max_units=$5,decimal=$6,height=$7,timestamp=$8,content=$9")
+        .bind(asset)
+        .bind(tx)
+        .bind(block)
+        .bind(issuer)
+        .bind(max_units)
+        .bind(decimal)
+        .bind(height)
+        .bind(timestamp)
+        .bind(content)
         .execute(pool)
         .await?;
 
