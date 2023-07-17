@@ -274,7 +274,7 @@ pub async fn save_native_tx(
     timestamp: i64,
     pool: &PgPool,
 ) -> Result<(), Error> {
-    sqlx::query("INSERT INTO native_txs VALUES($1,$2,$3,$4,$5,$6,$7,$8) ON CONFLICT(tx) DO UPDATE SET tx=$1,block=$2,sender=$3,receiver=$4,asset=$5,amount=$6,height=$7,timestamp=$8")
+    sqlx::query("INSERT INTO native_txs VALUES($1,$2,$3,$4,$5,$6,$7,$8) ON CONFLICT(tx,amount) DO UPDATE SET tx=$1,block=$2,sender=$3,receiver=$4,asset=$5,amount=$6,height=$7,timestamp=$8")
         .bind(tx)
         .bind(block)
         .bind(sender)
@@ -339,5 +339,27 @@ pub async fn save_unstaking_tx(
         .bind(timestamp)
         .execute(pool)
         .await?;
+    Ok(())
+}
+
+pub async fn save_rewards_tx(
+    tx: &str,
+    block: &str,
+    sender: &str,
+    amount: i64,
+    height: i64,
+    timestamp: i64,
+    pool: &PgPool,
+) -> Result<(), Error> {
+    sqlx::query("INSERT INTO rewards VALUES($1,$2,$3,$4,$5,$6) ON CONFLICT(tx) DO UPDATE SET tx=$1,block=$2,sender=$3,amount=$4,height=$5,timestamp=$6")
+        .bind(tx)
+        .bind(block)
+        .bind(sender)
+        .bind(amount)
+        .bind(height)
+        .bind(timestamp)
+        .execute(pool)
+        .await?;
+
     Ok(())
 }
