@@ -19,11 +19,12 @@ pub enum ScannerCmd {
     Migrate(Migrate),
 }
 use crate::db::{
-    save_delegation_tx, save_evm_tx, save_n2e_tx, save_native_tx, save_tx_type, save_unstaking_tx,
+    save_delegation_tx, save_evm_tx, save_n2e_tx, save_native_tx, save_rewards_tx, save_tx_type,
+    save_unstaking_tx,
 };
 use crate::types::{
-    ConvertAccountOperation, DelegationOpt, FindoraEVMTx, FindoraTxType, TransferAssetOpt, TxValue,
-    UnDelegationOpt,
+    ClaimOpt, ConvertAccountOperation, DelegationOpt, FindoraEVMTx, FindoraTxType,
+    TransferAssetOpt, TxValue, UnDelegationOpt,
 };
 use crate::util::pubkey_to_fra_address;
 use crate::{Error, Result};
@@ -349,13 +350,28 @@ impl Migrate {
                         )
                         .await?;
                         save_tx_type(&tx, FindoraTxType::Staking as i32, &pool).await?;
+                    } else if op_str.contains("Claim") {
+                        // rewards
+                        let opt: ClaimOpt = serde_json::from_value(op).unwrap();
+                        let sender = pubkey_to_fra_address(&opt.claim.pubkey).unwrap();
+                        save_rewards_tx(
+                            &tx.to_lowercase(),
+                            &block.to_lowercase(),
+                            &sender.to_lowercase(),
+                            opt.claim.body.amount,
+                            height,
+                            timestamp,
+                            &pool,
+                        )
+                        .await?;
+                        save_tx_type(&tx, FindoraTxType::Claim as i32, &pool).await?;
                     } else {
                         // transfer asset
                         let opt: TransferAssetOpt = serde_json::from_value(op).unwrap();
                         let pubkey = opt.transfer_asset.body_signatures[0].address.key.clone();
                         let sender = pubkey_to_fra_address(&pubkey).unwrap();
                         for output in opt.transfer_asset.body.transfer.outputs {
-                            if output.public_key.eq(FRA_ASSET) || output.public_key.eq(&pubkey) {
+                            if output.public_key.eq(FRA_ASSET) {
                                 continue;
                             }
                             let asset = base64::encode_config(

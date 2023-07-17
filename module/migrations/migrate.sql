@@ -25,7 +25,7 @@ create table native_txs(
     amount varchar(32) not null,
     height bigint not null,
     timestamp bigint not null,
-    primary key (tx)
+    primary key (tx,amount)
 );
 create index nt_block_index on native_txs(block);
 create index nt_sender_index on native_txs(sender);
@@ -124,10 +124,11 @@ create index unstk_height_index on unstakings(height);
 -- Claim
 create table rewards(
     tx varchar(64) not null,
+    block varchar(64) not null,
     sender varchar(62) not null,
     amount bigint not null,
-    timestamp bigint not null,
     height bigint not null,
+    timestamp bigint not null,
     primary key (tx)
 );
 create index rd_sender_index on rewards(sender);

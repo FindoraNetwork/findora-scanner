@@ -183,3 +183,21 @@ pub struct Pu {
     pub new_delegator_id: String,
     pub target_validator: [u8; 20],
 }
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// claim
+////////////////////////////////////////////////////////////////////////////////////////////////////
+#[derive(Serialize, Deserialize, Debug, Default)]
+pub struct ClaimOpt {
+    #[serde(rename = "Claim")]
+    pub claim: Claim,
+}
+#[derive(Serialize, Deserialize, Debug, Default)]
+pub struct Claim {
+    pub body: ClaimOptBody,
+    pub pubkey: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default)]
+pub struct ClaimOptBody {
+    pub amount: i64,
+}
