@@ -25,11 +25,10 @@ create table native_txs(
     amount varchar(32) not null,
     height bigint not null,
     timestamp bigint not null,
-    primary key (tx,amount)
+    primary key (tx,receiver,amount,asset)
 );
 create index nt_block_index on native_txs(block);
 create index nt_sender_index on native_txs(sender);
-create index unt_receiver_index on native_txs(receiver);
 create index nt_height_index on native_txs(height);
 create index nt_time_index on native_txs(timestamp);
 
@@ -54,23 +53,23 @@ create index et_height_index on evm_txs(height);
 create index et_time_index on evm_txs(timestamp);
 
 -- DefineAsset
-create table created_assets(
-    code varchar(44) not null,
-    creator varchar(62) not null,
-    created_at_tx varchar(64) not null,
+create table defined_assets(
+    asset varchar(44) not null,
+    tx varchar(64) not null,
+    block varchar(64) not null,
+    issuer varchar(62) not null,
+    max_units varchar(32) not null,
     decimal integer not null,
-    max_units integer not null,
-    transferable boolean not null,
-    updatable boolean not null,
-    transfer_multisig_rules jsonb,
-    timestamp bigint not null,
     height bigint not null,
-    primary key (code)
+    timestamp bigint not null,
+    content jsonb not null,
+    primary key (asset)
 );
-create index ca_issuer_index on created_assets(creator);
-create index ca_created_at_index on created_assets(created_at_tx);
-create index ca_time_index on created_assets(timestamp);
-create index ca_height_index on created_assets(height);
+create index da_tx_index on defined_assets(tx);
+create index da_block_index on defined_assets(block);
+create index da_issuer_index on defined_assets(issuer);
+create index da_time_index on defined_assets(timestamp);
+create index da_height_index on defined_assets(height);
 
 -- IssueAsset
 create table issued_assets(

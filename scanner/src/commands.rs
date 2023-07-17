@@ -1,4 +1,5 @@
 use crate::{db, rpc::RPCCaller, scanner::RangeScanner};
+use base64::URL_SAFE;
 use clap::Parser;
 use ethereum::TransactionAction;
 use ethereum_types::H256;
@@ -19,11 +20,11 @@ pub enum ScannerCmd {
     Migrate(Migrate),
 }
 use crate::db::{
-    save_delegation_tx, save_evm_tx, save_n2e_tx, save_native_tx, save_rewards_tx, save_tx_type,
-    save_unstaking_tx,
+    save_define_asset_tx, save_delegation_tx, save_evm_tx, save_n2e_tx, save_native_tx,
+    save_rewards_tx, save_tx_type, save_unstaking_tx,
 };
 use crate::types::{
-    ClaimOpt, ConvertAccountOperation, DelegationOpt, FindoraEVMTx, FindoraTxType,
+    ClaimOpt, ConvertAccountOperation, DefineAssetOpt, DelegationOpt, FindoraEVMTx, FindoraTxType,
     TransferAssetOpt, TxValue, UnDelegationOpt,
 };
 use crate::util::pubkey_to_fra_address;
@@ -290,8 +291,8 @@ impl Migrate {
                         save_n2e_tx(
                             &tx.to_lowercase(),
                             &block.to_lowercase(),
-                            &opt.convert_account.signer.to_lowercase(),
-                            &opt.convert_account.receiver.ethereum.to_lowercase(),
+                            &opt.convert_account.signer,
+                            &opt.convert_account.receiver.ethereum,
                             &asset,
                             &opt.convert_account.value,
                             height,
@@ -320,7 +321,7 @@ impl Migrate {
                         save_unstaking_tx(
                             &tx.to_lowercase(),
                             &block.to_lowercase(),
-                            &sender.to_lowercase(),
+                            &sender,
                             amount,
                             &target_validator,
                             &new_delegator,
@@ -340,7 +341,7 @@ impl Migrate {
                         save_delegation_tx(
                             &tx.to_lowercase(),
                             &block.to_lowercase(),
-                            &sender.to_lowercase(),
+                            &sender,
                             opt.delegation.body.amount,
                             &opt.delegation.body.validator,
                             &new_validator,
@@ -357,7 +358,7 @@ impl Migrate {
                         save_rewards_tx(
                             &tx.to_lowercase(),
                             &block.to_lowercase(),
-                            &sender.to_lowercase(),
+                            &sender,
                             opt.claim.body.amount,
                             height,
                             timestamp,
@@ -365,6 +366,27 @@ impl Migrate {
                         )
                         .await?;
                         save_tx_type(&tx, FindoraTxType::Claim as i32, &pool).await?;
+                    } else if op_str.contains("DefineAsset") {
+                        // define asset
+                        let op_copy = op.clone();
+                        let opt: DefineAssetOpt = serde_json::from_value(op).unwrap();
+                        let issuer = pubkey_to_fra_address(&opt.define_asset.pubkey.key).unwrap();
+                        let asset =
+                            base64::encode_config(opt.define_asset.body.asset.code.val, URL_SAFE);
+                        save_define_asset_tx(
+                            &asset,
+                            &tx.to_lowercase(),
+                            &block.to_lowercase(),
+                            &issuer,
+                            &opt.define_asset.body.asset.asset_rules.max_units,
+                            opt.define_asset.body.asset.asset_rules.decimals,
+                            height,
+                            timestamp,
+                            &op_copy,
+                            &pool,
+                        )
+                        .await?;
+                        save_tx_type(&tx, FindoraTxType::DefineAsset as i32, &pool).await?;
                     } else {
                         // transfer asset
                         let opt: TransferAssetOpt = serde_json::from_value(op).unwrap();
@@ -382,8 +404,8 @@ impl Migrate {
                             save_native_tx(
                                 &tx.to_lowercase(),
                                 &block.to_lowercase(),
-                                &sender.to_lowercase(),
-                                &receiver.to_lowercase(),
+                                &sender,
+                                &receiver,
                                 &asset,
                                 &output.amount.non_confidential,
                                 height,
