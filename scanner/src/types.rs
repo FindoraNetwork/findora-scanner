@@ -248,3 +248,22 @@ pub struct Asset {
     pub issuer: Key,
     pub memo: String,
 }
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// issue asset
+////////////////////////////////////////////////////////////////////////////////////////////////////
+#[derive(Serialize, Deserialize, Debug, Default)]
+pub struct IssueAssetOpt {
+    #[serde(rename = "IssueAsset")]
+    pub issue_asset: IssueAsset,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default)]
+pub struct IssueAsset {
+    pub body: IssueAssetBody,
+    pub pubkey: Key,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default)]
+pub struct IssueAssetBody {
+    pub code: AssetCode,
+}

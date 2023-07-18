@@ -392,3 +392,25 @@ pub async fn save_define_asset_tx(
 
     Ok(())
 }
+pub async fn save_issue_asset_tx(
+    asset: &str,
+    tx: &str,
+    block: &str,
+    issuer: &str,
+    height: i64,
+    timestamp: i64,
+    content: &Value,
+    pool: &PgPool,
+) -> Result<(), Error> {
+    sqlx::query("INSERT INTO issued_assets VALUES($1,$2,$3,$4,$5,$6,$7) ON CONFLICT(asset) DO UPDATE SET asset=$1,tx=$2,block=$3,issuer=$4,height=$5,timestamp=$6,content=$7")
+        .bind(asset)
+        .bind(tx)
+        .bind(block)
+        .bind(issuer)
+        .bind(height)
+        .bind(timestamp)
+        .bind(content)
+        .execute(pool)
+        .await?;
+    Ok(())
+}

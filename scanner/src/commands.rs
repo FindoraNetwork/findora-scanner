@@ -20,12 +20,12 @@ pub enum ScannerCmd {
     Migrate(Migrate),
 }
 use crate::db::{
-    save_define_asset_tx, save_delegation_tx, save_evm_tx, save_n2e_tx, save_native_tx,
-    save_rewards_tx, save_tx_type, save_unstaking_tx,
+    save_define_asset_tx, save_delegation_tx, save_evm_tx, save_issue_asset_tx, save_n2e_tx,
+    save_native_tx, save_rewards_tx, save_tx_type, save_unstaking_tx,
 };
 use crate::types::{
     ClaimOpt, ConvertAccountOperation, DefineAssetOpt, DelegationOpt, FindoraEVMTx, FindoraTxType,
-    TransferAssetOpt, TxValue, UnDelegationOpt,
+    IssueAssetOpt, TransferAssetOpt, TxValue, UnDelegationOpt,
 };
 use crate::util::pubkey_to_fra_address;
 use crate::{Error, Result};
@@ -387,6 +387,24 @@ impl Migrate {
                         )
                         .await?;
                         save_tx_type(&tx, FindoraTxType::DefineAsset as i32, &pool).await?;
+                    } else if op_str.contains("IssueAsset") {
+                        // issue asset
+                        let opt_copy = op.clone();
+                        let opt: IssueAssetOpt = serde_json::from_value(op).unwrap();
+                        let issuer = pubkey_to_fra_address(&opt.issue_asset.pubkey.key).unwrap();
+                        let asset = base64::encode_config(opt.issue_asset.body.code.val, URL_SAFE);
+                        save_issue_asset_tx(
+                            &asset,
+                            &tx,
+                            &block.to_lowercase(),
+                            &issuer,
+                            height,
+                            timestamp,
+                            &opt_copy,
+                            &pool,
+                        )
+                        .await?;
+                        save_tx_type(&tx, FindoraTxType::IssueAsset as i32, &pool).await?;
                     } else {
                         // transfer asset
                         let opt: TransferAssetOpt = serde_json::from_value(op).unwrap();
