@@ -1,5 +1,5 @@
+use crate::service::api::Api;
 use crate::service::util::{public_key_from_base64, public_key_from_bech32, public_key_to_base64};
-use crate::Api;
 use anyhow::Result;
 use log::{debug, error};
 use module::schema::{ClaimOpt, DelegationOpt, TdValidator, UnDelegationOpt};

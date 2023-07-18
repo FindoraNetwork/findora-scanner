@@ -1,6 +1,5 @@
 mod service;
-
-use crate::service::v1::api::Api;
+use crate::service::api::Api;
 use anyhow::Result;
 use poem::middleware::Cors;
 use poem::{listener::TcpListener, EndpointExt, Route, Server};

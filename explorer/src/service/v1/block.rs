@@ -1,4 +1,4 @@
-use crate::Api;
+use crate::service::api::Api;
 use anyhow::Result;
 use module::display::block::{DisplayBlock, DisplayFullBlock};
 use module::rpc::block::BlockRPC;
