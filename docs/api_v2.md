@@ -1,7 +1,7 @@
 # Findora Scanner V2 API Spec
 
-Get evm tx by hash:
-`/api/v2/evm/tx/:hash`
+* Get evm tx by hash:
+* `/api/v2/evm/tx/:hash`
 Response:
 ```json
 {
@@ -40,8 +40,8 @@ Response:
 	"message": ""
 }
 ```
-`/api/v2/evm/txs`
-Response:
+* `/api/v2/evm/txs`
+* Response:
 ```json
 {
     "code": 200,
@@ -84,5 +84,38 @@ Response:
         ]
     },
     "message": ""
+}
+```
+* `/api/v2/delegation/tx/:hash`
+* Response:
+```json
+{
+  "code": 200,
+  "data": {
+    "amount": 1000000,
+    "block_hash": "af9c552f9a24283e8493823f4b188f63d3b3efb5c7a23cec3d31c13eaa038024",
+    "from": "fra18fnyetvs2kc035xz78kyfcygmej8pk5h2kwczy03w6uewdphzfxsk74dym",
+    "height": 2799430,
+    "new_validator": "",
+    "timestamp": 1661765633,
+    "tx_hash": "5ca21da32f029318e811db17f9240659c98e86169bd42c1b7901afff71b425b3",
+    "validator": "9E6717392EFDCFA101E33449A7C2A238251315B1",
+    "value": {
+      "Delegation": {
+        "body": {
+          "amount": 1000000,
+          "new_validator": null,
+          "nonce": [
+            [234, 72, 153, 142, 247, 120, 11, 7], 39960
+          ],
+          "validator": "9E6717392EFDCFA101E33449A7C2A238251315B1"
+        },
+        "pubkey": "OmZMrZBVsPjQwvHsROCI3mRw2pdVnYER8Xa5lzQ3Ek0=",
+        "signature": "HEh--QNjRhigsXtOddRFaJISvHc-in86C8xDp3RW2icffPzOJlU7OS_nHsKpVO6wHlXC6vnzsEHm6ju2Qmi1DQ==",
+        "v_signature": null
+      }
+    }
+  },
+  "message": ""
 }
 ```
