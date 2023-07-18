@@ -1,3 +1,5 @@
+use anyhow::Error;
+use poem::http::StatusCode;
 use {
     bech32::{self, FromBase32, ToBase32},
     ruc::*,
@@ -44,6 +46,20 @@ pub fn public_key_from_bech32(addr: &str) -> Result<XfrPublicKey> {
     bech32_decode(addr)
         .c(d!())
         .and_then(|bytes| XfrPublicKey::zei_from_bytes(&bytes).c(d!()))
+}
+
+#[allow(non_snake_case)]
+#[allow(unreachable_patterns)]
+#[allow(unused_variables)]
+pub fn handle_fetch_one_err(err: Error) -> poem::Error {
+    log::debug!("get_tx err:{}", err.to_string());
+
+    let code = match err {
+        RowNotFound => StatusCode::NOT_FOUND,
+        _ => StatusCode::INTERNAL_SERVER_ERROR,
+    };
+
+    poem::Error::from_status(code)
 }
 
 #[cfg(test)]
