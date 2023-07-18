@@ -1,5 +1,5 @@
 use crate::service::util::{public_key_from_bech32, public_key_to_base64};
-use crate::Api;
+use crate::service::v1::api::Api;
 use anyhow::Result;
 use module::schema::Transaction;
 use poem_openapi::param::Query;
