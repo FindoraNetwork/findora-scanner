@@ -392,6 +392,8 @@ pub async fn save_define_asset_tx(
 
     Ok(())
 }
+
+#[allow(clippy::too_many_arguments)]
 pub async fn save_issue_asset_tx(
     asset: &str,
     tx: &str,
