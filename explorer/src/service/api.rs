@@ -15,7 +15,7 @@ use crate::service::v1::staking::{
     SimpleDelegationResponse, UnDelegationResponse, UndelegationAmountResponse,
     UndelegationResponse,
 };
-use crate::service::v1::tx::{
+use crate::service::v1::transaction::{
     ClaimAmountResponse, PmtxsResponse, TxResponse, TxsResponse, V2PrismRecordResponse,
 };
 use crate::service::v1::validator::{
@@ -23,32 +23,16 @@ use crate::service::v1::validator::{
     ValidatorDetailResponse, ValidatorHistoryResponse, ValidatorListResponse,
     ValidatorSignedCountResponse,
 };
+use crate::service::ApiTags;
 
 use poem_openapi::param::{Path, Query};
-use poem_openapi::{OpenApi, Tags};
+use poem_openapi::OpenApi;
 use scanner::rpc::TendermintRPC;
 
 use sqlx::{Pool, Postgres};
 
+use crate::service::v2::transaction::{v2_get_evm_tx, V2EvmTxResponse};
 use tokio::sync::Mutex;
-
-#[derive(Tags)]
-enum ApiTags {
-    /// Operations about Transaction
-    Transaction,
-    /// Operations about Block
-    Block,
-    /// Operations about Address
-    Address,
-    /// Operations about Asset
-    Asset,
-    /// Operations about Chain
-    BlockChain,
-    /// Operations about Price
-    Price,
-    /// Operations about staking
-    Staking,
-}
 
 #[allow(dead_code)]
 pub struct Api {
@@ -66,7 +50,7 @@ impl Api {
         /// tx hash, e.g. c19fc22beb61030607367b42d4898a26ede1e6aa6b400330804c95b241f29bd0
         tx_hash: Path<String>,
     ) -> poem::Result<TxResponse> {
-        service::v1::tx::get_tx(self, tx_hash)
+        service::v1::transaction::get_tx(self, tx_hash)
             .await
             .map_err(handle_fetch_one_err)
     }
@@ -81,7 +65,7 @@ impl Api {
         /// evm tx hash, e.g. 0x697c0492b64b8e786061818c12af46e9b62b9ee20e573d7549e7a82e94ef13cf
         tx_hash: Path<String>,
     ) -> poem::Result<TxResponse> {
-        service::v1::tx::get_evm_tx(self, tx_hash)
+        service::v1::transaction::get_evm_tx(self, tx_hash)
             .await
             .map_err(handle_fetch_one_err)
     }
@@ -96,7 +80,7 @@ impl Api {
         /// page size, the default is 10.
         page_size: Query<Option<i64>>,
     ) -> poem::Result<TxsResponse> {
-        service::v1::tx::get_txs_send_to(self, address, page, page_size)
+        service::v1::transaction::get_txs_send_to(self, address, page, page_size)
             .await
             .map_err(handle_fetch_one_err)
     }
@@ -111,7 +95,7 @@ impl Api {
         /// page size, the default is 10.
         page_size: Query<Option<i64>>,
     ) -> poem::Result<TxsResponse> {
-        service::v1::tx::get_txs_receive_from(self, address, page, page_size)
+        service::v1::transaction::get_txs_receive_from(self, address, page, page_size)
             .await
             .map_err(handle_fetch_one_err)
     }
@@ -143,7 +127,7 @@ impl Api {
         /// page size, the default is 10.
         page_size: Query<Option<i64>>,
     ) -> poem::Result<TxsResponse> {
-        service::v1::tx::get_txs(
+        service::v1::transaction::get_txs(
             self, block_id, height, address, from, to, ty, start_time, end_time, page, page_size,
         )
         .await
@@ -177,7 +161,7 @@ impl Api {
         /// page size, the default is 10.
         page_size: Query<Option<i64>>,
     ) -> poem::Result<TxsResponse> {
-        service::v1::tx::get_txs_raw(
+        service::v1::transaction::get_txs_raw(
             self, block_id, height, address, from, to, ty, start_time, end_time, page, page_size,
         )
         .await
@@ -209,7 +193,7 @@ impl Api {
         /// page size, the default is 10.
         page_size: Query<Option<i64>>,
     ) -> poem::Result<TxsResponse> {
-        service::v1::tx::get_triple_masking_txs(
+        service::v1::transaction::get_triple_masking_txs(
             self, block_id, pub_key, bar, start_time, end_time, page, page_size,
         )
         .await
@@ -232,7 +216,7 @@ impl Api {
         /// page size, the default is 10.
         page_size: Query<Option<i64>>,
     ) -> poem::Result<TxsResponse> {
-        service::v1::tx::get_claim_txs(
+        service::v1::transaction::get_claim_txs(
             self, block_id, pub_key, start_time, end_time, page, page_size,
         )
         .await
@@ -258,7 +242,7 @@ impl Api {
         /// page size, the default is 10.
         page_size: Query<Option<i64>>,
     ) -> poem::Result<PmtxsResponse> {
-        service::v1::tx::get_prism_tx(self, address, start_time, end_time, page, page_size)
+        service::v1::transaction::get_prism_tx(self, address, start_time, end_time, page, page_size)
             .await
             .map_err(handle_fetch_one_err)
     }
@@ -562,7 +546,7 @@ impl Api {
         /// page size, the default is 10.
         page_size: Query<Option<i64>>,
     ) -> poem::Result<V2PrismRecordResponse> {
-        service::v1::tx::get_prism_received(self, address, page, page_size)
+        service::v1::transaction::get_prism_received(self, address, page, page_size)
             .await
             .map_err(handle_fetch_one_err)
     }
@@ -581,7 +565,7 @@ impl Api {
         /// page size, the default is 10.
         page_size: Query<Option<i64>>,
     ) -> poem::Result<V2PrismRecordResponse> {
-        service::v1::tx::get_prism_records_send(self, address, page, page_size)
+        service::v1::transaction::get_prism_records_send(self, address, page, page_size)
             .await
             .map_err(handle_fetch_one_err)
     }
@@ -660,7 +644,7 @@ impl Api {
         tag = "ApiTags::BlockChain"
     )]
     async fn get_claim_amount(&self, address: Path<String>) -> poem::Result<ClaimAmountResponse> {
-        service::v1::tx::get_claims_amount(self, address)
+        service::v1::transaction::get_claims_amount(self, address)
             .await
             .map_err(handle_fetch_one_err)
     }
@@ -774,6 +758,20 @@ impl Api {
     )]
     async fn delegation_address_num(&self) -> poem::Result<DelegateAddressNumResponse> {
         service::v1::chain::delegation_address_num(self)
+            .await
+            .map_err(handle_fetch_one_err)
+    }
+
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // V2
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    #[oai(
+        path = "/v2/tx/evm/:tx_hash",
+        method = "get",
+        tag = "ApiTags::Transaction"
+    )]
+    async fn v2_get_evm_tx(&self, tx_hash: Path<String>) -> poem::Result<V2EvmTxResponse> {
+        v2_get_evm_tx(self, tx_hash)
             .await
             .map_err(handle_fetch_one_err)
     }

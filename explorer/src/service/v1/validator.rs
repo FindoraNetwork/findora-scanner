@@ -1,5 +1,5 @@
+use crate::service::api::Api;
 use crate::service::util::{public_key_from_base64, public_key_to_bech32};
-use crate::Api;
 use anyhow::Result;
 use log::debug;
 use module::schema::{DelegationOpt, Memo, UnDelegationOpt};

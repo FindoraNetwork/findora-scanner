@@ -1,4 +1,4 @@
-use crate::Api;
+use crate::service::api::Api;
 use anyhow::Result;
 use module::utils::crypto::bech32enc;
 use poem_openapi::{param::Path, param::Query, payload::Json, ApiResponse, Object};
