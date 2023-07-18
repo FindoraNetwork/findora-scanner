@@ -73,16 +73,18 @@ create index da_height_index on defined_assets(height);
 
 -- IssueAsset
 create table issued_assets(
-    code varchar(44) not null,
+    asset varchar(44) not null,
+    tx varchar(64) not null,
+    block varchar(64) not null,
     issuer varchar(62) not null,
-    issued_at_tx varchar(64) not null,
-    amount varchar(89) not null,
-    timestamp bigint not null,
     height bigint not null,
-    primary key (code)
+    timestamp bigint not null,
+    content jsonb not null,
+    primary key (asset)
 );
 create index ia_issuer_index on issued_assets(issuer);
-create index ia_issued_at_index on issued_assets(issued_at_tx);
+create index ia_tx_index on issued_assets(tx);
+create index ia_block_index on issued_assets(block);
 create index ia_time_index on issued_assets(timestamp);
 create index ia_height_index on issued_assets(height);
 
