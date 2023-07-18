@@ -1,10 +1,10 @@
 drop table native_txs;
 drop table evm_txs;
-drop table created_assets;
+drop table defined_assets;
 drop table issued_assets;
-drop table stakings;
-drop table unstakings;
-drop table rewards;
+drop table delegations;
+drop table undelegations;
+drop table claims;
 drop table tx_types;
 drop table n2e;
 
@@ -89,7 +89,7 @@ create index ia_time_index on issued_assets(timestamp);
 create index ia_height_index on issued_assets(height);
 
 -- Delegation
-create table stakings(
+create table delegations(
     tx varchar(64) not null,
     block varchar(64) not null,
     sender varchar(62) not null,
@@ -98,15 +98,16 @@ create table stakings(
     new_validator varchar(62),
     timestamp bigint not null,
     height bigint not null,
+    content jsonb not null,
     primary key (tx)
 );
-create index stk_sender_index on stakings(sender);
-create index stk_validator_index on stakings(validator);
-create index stk_time_index on stakings(timestamp);
-create index stk_height_index on stakings(height);
+create index dlg_sender_index on delegations(sender);
+create index dlg_validator_index on delegations(validator);
+create index dlg_time_index on delegations(timestamp);
+create index dlg_height_index on delegations(height);
 
 -- UnDelegation
-create table unstakings(
+create table undelegations(
     tx varchar(64) not null,
     block varchar(64) not null,
     sender varchar(62) not null,
@@ -115,26 +116,28 @@ create table unstakings(
     new_delegator varchar(62),
     height bigint not null,
     timestamp bigint not null,
+    content jsonb not null,
     primary key (tx)
 );
-create index unstk_sender_index on unstakings(sender);
-create index unstk_validator_index on unstakings(target_validator);
-create index unstk_time_index on unstakings(timestamp);
-create index unstk_height_index on unstakings(height);
+create index ud_sender_index on undelegations(sender);
+create index ud_validator_index on undelegations(target_validator);
+create index ud_time_index on undelegations(timestamp);
+create index ud_height_index on undelegations(height);
 
 -- Claim
-create table rewards(
+create table claims(
     tx varchar(64) not null,
     block varchar(64) not null,
     sender varchar(62) not null,
     amount bigint not null,
     height bigint not null,
     timestamp bigint not null,
+    content jsonb not null,
     primary key (tx)
 );
-create index rd_sender_index on rewards(sender);
-create index rd_time_index on rewards(timestamp);
-create index rd_height_index on rewards(height);
+create index clm_sender_index on claims(sender);
+create index clm_time_index on claims(timestamp);
+create index clm_height_index on claims(height);
 
 -- Native To EVM
 create table n2e(

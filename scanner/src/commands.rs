@@ -1,4 +1,14 @@
+use crate::db::{
+    save_claim_tx, save_define_asset_tx, save_delegation_tx, save_evm_tx, save_issue_asset_tx,
+    save_n2e_tx, save_native_tx, save_tx_type, save_undelegation_tx,
+};
+use crate::types::{
+    ClaimOpt, ConvertAccountOperation, DefineAssetOpt, DelegationOpt, FindoraEVMTx, FindoraTxType,
+    IssueAssetOpt, TransferAssetOpt, TxValue, UnDelegationOpt,
+};
+use crate::util::pubkey_to_fra_address;
 use crate::{db, rpc::RPCCaller, scanner::RangeScanner};
+use crate::{Error, Result};
 use base64::URL_SAFE;
 use clap::Parser;
 use ethereum::TransactionAction;
@@ -12,6 +22,13 @@ use sqlx::{PgPool, Row};
 use std::env;
 use std::time::Duration;
 
+const DEFAULT_TIMEOUT_SECS: u64 = 32;
+const DEFAULT_RETIES: usize = 3;
+const DEFAULT_CONCURRENCY: usize = 8;
+//const DEFAULT_INTERVAL: Duration = Duration::from_secs(15);
+
+const FRA_ASSET: &str = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+
 #[derive(Parser)]
 pub enum ScannerCmd {
     Scan(RangeScan),
@@ -19,23 +36,6 @@ pub enum ScannerCmd {
     Subscribe(Subscribe),
     Migrate(Migrate),
 }
-use crate::db::{
-    save_define_asset_tx, save_delegation_tx, save_evm_tx, save_issue_asset_tx, save_n2e_tx,
-    save_native_tx, save_rewards_tx, save_tx_type, save_unstaking_tx,
-};
-use crate::types::{
-    ClaimOpt, ConvertAccountOperation, DefineAssetOpt, DelegationOpt, FindoraEVMTx, FindoraTxType,
-    IssueAssetOpt, TransferAssetOpt, TxValue, UnDelegationOpt,
-};
-use crate::util::pubkey_to_fra_address;
-use crate::{Error, Result};
-
-const DEFAULT_TIMEOUT_SECS: u64 = 32;
-const DEFAULT_RETIES: usize = 3;
-const DEFAULT_CONCURRENCY: usize = 8;
-//const DEFAULT_INTERVAL: Duration = Duration::from_secs(15);
-
-const FRA_ASSET: &str = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
 
 /// load block at specific height.
 #[derive(Parser, Debug)]
@@ -303,6 +303,7 @@ impl Migrate {
                         save_tx_type(&tx, FindoraTxType::NativeToEVM as i32, &pool).await?;
                     } else if op_str.contains("UnDelegation") {
                         // unstaking
+                        let op_copy = op.clone();
                         let opt: UnDelegationOpt = serde_json::from_value(op).unwrap();
                         let sender = pubkey_to_fra_address(&opt.undelegation.pubkey).unwrap();
                         let (amount, new_delegator, target_validator) =
@@ -318,7 +319,7 @@ impl Migrate {
                                 _ => (0, "".to_string(), "".to_string()),
                             };
 
-                        save_unstaking_tx(
+                        save_undelegation_tx(
                             &tx.to_lowercase(),
                             &block.to_lowercase(),
                             &sender,
@@ -327,12 +328,14 @@ impl Migrate {
                             &new_delegator,
                             height,
                             timestamp,
+                            &op_copy,
                             &pool,
                         )
                         .await?;
                         save_tx_type(&tx, FindoraTxType::UnStaking as i32, &pool).await?;
                     } else if op_str.contains("Delegation") {
                         // staking
+                        let op_copy = op.clone();
                         let opt: DelegationOpt = serde_json::from_value(op).unwrap();
                         let sender = pubkey_to_fra_address(&opt.delegation.pubkey).unwrap();
                         let new_validator =
@@ -347,21 +350,24 @@ impl Migrate {
                             &new_validator,
                             height,
                             timestamp,
+                            &op_copy,
                             &pool,
                         )
                         .await?;
                         save_tx_type(&tx, FindoraTxType::Staking as i32, &pool).await?;
                     } else if op_str.contains("Claim") {
                         // rewards
+                        let op_copy = op.clone();
                         let opt: ClaimOpt = serde_json::from_value(op).unwrap();
                         let sender = pubkey_to_fra_address(&opt.claim.pubkey).unwrap();
-                        save_rewards_tx(
+                        save_claim_tx(
                             &tx.to_lowercase(),
                             &block.to_lowercase(),
                             &sender,
                             opt.claim.body.amount,
                             height,
                             timestamp,
+                            &op_copy,
                             &pool,
                         )
                         .await?;
