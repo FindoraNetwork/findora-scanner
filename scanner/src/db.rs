@@ -299,9 +299,10 @@ pub async fn save_delegation_tx(
     new_validator: &str,
     timestamp: i64,
     height: i64,
+    content: &Value,
     pool: &PgPool,
 ) -> Result<(), Error> {
-    sqlx::query("INSERT INTO stakings VALUES($1,$2,$3,$4,$5,$6,$7,$8) ON CONFLICT(tx) DO UPDATE SET tx=$1,block=$2,sender=$3,amount=$4,validator=$5,new_validator=$6,height=$7,timestamp=$8")
+    sqlx::query("INSERT INTO delegations VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9) ON CONFLICT(tx) DO UPDATE SET tx=$1,block=$2,sender=$3,amount=$4,validator=$5,new_validator=$6,height=$7,timestamp=$8,content=$9")
         .bind(tx)
         .bind(block)
         .bind(sender)
@@ -310,6 +311,7 @@ pub async fn save_delegation_tx(
         .bind(new_validator)
         .bind(height)
         .bind(timestamp)
+        .bind(content)
         .execute(pool)
         .await?;
 
@@ -317,7 +319,7 @@ pub async fn save_delegation_tx(
 }
 
 #[allow(clippy::too_many_arguments)]
-pub async fn save_unstaking_tx(
+pub async fn save_undelegation_tx(
     tx: &str,
     block: &str,
     sender: &str,
@@ -326,9 +328,10 @@ pub async fn save_unstaking_tx(
     new_delegator: &str,
     height: i64,
     timestamp: i64,
+    content: &Value,
     pool: &PgPool,
 ) -> Result<(), Error> {
-    sqlx::query("INSERT INTO unstakings VALUES($1,$2,$3,$4,$5,$6,$7,$8) ON CONFLICT(tx) DO UPDATE SET tx=$1,block=$2,sender=$3,amount=$4,target_validator=$5,new_delegator=$6,height=$7,timestamp=$8")
+    sqlx::query("INSERT INTO undelegations VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9) ON CONFLICT(tx) DO UPDATE SET tx=$1,block=$2,sender=$3,amount=$4,target_validator=$5,new_delegator=$6,height=$7,timestamp=$8,content=$9")
         .bind(tx)
         .bind(block)
         .bind(sender)
@@ -337,27 +340,31 @@ pub async fn save_unstaking_tx(
         .bind(new_delegator)
         .bind(height)
         .bind(timestamp)
+        .bind(content)
         .execute(pool)
         .await?;
     Ok(())
 }
 
-pub async fn save_rewards_tx(
+#[allow(clippy::too_many_arguments)]
+pub async fn save_claim_tx(
     tx: &str,
     block: &str,
     sender: &str,
     amount: i64,
     height: i64,
     timestamp: i64,
+    content: &Value,
     pool: &PgPool,
 ) -> Result<(), Error> {
-    sqlx::query("INSERT INTO rewards VALUES($1,$2,$3,$4,$5,$6) ON CONFLICT(tx) DO UPDATE SET tx=$1,block=$2,sender=$3,amount=$4,height=$5,timestamp=$6")
+    sqlx::query("INSERT INTO claims VALUES($1,$2,$3,$4,$5,$6,$7) ON CONFLICT(tx) DO UPDATE SET tx=$1,block=$2,sender=$3,amount=$4,height=$5,timestamp=$6,content=$7")
         .bind(tx)
         .bind(block)
         .bind(sender)
         .bind(amount)
         .bind(height)
         .bind(timestamp)
+        .bind(content)
         .execute(pool)
         .await?;
 

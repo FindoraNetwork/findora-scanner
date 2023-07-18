@@ -31,7 +31,8 @@ use scanner::rpc::TendermintRPC;
 
 use sqlx::{Pool, Postgres};
 
-use crate::service::v2::transaction::{
+use crate::service::v2::delegation::{v2_get_delegation_tx, V2DelegationTxResponse};
+use crate::service::v2::transaction_evm::{
     v2_get_evm_tx, v2_get_evm_txs, V2EvmTxResponse, V2EvmTxsResponse,
 };
 use tokio::sync::Mutex;
@@ -787,6 +788,20 @@ impl Api {
         page_size: Query<Option<i64>>,
     ) -> poem::Result<V2EvmTxsResponse> {
         v2_get_evm_txs(self, from, to, page, page_size)
+            .await
+            .map_err(handle_fetch_one_err)
+    }
+
+    #[oai(
+        path = "/v2/delegation/tx/:tx_hash",
+        method = "get",
+        tag = "ApiTags::Transaction"
+    )]
+    async fn v2_get_delegation_tx(
+        &self,
+        tx_hash: Path<String>,
+    ) -> poem::Result<V2DelegationTxResponse> {
+        v2_get_delegation_tx(self, tx_hash)
             .await
             .map_err(handle_fetch_one_err)
     }
