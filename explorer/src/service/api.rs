@@ -31,7 +31,9 @@ use scanner::rpc::TendermintRPC;
 
 use sqlx::{Pool, Postgres};
 
-use crate::service::v2::transaction::{v2_get_evm_tx, V2EvmTxResponse};
+use crate::service::v2::transaction::{
+    v2_get_evm_tx, v2_get_evm_txs, V2EvmTxResponse, V2EvmTxsResponse,
+};
 use tokio::sync::Mutex;
 
 #[allow(dead_code)]
@@ -766,12 +768,25 @@ impl Api {
     // V2
     ///////////////////////////////////////////////////////////////////////////////////////////////
     #[oai(
-        path = "/v2/tx/evm/:tx_hash",
+        path = "/v2/evm/tx/:tx_hash",
         method = "get",
         tag = "ApiTags::Transaction"
     )]
     async fn v2_get_evm_tx(&self, tx_hash: Path<String>) -> poem::Result<V2EvmTxResponse> {
         v2_get_evm_tx(self, tx_hash)
+            .await
+            .map_err(handle_fetch_one_err)
+    }
+
+    #[oai(path = "/v2/evm/txs", method = "get", tag = "ApiTags::Transaction")]
+    async fn v2_get_evm_txs(
+        &self,
+        from: Query<Option<String>>,
+        to: Query<Option<String>>,
+        page: Query<Option<i64>>,
+        page_size: Query<Option<i64>>,
+    ) -> poem::Result<V2EvmTxsResponse> {
+        v2_get_evm_txs(self, from, to, page, page_size)
             .await
             .map_err(handle_fetch_one_err)
     }
