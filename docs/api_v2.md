@@ -1,6 +1,39 @@
 # Findora Scanner V2 API Spec
 
-* `/api/v2/tx/native/:hash`
+## [1.Native](#1)
+* [1.1 Get native tx by hash](#1.1)
+
+## [2.EVM](#2)
+* [2.1 Get evm tx by hash](#2.1)
+* [2.2 Get evm txs](#2.2)
+
+## [3.Staking](#3)
+* [3.1 Get delegation tx by hash](#3.1)
+
+## [4.UnStaking](#4)
+* [4.1 Get undelegation tx by hash](#4.1)
+
+## [5.Rewards](#4)
+* [5.1 Get claim tx by hash](#5.1)
+
+## [6.Native To EVM](#4)
+* [6.1 Get native to evm tx by hash](#6.1)
+
+## [7.Define Asset](#7)
+* [6.1 Get defined asset](#7.1)
+
+## [8.Issue Asset](#8)
+* [8.1 Get issued asset](#8.1)
+
+* <h2 id="1">1.Native</h2>
+<h3 id="1.1">1.1 Get Native Tx By Hash</h3>
+`GET /api/v2/tx/native/:hash`
+
+| 参数   | 类型     | 说明               | 必传  |
+|------|--------|------------------|-----|
+| hash | string | transaction hash | Y   |
+
+* Example Request:`http://localhost/api/v2/tx/native/f8ff841a53603e40b5628e9df7d662a72cc9d60c9035521d6dc530d35f2679f0`
 * Response:
 ```json
 {
@@ -138,7 +171,16 @@
 	"message": ""
 }
 ```
-* `/api/v2/tx/evm/:hash`
+<h2 id="2">1.Evm</h2>
+<h3 id="2.1">2.1 Get EVM Tx By Hash</h3>
+
+`GET /api/v2/tx/evm/:hash`
+
+| 参数   | 类型     | 说明               | 必传  |
+|------|--------|------------------|-----|
+| hash | string | transaction hash | Y   |
+
+* Example Request:`http://localhost/api/v2/tx/evm/5ed3a7d62b17668537bff6bb1659b03cd583079dea068422b1eef45361d59de0`
 * Response:
 ```json
 {
@@ -177,7 +219,19 @@
 	"message": ""
 }
 ```
-* `/api/v2/txs/evm`
+
+<h3 id="2.2">2.2 Get EVM Txs</h3>
+
+`GET /api/v2/txs/evm`
+
+| 参数        | 类型     | 说明               | 必传 |
+|-----------|--------|------------------|----|
+| from      | string | sender address   | N  |
+| to        | string | receiver address | N  |
+| page      | number | page index       | N  |
+| page_size | number | page size        | N  |
+
+* Example Request:`http://localhost/api/v2/txs/evm?from=0xc7671515ef928ce0ee3a1920e2ea120442efb1ea&page=1&page_size=10`
 * Response:
 ```json
 {
@@ -223,7 +277,17 @@
     "message": ""
 }
 ```
-* `/api/v2/tx/delegation/:hash`
+
+<h2 id="3">3.Staking</h2>
+<h3 id="3.1">3.1 Get Delegation Tx By Hash</h3>
+
+* `GET /api/v2/tx/delegation/:hash`
+
+| 参数   | 类型     | 说明               | 必传 |
+|------|--------|------------------|----|
+| hash | string | transaction hash | Y  |
+
+* Example Request:`http://localhost/api/v2/tx/delegation/5ca21da32f029318e811db17f9240659c98e86169bd42c1b7901afff71b425b3`
 * Response:
 ```json
 {
@@ -256,7 +320,17 @@
 	"message": ""
 }
 ```
-* `/api/v2/tx/undelegation/:hash`
+
+<h2 id="4">4.Unstaking</h2>
+<h3 id="4.1">4.1 Get Undelegation Tx By Hash</h3>
+
+* `GET /api/v2/tx/undelegation/:hash`
+
+| 参数   | 类型     | 说明               | 必传 |
+|------|--------|------------------|----|
+| hash | string | transaction hash | Y  |
+
+* Example Request:`http://localhost/api/v2/tx/undelegation/91001c320aa13cef240f00b1cd941a429b72de9f089ccd301111998aa55d6562`
 * Response
 ```json
 {
@@ -290,7 +364,17 @@
 	"message": ""
 }
 ```
-* `/v2/tx/claim/:hash`
+
+<h2 id="5">5.Rewards</h2>
+<h3 id="5.1">5.1 Get Claim Tx By Hash</h3>
+
+* `GET /api/v2/tx/claim/:hash`
+
+| 参数   | 类型     | 说明               | 必传 |
+|------|--------|------------------|----|
+| hash | string | transaction hash | Y  |
+
+* Example Request:`http://localhost/api/v2/tx/claim/114710d4828472bc3e2da38089b70efe92d47f25b8b0439b918de227a9cbf392`
 * Response
 ```json
 {
@@ -318,7 +402,16 @@
 	"message": ""
 }
 ```
-* `/v2/tx/n2e/:hash`
+<h2 id="6">6.Native To EVM</h2>
+<h3 id="6.1">6.1 Get Native To EVM Tx By Hash</h3>
+
+* `GET /api/v2/tx/n2e/:hash`
+
+| 参数   | 类型     | 说明               | 必传 |
+|------|--------|------------------|----|
+| hash | string | transaction hash | Y  |
+
+* Example Request:`http://localhost/api/v2/tx/n2e/e5fb78efd8dac071a7d8e5e9217971fe552302f74aad811106a314f1c3029ccd`
 * Response:
 ```json
 {
@@ -348,7 +441,16 @@
 	"message": ""
 }
 ```
+<h2 id="7">7.Define Asset</h2>
+<h3 id="7.1">7.1 Get Defined Asset</h3>
+
 * `/v2/asset/define/:asset`
+
+| 参数    | 类型     | 说明            | 必传 |
+|-------|--------|---------------|----|
+| asset | string | asset address | Y  |
+
+* Example Request:`http://localhost/api/v2/asset/difine/dx8LUysx7w3sgKDN8voPw3HVqFU2eW7ZkxwE9HPATjM=`
 * Response:
 ```json
 {
@@ -392,7 +494,16 @@
 	"message": ""
 }
 ```
+<h2 id="8">8.Issue Asset</h2>
+<h3 id="8.1">8.1 Get Issued Asset</h3>
+
 * `/api/v2/asset/issue/:asset`
+
+| 参数    | 类型     | 说明            | 必传 |
+|-------|--------|---------------|----|
+| asset | string | asset address | Y  |
+
+* Example Request:`http://localhost/api/v2/asset/issue/dx8LUysx7w3sgKDN8voPw3HVqFU2eW7ZkxwE9HPATjM=`
 * Response:
 ```json
 {
