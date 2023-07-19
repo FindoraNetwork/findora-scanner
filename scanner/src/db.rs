@@ -268,23 +268,21 @@ pub async fn save_n2e_tx(
 pub async fn save_native_tx(
     tx: &str,
     block: &str,
-    sender: &str,
-    receiver: &str,
-    asset: &str,
-    amount: &str,
     height: i64,
     timestamp: i64,
+    inputs: &Value,
+    outputs: &Value,
+    content: &Value,
     pool: &PgPool,
 ) -> Result<(), Error> {
-    sqlx::query("INSERT INTO native_txs VALUES($1,$2,$3,$4,$5,$6,$7,$8) ON CONFLICT(tx,receiver,amount,asset) DO UPDATE SET tx=$1,block=$2,sender=$3,receiver=$4,asset=$5,amount=$6,height=$7,timestamp=$8")
+    sqlx::query("INSERT INTO native_txs VALUES($1,$2,$3,$4,$5,$6,$7) ON CONFLICT(tx) DO UPDATE SET tx=$1,block=$2,height=$3,timestamp=$4,inputs=$5,outputs=$6,content=$7")
         .bind(tx)
         .bind(block)
-        .bind(sender)
-        .bind(receiver)
-        .bind(asset)
-        .bind(amount)
         .bind(height)
         .bind(timestamp)
+        .bind(inputs)
+        .bind(outputs)
+        .bind(content)
         .execute(pool)
         .await?;
 

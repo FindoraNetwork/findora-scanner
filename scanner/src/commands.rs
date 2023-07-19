@@ -397,7 +397,7 @@ impl Migrate {
                         save_tx_type(&tx, FindoraTxType::DefineAsset as i32, &pool).await?;
                     } else if op_str.contains("IssueAsset") {
                         // issue asset
-                        let opt_copy = op.clone();
+                        let op_copy = op.clone();
                         let opt: IssueAssetOpt = serde_json::from_value(op).unwrap();
                         let issuer = pubkey_to_fra_address(&opt.issue_asset.pubkey.key).unwrap();
                         let asset = base64::encode_config(opt.issue_asset.body.code.val, URL_SAFE);
@@ -408,39 +408,32 @@ impl Migrate {
                             &issuer,
                             height,
                             timestamp,
-                            &opt_copy,
+                            &op_copy,
                             &pool,
                         )
                         .await?;
                         save_tx_type(&tx, FindoraTxType::IssueAsset as i32, &pool).await?;
-                    } else {
+                    } else if op_str.contains("TransferAsset") {
                         // transfer asset
+                        let op_copy = op.clone();
                         let opt: TransferAssetOpt = serde_json::from_value(op).unwrap();
-                        let pubkey = opt.transfer_asset.body_signatures[0].address.key.clone();
-                        let sender = pubkey_to_fra_address(&pubkey).unwrap();
-                        for output in opt.transfer_asset.body.transfer.outputs {
-                            if output.public_key.eq(FRA_ASSET) {
-                                continue;
-                            }
-                            let asset = base64::encode_config(
-                                &output.asset_type.non_confidential,
-                                base64::URL_SAFE,
-                            );
-                            let receiver = pubkey_to_fra_address(&output.public_key).unwrap();
-                            save_native_tx(
-                                &tx.to_lowercase(),
-                                &block.to_lowercase(),
-                                &sender,
-                                &receiver,
-                                &asset,
-                                &output.amount.non_confidential,
-                                height,
-                                timestamp,
-                                &pool,
-                            )
-                            .await?;
-                            save_tx_type(&tx, FindoraTxType::Native as i32, &pool).await?;
-                        }
+                        let inputs =
+                            serde_json::to_value(&opt.transfer_asset.body.transfer.inputs).unwrap();
+                        let outputs =
+                            serde_json::to_value(&opt.transfer_asset.body.transfer.outputs)
+                                .unwrap();
+                        save_native_tx(
+                            &tx.to_lowercase(),
+                            &block.to_lowercase(),
+                            height,
+                            timestamp,
+                            &inputs,
+                            &outputs,
+                            &op_copy,
+                            &pool,
+                        )
+                        .await?;
+                        save_tx_type(&tx, FindoraTxType::Native as i32, &pool).await?;
                     }
                 }
             }

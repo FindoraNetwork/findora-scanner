@@ -114,7 +114,8 @@ pub struct TransferBody {
 
 #[derive(Serialize, Deserialize, Debug, Default, Clone)]
 pub struct TransferOutputs {
-    pub outputs: Vec<TransferOutput>,
+    pub inputs: Vec<Value>,
+    pub outputs: Vec<Value>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Default, Clone)]

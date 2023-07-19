@@ -2,9 +2,7 @@
 
 A scanner for findora. This tool will generate all data and cache into db.
 ## Dependencies
-```
-sudo apt install postgresql
-```
+* PostgreSQL
 ## Usage of Scanner.
 
 ### ENV vars

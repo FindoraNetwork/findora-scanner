@@ -1,7 +1,144 @@
 # Findora Scanner V2 API Spec
 
-
-* `/api/v2/ex/evm/:hash`
+* `/api/v2/tx/native/:hash`
+* Response:
+```json
+{
+	"code": 200,
+	"data": {
+		"block_hash": "cf457fd6bbd404761cf837ae56e74c2191f5f3662040ec2dd7a4f4004c1004a4",
+		"height": 2798685,
+		"inputs": [{
+			"amount": {
+				"NonConfidential": "2411756"
+			},
+			"asset_type": {
+				"NonConfidential": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+			},
+			"public_key": "NgSBk4LVOw95CTtol_jNe7K2nAHdLsQCyUY09BmyDu0="
+		}],
+		"outputs": [{
+			"amount": {
+				"NonConfidential": "10000"
+			},
+			"asset_type": {
+				"NonConfidential": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+			},
+			"public_key": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+		}, {
+			"amount": {
+				"NonConfidential": "2401756"
+			},
+			"asset_type": {
+				"NonConfidential": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+			},
+			"public_key": "NgSBk4LVOw95CTtol_jNe7K2nAHdLsQCyUY09BmyDu0="
+		}],
+		"timestamp": 1661752937,
+		"tx_hash": "f8ff841a53603e40b5628e9df7d662a72cc9d60c9035521d6dc530d35f2679f0",
+		"value": {
+			"TransferAsset": {
+				"body": {
+					"inputs": [{
+						"Absolute": 91759
+					}],
+					"outputs": [{
+						"id": null,
+						"record": {
+							"amount": {
+								"NonConfidential": "10000"
+							},
+							"asset_type": {
+								"NonConfidential": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+							},
+							"public_key": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+						}
+					}, {
+						"id": null,
+						"record": {
+							"amount": {
+								"NonConfidential": "2401756"
+							},
+							"asset_type": {
+								"NonConfidential": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+							},
+							"public_key": "NgSBk4LVOw95CTtol_jNe7K2nAHdLsQCyUY09BmyDu0="
+						}
+					}],
+					"policies": {
+						"inputs_sig_commitments": [null],
+						"inputs_tracing_policies": [
+							[]
+						],
+						"outputs_sig_commitments": [null, null],
+						"outputs_tracing_policies": [
+							[],
+							[]
+						],
+						"valid": true
+					},
+					"transfer": {
+						"asset_tracing_memos": [
+							[],
+							[],
+							[]
+						],
+						"inputs": [{
+							"amount": {
+								"NonConfidential": "2411756"
+							},
+							"asset_type": {
+								"NonConfidential": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+							},
+							"public_key": "NgSBk4LVOw95CTtol_jNe7K2nAHdLsQCyUY09BmyDu0="
+						}],
+						"outputs": [{
+							"amount": {
+								"NonConfidential": "10000"
+							},
+							"asset_type": {
+								"NonConfidential": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+							},
+							"public_key": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+						}, {
+							"amount": {
+								"NonConfidential": "2401756"
+							},
+							"asset_type": {
+								"NonConfidential": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+							},
+							"public_key": "NgSBk4LVOw95CTtol_jNe7K2nAHdLsQCyUY09BmyDu0="
+						}],
+						"owners_memos": [null, null],
+						"proofs": {
+							"asset_tracing_proof": {
+								"asset_type_and_amount_proofs": [],
+								"inputs_identity_proofs": [
+									[]
+								],
+								"outputs_identity_proofs": [
+									[],
+									[]
+								]
+							},
+							"asset_type_and_amount_proof": "NoProof"
+						}
+					},
+					"transfer_type": "Standard"
+				},
+				"body_signatures": [{
+					"address": {
+						"key": "NgSBk4LVOw95CTtol_jNe7K2nAHdLsQCyUY09BmyDu0="
+					},
+					"signature": "65dO44EHyYzI2QHriJ7zD2sN02r9VTkIaWF-QhhFD72sGwUVhKuZQf3ExeiW9BB4coiWhGt2qaZRmUo1Viv8Bw=="
+				}]
+			}
+		}
+	},
+	"message": ""
+}
+```
+* `/api/v2/tx/evm/:hash`
 * Response:
 ```json
 {
