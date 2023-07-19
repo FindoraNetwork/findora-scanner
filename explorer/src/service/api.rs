@@ -35,6 +35,7 @@ use crate::service::v2::delegation::{v2_get_delegation_tx, V2DelegationTxRespons
 use crate::service::v2::transaction_evm::{
     v2_get_evm_tx, v2_get_evm_txs, V2EvmTxResponse, V2EvmTxsResponse,
 };
+use crate::service::v2::undelegation::{v2_get_undelegation_tx, V2UndelegationTxResponse};
 use tokio::sync::Mutex;
 
 #[allow(dead_code)]
@@ -59,9 +60,9 @@ impl Api {
     }
 
     #[oai(
-        path = "/tx/evm/:tx_hash",
-        method = "get",
-        tag = "ApiTags::Transaction"
+    path = "/tx/evm/:tx_hash",
+    method = "get",
+    tag = "ApiTags::Transaction"
     )]
     async fn get_evm_tx(
         &self,
@@ -133,8 +134,8 @@ impl Api {
         service::v1::transaction::get_txs(
             self, block_id, height, address, from, to, ty, start_time, end_time, page, page_size,
         )
-        .await
-        .map_err(handle_fetch_one_err)
+            .await
+            .map_err(handle_fetch_one_err)
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -167,15 +168,15 @@ impl Api {
         service::v1::transaction::get_txs_raw(
             self, block_id, height, address, from, to, ty, start_time, end_time, page, page_size,
         )
-        .await
-        .map_err(handle_fetch_one_err)
+            .await
+            .map_err(handle_fetch_one_err)
     }
 
     #[allow(clippy::too_many_arguments)]
     #[oai(
-        path = "/txs/triple_masking",
-        method = "get",
-        tag = "ApiTags::Transaction"
+    path = "/txs/triple_masking",
+    method = "get",
+    tag = "ApiTags::Transaction"
     )]
     async fn get_triple_masking_txs(
         &self,
@@ -199,8 +200,8 @@ impl Api {
         service::v1::transaction::get_triple_masking_txs(
             self, block_id, pub_key, bar, start_time, end_time, page, page_size,
         )
-        .await
-        .map_err(handle_fetch_one_err)
+            .await
+            .map_err(handle_fetch_one_err)
     }
 
     #[oai(path = "/txs/claim", method = "get", tag = "ApiTags::Transaction")]
@@ -222,15 +223,15 @@ impl Api {
         service::v1::transaction::get_claim_txs(
             self, block_id, pub_key, start_time, end_time, page, page_size,
         )
-        .await
-        .map_err(handle_fetch_one_err)
+            .await
+            .map_err(handle_fetch_one_err)
     }
 
     #[allow(clippy::too_many_arguments)]
     #[oai(
-        path = "/txs/prism/:address",
-        method = "get",
-        tag = "ApiTags::Transaction"
+    path = "/txs/prism/:address",
+    method = "get",
+    tag = "ApiTags::Transaction"
     )]
     async fn get_prism_tx(
         &self,
@@ -262,9 +263,9 @@ impl Api {
     }
 
     #[oai(
-        path = "/block/full/height/:height",
-        method = "get",
-        tag = "ApiTags::Block"
+    path = "/block/full/height/:height",
+    method = "get",
+    tag = "ApiTags::Block"
     )]
     async fn get_full_block_by_height(
         &self,
@@ -288,9 +289,9 @@ impl Api {
     }
 
     #[oai(
-        path = "/block/full/hash/:hash",
-        method = "get",
-        tag = "ApiTags::Block"
+    path = "/block/full/hash/:hash",
+    method = "get",
+    tag = "ApiTags::Block"
     )]
     async fn get_full_block_by_hash(
         &self,
@@ -327,8 +328,8 @@ impl Api {
             page,
             page_size,
         )
-        .await
-        .map_err(handle_fetch_one_err)
+            .await
+            .map_err(handle_fetch_one_err)
     }
 
     #[oai(path = "/address/:address", method = "get", tag = "ApiTags::Address")]
@@ -391,9 +392,9 @@ impl Api {
     }
 
     #[oai(
-        path = "/chain/statistics",
-        method = "get",
-        tag = "ApiTags::BlockChain"
+    path = "/chain/statistics",
+    method = "get",
+    tag = "ApiTags::BlockChain"
     )]
     async fn statistics(
         &self,
@@ -406,9 +407,9 @@ impl Api {
     }
 
     #[oai(
-        path = "/chain/validator_list",
-        method = "get",
-        tag = "ApiTags::BlockChain"
+    path = "/chain/validator_list",
+    method = "get",
+    tag = "ApiTags::BlockChain"
     )]
     async fn validator_list(&self) -> poem::Result<ValidatorListResponse> {
         service::v1::validator::validator_list(self)
@@ -417,9 +418,9 @@ impl Api {
     }
 
     #[oai(
-        path = "/chain/validator_detail/:address",
-        method = "get",
-        tag = "ApiTags::BlockChain"
+    path = "/chain/validator_detail/:address",
+    method = "get",
+    tag = "ApiTags::BlockChain"
     )]
     async fn validator_detail(
         &self,
@@ -432,9 +433,9 @@ impl Api {
     }
 
     #[oai(
-        path = "/chain/circulating_supply",
-        method = "get",
-        tag = "ApiTags::BlockChain"
+    path = "/chain/circulating_supply",
+    method = "get",
+    tag = "ApiTags::BlockChain"
     )]
     async fn circulating_supply(&self) -> poem::Result<CirculatingSupplyResponse> {
         service::v1::validator::circulating_supply(self)
@@ -443,9 +444,9 @@ impl Api {
     }
 
     #[oai(
-        path = "/chain/validator/signed_count",
-        method = "get",
-        tag = "ApiTags::BlockChain"
+    path = "/chain/validator/signed_count",
+    method = "get",
+    tag = "ApiTags::BlockChain"
     )]
     async fn validator_signed_count(
         &self,
@@ -462,9 +463,9 @@ impl Api {
     }
 
     #[oai(
-        path = "/chain/delegator_list/:address",
-        method = "get",
-        tag = "ApiTags::BlockChain"
+    path = "/chain/delegator_list/:address",
+    method = "get",
+    tag = "ApiTags::BlockChain"
     )]
     async fn delegator_list(
         &self,
@@ -486,9 +487,9 @@ impl Api {
     }
 
     #[oai(
-        path = "/coins/:id/market_chart",
-        method = "get",
-        tag = "ApiTags::Price"
+    path = "/coins/:id/market_chart",
+    method = "get",
+    tag = "ApiTags::Price"
     )]
     async fn market_chart(
         &self,
@@ -521,9 +522,9 @@ impl Api {
     }
 
     #[oai(
-        path = "/chain/validator_delegation",
-        method = "get",
-        tag = "ApiTags::BlockChain"
+    path = "/chain/validator_delegation",
+    method = "get",
+    tag = "ApiTags::BlockChain"
     )]
     async fn validator_delegation(
         &self,
@@ -536,9 +537,9 @@ impl Api {
     }
 
     #[oai(
-        path = "/tx/prism/records/receive",
-        method = "get",
-        tag = "ApiTags::Transaction"
+    path = "/tx/prism/records/receive",
+    method = "get",
+    tag = "ApiTags::Transaction"
     )]
     async fn get_prism_records_receive(
         &self,
@@ -555,9 +556,9 @@ impl Api {
     }
 
     #[oai(
-        path = "/tx/prism/records/send",
-        method = "get",
-        tag = "ApiTags::Transaction"
+    path = "/tx/prism/records/send",
+    method = "get",
+    tag = "ApiTags::Transaction"
     )]
     async fn get_prism_records_send(
         &self,
@@ -589,9 +590,9 @@ impl Api {
     }
 
     #[oai(
-        path = "/tx/undelegation",
-        method = "get",
-        tag = "ApiTags::Transaction"
+    path = "/tx/undelegation",
+    method = "get",
+    tag = "ApiTags::Transaction"
     )]
     async fn get_undelegation(
         &self,
@@ -623,9 +624,9 @@ impl Api {
     }
 
     #[oai(
-        path = "/chain/validator/history",
-        method = "get",
-        tag = "ApiTags::BlockChain"
+    path = "/chain/validator/history",
+    method = "get",
+    tag = "ApiTags::BlockChain"
     )]
     async fn get_validator_history(
         &self,
@@ -642,9 +643,9 @@ impl Api {
     }
 
     #[oai(
-        path = "/chain/claim/:address",
-        method = "get",
-        tag = "ApiTags::BlockChain"
+    path = "/chain/claim/:address",
+    method = "get",
+    tag = "ApiTags::BlockChain"
     )]
     async fn get_claim_amount(&self, address: Path<String>) -> poem::Result<ClaimAmountResponse> {
         service::v1::transaction::get_claims_amount(self, address)
@@ -653,9 +654,9 @@ impl Api {
     }
 
     #[oai(
-        path = "/staking/delegation_info/:address",
-        method = "get",
-        tag = "ApiTags::Staking"
+    path = "/staking/delegation_info/:address",
+    method = "get",
+    tag = "ApiTags::Staking"
     )]
     async fn get_delegation(&self, address: Path<String>) -> poem::Result<DelegationInfoResponse> {
         service::v1::staking::delegation(self, address)
@@ -664,9 +665,9 @@ impl Api {
     }
 
     #[oai(
-        path = "/staking/undelegation",
-        method = "get",
-        tag = "ApiTags::Staking"
+    path = "/staking/undelegation",
+    method = "get",
+    tag = "ApiTags::Staking"
     )]
     async fn get_undelegation_info(
         &self,
@@ -706,9 +707,9 @@ impl Api {
     }
 
     #[oai(
-        path = "/staking/delegation/amount",
-        method = "get",
-        tag = "ApiTags::Staking"
+    path = "/staking/delegation/amount",
+    method = "get",
+    tag = "ApiTags::Staking"
     )]
     async fn get_delegation_amount(
         &self,
@@ -725,9 +726,9 @@ impl Api {
     }
 
     #[oai(
-        path = "/staking/undelegation/amount",
-        method = "get",
-        tag = "ApiTags::Staking"
+    path = "/staking/undelegation/amount",
+    method = "get",
+    tag = "ApiTags::Staking"
     )]
     async fn get_undelegation_amount(
         &self,
@@ -744,9 +745,9 @@ impl Api {
     }
 
     #[oai(
-        path = "/chain/prism/sync",
-        method = "get",
-        tag = "ApiTags::BlockChain"
+    path = "/chain/prism/sync",
+    method = "get",
+    tag = "ApiTags::BlockChain"
     )]
     async fn prism_sync_info(&self) -> poem::Result<PrismSyncResponse> {
         service::v1::chain::prism_sync_info(self)
@@ -755,9 +756,9 @@ impl Api {
     }
 
     #[oai(
-        path = "/chain/delegation/address/num",
-        method = "get",
-        tag = "ApiTags::BlockChain"
+    path = "/chain/delegation/address/num",
+    method = "get",
+    tag = "ApiTags::BlockChain"
     )]
     async fn delegation_address_num(&self) -> poem::Result<DelegateAddressNumResponse> {
         service::v1::chain::delegation_address_num(self)
@@ -769,9 +770,9 @@ impl Api {
     // V2
     ///////////////////////////////////////////////////////////////////////////////////////////////
     #[oai(
-        path = "/v2/evm/tx/:tx_hash",
-        method = "get",
-        tag = "ApiTags::Transaction"
+    path = "/v2/evm/tx/:tx_hash",
+    method = "get",
+    tag = "ApiTags::Transaction"
     )]
     async fn v2_get_evm_tx(&self, tx_hash: Path<String>) -> poem::Result<V2EvmTxResponse> {
         v2_get_evm_tx(self, tx_hash)
@@ -793,15 +794,29 @@ impl Api {
     }
 
     #[oai(
-        path = "/v2/delegation/tx/:tx_hash",
-        method = "get",
-        tag = "ApiTags::Transaction"
+    path = "/v2/delegation/tx/:tx_hash",
+    method = "get",
+    tag = "ApiTags::Transaction"
     )]
     async fn v2_get_delegation_tx(
         &self,
         tx_hash: Path<String>,
     ) -> poem::Result<V2DelegationTxResponse> {
         v2_get_delegation_tx(self, tx_hash)
+            .await
+            .map_err(handle_fetch_one_err)
+    }
+
+    #[oai(
+    path = "/v2/undelegation/tx/:tx_hash",
+    method = "get",
+    tag = "ApiTags::Transaction"
+    )]
+    async fn v2_get_undelegation_tx(
+        &self,
+        tx_hash: Path<String>,
+    ) -> poem::Result<V2UndelegationTxResponse> {
+        v2_get_undelegation_tx(self, tx_hash)
             .await
             .map_err(handle_fetch_one_err)
     }
