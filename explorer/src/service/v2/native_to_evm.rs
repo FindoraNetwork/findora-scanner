@@ -37,10 +37,7 @@ pub struct V2NativeToEvmTx {
 }
 pub async fn v2_get_n2e_tx(api: &Api, tx_hash: Path<String>) -> Result<V2NativeToEvmTxResponse> {
     let mut conn = api.storage.lock().await.acquire().await?;
-    let sql_query = format!(
-        "SELECT * FROM n2e WHERE tx='{}'",
-        tx_hash.0.to_lowercase()
-    );
+    let sql_query = format!("SELECT * FROM n2e WHERE tx='{}'", tx_hash.0.to_lowercase());
 
     let row = sqlx::query(sql_query.as_str()).fetch_one(&mut conn).await?;
 
