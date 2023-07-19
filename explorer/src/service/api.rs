@@ -835,7 +835,7 @@ impl Api {
     }
 
     #[oai(
-        path = "/v2/n2e/tx/:tx_hash",
+        path = "/v2/tx/n2e/:tx_hash",
         method = "get",
         tag = "ApiTags::Transaction"
     )]
