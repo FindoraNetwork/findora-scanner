@@ -26,6 +26,7 @@ use crate::service::v1::validator::{
 use crate::service::v2::claim::{v2_get_claim_tx, V2ClaimTxResponse};
 use crate::service::v2::define_asset::{v2_get_define_asset, V2DefineAssetTxResponse};
 use crate::service::v2::delegation::{v2_get_delegation_tx, V2DelegationTxResponse};
+use crate::service::v2::issue_asset::{v2_get_issue_asset, V2IssueAssetTxResponse};
 use crate::service::v2::native_to_evm::{v2_get_n2e_tx, V2NativeToEvmTxResponse};
 use crate::service::v2::transaction_evm::{
     v2_get_evm_tx, v2_get_evm_txs, V2EvmTxResponse, V2EvmTxsResponse,
@@ -853,6 +854,20 @@ impl Api {
         asset: Path<String>,
     ) -> poem::Result<V2DefineAssetTxResponse> {
         v2_get_define_asset(self, asset)
+            .await
+            .map_err(handle_fetch_one_err)
+    }
+
+    #[oai(
+        path = "/v2/asset/issue/:asset",
+        method = "get",
+        tag = "ApiTags::Asset"
+    )]
+    async fn v2_get_issue_asset(
+        &self,
+        asset: Path<String>,
+    ) -> poem::Result<V2IssueAssetTxResponse> {
+        v2_get_issue_asset(self, asset)
             .await
             .map_err(handle_fetch_one_err)
     }
