@@ -255,3 +255,54 @@
 	"message": ""
 }
 ```
+* `/api/v2/asset/issue/:asset`
+* Response:
+```json
+{
+  "code": 200,
+  "data": {
+    "asset": "dx8LUysx7w3sgKDN8voPw3HVqFU2eW7ZkxwE9HPATjM=",
+    "block": "3294db9641e0653ffed2f8368eaf52a0da40bfee5c43322368249b4ae00a5f2d",
+    "height": 2798689,
+    "issuer": "fra1xczgryuz65as77gf8d5f07xd0wetd8qpm5hvgqkfgc60gxdjpmkshnq9ys",
+    "timestamp": 1661753006,
+    "tx": "fe5958ff051f6c397869320452b4308cc171228e59154b806236ab514ed75582",
+    "value": {
+      "IssueAsset": {
+        "body": {
+          "code": {
+            "val": [119, 31, 11, 83, 43, 49, 239, 13, 236, 128, 160, 205, 242, 250, 15, 195, 113, 213, 168, 85, 54, 121, 110, 217, 147, 28, 4, 244, 115, 192, 78, 51]
+          },
+          "num_outputs": 1,
+          "records": [
+            [{
+              "id": null,
+              "record": {
+                "amount": {
+                  "Confidential": ["BA5weX5FN4bul50T2jcsOCZImgh8qFAMcmW1XqP1IRg=", "7mRIrNV2dxXTzGdFYlBFmD2y0RZul5k_EZVdX8mNKFk="]
+                },
+                "asset_type": {
+                  "NonConfidential": [119, 31, 11, 83, 43, 49, 239, 13, 236, 128, 160, 205, 242, 250, 15, 195, 113, 213, 168, 85, 54, 121, 110, 217, 147, 28, 4, 244, 115, 192, 78, 51]
+                },
+                "public_key": "NgSBk4LVOw95CTtol_jNe7K2nAHdLsQCyUY09BmyDu0="
+              }
+            }, {
+              "blind_share": "VglwyHFCYL7pg87itoDyvtcOJ_9X4rovtelydidMJ2I=",
+              "lock": {
+                "ciphertext": "ZyqqjNYByqs=",
+                "ephemeral_public_key": "-uj1yfgazboYNA4kvPSGWYT2m9_UFc35LJt3MJ-4ZSI="
+              }
+            }]
+          ],
+          "seq_num": 39902
+        },
+        "pubkey": {
+          "key": "NgSBk4LVOw95CTtol_jNe7K2nAHdLsQCyUY09BmyDu0="
+        },
+        "signature": "DkydH0ONCMm5yiUKmWHEFZTLF3IfpYyyTkv-drg8ExvU6MyMxtEyr99PuWWManMJw3hpaopVATVpPN44w0WiCg=="
+      }
+    }
+  },
+  "message": ""
+}
+```
