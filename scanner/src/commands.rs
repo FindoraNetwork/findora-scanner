@@ -281,6 +281,7 @@ impl Migrate {
                     let op_str = serde_json::to_string(&op).unwrap();
                     if op_str.contains("ConvertAccount") {
                         // convert account
+                        let op_copy = op.clone();
                         let opt: ConvertAccountOperation = serde_json::from_value(op).unwrap();
                         let asset: String;
                         if let Some(asset_bin) = &opt.convert_account.asset_type {
@@ -297,6 +298,7 @@ impl Migrate {
                             &opt.convert_account.value,
                             height,
                             timestamp,
+                            &op_copy,
                             &pool,
                         )
                         .await?;

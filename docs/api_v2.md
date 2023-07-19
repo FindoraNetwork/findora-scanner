@@ -1,8 +1,8 @@
 # Findora Scanner V2 API Spec
 
-Get evm tx by hash:
-`/api/v2/evm/tx/:hash`
-Response:
+
+* `/api/v2/evm/tx/:hash`
+* Response:
 ```json
 {
 	"code": 200,
@@ -40,8 +40,8 @@ Response:
 	"message": ""
 }
 ```
-`/api/v2/evm/txs`
-Response:
+* `/api/v2/evm/txs`
+* Response:
 ```json
 {
     "code": 200,
@@ -175,6 +175,36 @@ Response:
 				},
 				"pubkey": "NgSBk4LVOw95CTtol_jNe7K2nAHdLsQCyUY09BmyDu0=",
 				"signature": "2DMtKlq-VM17sLI7xJVql5lXR1v4W-wYDZ8Zlf8gVu09GWmgGjPQuaD9BrtX_0dYQ4bRgiMe9SrbK7qJOI6qAg=="
+			}
+		}
+	},
+	"message": ""
+}
+```
+* `/v2/n2e/tx/:hash`
+* Response:
+```json
+{
+	"code": 200,
+	"data": {
+		"amount": "1000000",
+		"asset": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+		"block_hash": "e1ed231539cba0e40b4d595bde42eb0717a0e3634ae8368acddf293f4a02d00f",
+		"from": "OmZMrZBVsPjQwvHsROCI3mRw2pdVnYER8Xa5lzQ3Ek0=",
+		"height": 2799317,
+		"timestamp": 1661763710,
+		"to": "0x6f6050950cfa13f612388cd793242458acca4aa7",
+		"tx_hash": "e5fb78efd8dac071a7d8e5e9217971fe552302f74aad811106a314f1c3029ccd",
+		"value": {
+			"ConvertAccount": {
+				"nonce": [
+					[133, 28, 181, 142, 101, 188, 209, 200], 39950
+				],
+				"receiver": {
+					"Ethereum": "0x6f6050950cfa13f612388cd793242458acca4aa7"
+				},
+				"signer": "OmZMrZBVsPjQwvHsROCI3mRw2pdVnYER8Xa5lzQ3Ek0=",
+				"value": "1000000"
 			}
 		}
 	},

@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 pub mod claim;
 pub mod delegation;
+pub mod native_to_evm;
 pub mod transaction_evm;
 pub mod undelegation;
 

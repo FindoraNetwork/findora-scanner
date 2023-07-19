@@ -149,6 +149,7 @@ create table n2e(
     amount varchar(32) not null,
     height bigint not null,
     timestamp bigint not null,
+    content jsonb not null,
     primary key (tx)
 );
 create index n2e_sender_index on n2e(sender);

@@ -245,9 +245,10 @@ pub async fn save_n2e_tx(
     amount: &str,
     height: i64,
     timestamp: i64,
+    content: &Value,
     pool: &PgPool,
 ) -> Result<(), Error> {
-    sqlx::query("INSERT INTO n2e VALUES($1,$2,$3,$4,$5,$6,$7,$8) ON CONFLICT(tx) DO UPDATE SET tx=$1,block=$2,sender=$3,receiver=$4,asset=$5,amount=$6,height=$7,timestamp=$8")
+    sqlx::query("INSERT INTO n2e VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9) ON CONFLICT(tx) DO UPDATE SET tx=$1,block=$2,sender=$3,receiver=$4,asset=$5,amount=$6,height=$7,timestamp=$8,content=$9")
         .bind(tx)
         .bind(block)
         .bind(sender)
@@ -256,6 +257,7 @@ pub async fn save_n2e_tx(
         .bind(amount)
         .bind(height)
         .bind(timestamp)
+        .bind(content)
         .execute(pool)
         .await?;
 
