@@ -25,6 +25,7 @@ use crate::service::v1::validator::{
 };
 use crate::service::v2::claim::{v2_get_claim_tx, V2ClaimTxResponse};
 use crate::service::v2::delegation::{v2_get_delegation_tx, V2DelegationTxResponse};
+use crate::service::v2::native_to_evm::{v2_get_n2e_tx, V2NativeToEvmTxResponse};
 use crate::service::v2::transaction_evm::{
     v2_get_evm_tx, v2_get_evm_txs, V2EvmTxResponse, V2EvmTxsResponse,
 };
@@ -826,6 +827,17 @@ impl Api {
     )]
     async fn v2_get_claim_tx(&self, tx_hash: Path<String>) -> poem::Result<V2ClaimTxResponse> {
         v2_get_claim_tx(self, tx_hash)
+            .await
+            .map_err(handle_fetch_one_err)
+    }
+
+    #[oai(
+        path = "/v2/n2e/tx/:tx_hash",
+        method = "get",
+        tag = "ApiTags::Transaction"
+    )]
+    async fn v2_get_n2e_tx(&self, tx_hash: Path<String>) -> poem::Result<V2NativeToEvmTxResponse> {
+        v2_get_n2e_tx(self, tx_hash)
             .await
             .map_err(handle_fetch_one_err)
     }
