@@ -153,3 +153,31 @@ Response:
 	"message": ""
 }
 ```
+* `/v2/claim/tx/:hash`
+* Response
+```json
+{
+	"code": 200,
+	"data": {
+		"amount": 20000,
+		"block_hash": "951992a07625251f2cbf7805c063dd182af3fd06641cc1400ebea46a0d5834c1",
+		"from": "fra1xczgryuz65as77gf8d5f07xd0wetd8qpm5hvgqkfgc60gxdjpmkshnq9ys",
+		"height": 2799448,
+		"timestamp": 1661765944,
+		"tx_hash": "114710d4828472bc3e2da38089b70efe92d47f25b8b0439b918de227a9cbf392",
+		"value": {
+			"Claim": {
+				"body": {
+					"amount": 20000,
+					"nonce": [
+						[216, 83, 96, 111, 84, 31, 175, 85], 39962
+					]
+				},
+				"pubkey": "NgSBk4LVOw95CTtol_jNe7K2nAHdLsQCyUY09BmyDu0=",
+				"signature": "2DMtKlq-VM17sLI7xJVql5lXR1v4W-wYDZ8Zlf8gVu09GWmgGjPQuaD9BrtX_0dYQ4bRgiMe9SrbK7qJOI6qAg=="
+			}
+		}
+	},
+	"message": ""
+}
+```

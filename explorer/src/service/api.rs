@@ -23,19 +23,17 @@ use crate::service::v1::validator::{
     ValidatorDetailResponse, ValidatorHistoryResponse, ValidatorListResponse,
     ValidatorSignedCountResponse,
 };
-use crate::service::ApiTags;
-
-use poem_openapi::param::{Path, Query};
-use poem_openapi::OpenApi;
-use scanner::rpc::TendermintRPC;
-
-use sqlx::{Pool, Postgres};
-
+use crate::service::v2::claim::{v2_get_claim_tx, V2ClaimTxResponse};
 use crate::service::v2::delegation::{v2_get_delegation_tx, V2DelegationTxResponse};
 use crate::service::v2::transaction_evm::{
     v2_get_evm_tx, v2_get_evm_txs, V2EvmTxResponse, V2EvmTxsResponse,
 };
 use crate::service::v2::undelegation::{v2_get_undelegation_tx, V2UndelegationTxResponse};
+use crate::service::ApiTags;
+use poem_openapi::param::{Path, Query};
+use poem_openapi::OpenApi;
+use scanner::rpc::TendermintRPC;
+use sqlx::{Pool, Postgres};
 use tokio::sync::Mutex;
 
 #[allow(dead_code)]
@@ -817,6 +815,17 @@ impl Api {
         tx_hash: Path<String>,
     ) -> poem::Result<V2UndelegationTxResponse> {
         v2_get_undelegation_tx(self, tx_hash)
+            .await
+            .map_err(handle_fetch_one_err)
+    }
+
+    #[oai(
+        path = "/v2/claim/tx/:tx_hash",
+        method = "get",
+        tag = "ApiTags::Transaction"
+    )]
+    async fn v2_get_claim_tx(&self, tx_hash: Path<String>) -> poem::Result<V2ClaimTxResponse> {
+        v2_get_claim_tx(self, tx_hash)
             .await
             .map_err(handle_fetch_one_err)
     }
