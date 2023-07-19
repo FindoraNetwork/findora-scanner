@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 pub mod delegation;
 pub mod transaction_evm;
+pub mod undelegation;
 
 #[allow(dead_code)]
 #[derive(Serialize, Deserialize, Debug)]
