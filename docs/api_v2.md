@@ -20,14 +20,16 @@
 * [6.1 Get native to evm tx by hash](#6.1)
 
 ## [7.Define Asset](#7)
-* [6.1 Get defined asset](#7.1)
+* [7.1 Get defined asset](#7.1)
 
 ## [8.Issue Asset](#8)
 * [8.1 Get issued asset](#8.1)
 
-* <h2 id="1">1.Native</h2>
+
+<h2 id="1">1.Native</h2>
 <h3 id="1.1">1.1 Get Native Tx By Hash</h3>
-`GET /api/v2/tx/native/:hash`
+
+* `GET /api/v2/tx/native/:hash`
 
 | 参数   | 类型     | 说明               | 必传  |
 |------|--------|------------------|-----|
