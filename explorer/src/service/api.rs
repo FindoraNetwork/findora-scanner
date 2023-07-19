@@ -24,6 +24,7 @@ use crate::service::v1::validator::{
     ValidatorSignedCountResponse,
 };
 use crate::service::v2::claim::{v2_get_claim_tx, V2ClaimTxResponse};
+use crate::service::v2::define_asset::{v2_get_define_asset, V2DefineAssetTxResponse};
 use crate::service::v2::delegation::{v2_get_delegation_tx, V2DelegationTxResponse};
 use crate::service::v2::native_to_evm::{v2_get_n2e_tx, V2NativeToEvmTxResponse};
 use crate::service::v2::transaction_evm::{
@@ -769,7 +770,7 @@ impl Api {
     // V2
     ///////////////////////////////////////////////////////////////////////////////////////////////
     #[oai(
-        path = "/v2/evm/tx/:tx_hash",
+        path = "/v2/tx/evm/:tx_hash",
         method = "get",
         tag = "ApiTags::Transaction"
     )]
@@ -779,7 +780,7 @@ impl Api {
             .map_err(handle_fetch_one_err)
     }
 
-    #[oai(path = "/v2/evm/txs", method = "get", tag = "ApiTags::Transaction")]
+    #[oai(path = "/v2/txs/evm", method = "get", tag = "ApiTags::Transaction")]
     async fn v2_get_evm_txs(
         &self,
         from: Query<Option<String>>,
@@ -793,7 +794,7 @@ impl Api {
     }
 
     #[oai(
-        path = "/v2/delegation/tx/:tx_hash",
+        path = "/v2/tx/delegation/:tx_hash",
         method = "get",
         tag = "ApiTags::Transaction"
     )]
@@ -807,7 +808,7 @@ impl Api {
     }
 
     #[oai(
-        path = "/v2/undelegation/tx/:tx_hash",
+        path = "/v2/tx/undelegation/:tx_hash",
         method = "get",
         tag = "ApiTags::Transaction"
     )]
@@ -821,7 +822,7 @@ impl Api {
     }
 
     #[oai(
-        path = "/v2/claim/tx/:tx_hash",
+        path = "/v2/tx/claim/:tx_hash",
         method = "get",
         tag = "ApiTags::Transaction"
     )]
@@ -838,6 +839,20 @@ impl Api {
     )]
     async fn v2_get_n2e_tx(&self, tx_hash: Path<String>) -> poem::Result<V2NativeToEvmTxResponse> {
         v2_get_n2e_tx(self, tx_hash)
+            .await
+            .map_err(handle_fetch_one_err)
+    }
+
+    #[oai(
+        path = "/v2/asset/define/:asset",
+        method = "get",
+        tag = "ApiTags::Asset"
+    )]
+    async fn v2_get_define_asset(
+        &self,
+        asset: Path<String>,
+    ) -> poem::Result<V2DefineAssetTxResponse> {
+        v2_get_define_asset(self, asset)
             .await
             .map_err(handle_fetch_one_err)
     }

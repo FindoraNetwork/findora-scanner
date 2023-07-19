@@ -7,9 +7,9 @@ use serde_json::Value;
 use sqlx::Row;
 
 #[derive(ApiResponse)]
-pub enum V2NativeToEvmTxResponse {
+pub enum V2DefineAssetTxResponse {
     #[oai(status = 200)]
-    Ok(Json<V2NativeToEvmTxResult>),
+    Ok(Json<V2DefineAssetTxResult>),
     #[oai(status = 404)]
     NotFound,
     #[oai(status = 500)]
@@ -17,54 +17,57 @@ pub enum V2NativeToEvmTxResponse {
 }
 
 #[derive(Serialize, Deserialize, Debug, Object)]
-pub struct V2NativeToEvmTxResult {
+pub struct V2DefineAssetTxResult {
     pub code: u16,
     pub message: String,
-    pub data: Option<V2NativeToEvmTx>,
+    pub data: Option<V2DefineAssetTx>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Object)]
-pub struct V2NativeToEvmTx {
-    pub tx_hash: String,
-    pub block_hash: String,
-    pub from: String,
-    pub to: String,
+pub struct V2DefineAssetTx {
     pub asset: String,
-    pub amount: String,
+    pub tx: String,
+    pub block: String,
+    pub issuer: String,
+    pub max_units: String,
+    pub decimal: i32,
     pub height: i64,
     pub timestamp: i64,
     pub value: Value,
 }
 
-pub async fn v2_get_n2e_tx(api: &Api, tx_hash: Path<String>) -> Result<V2NativeToEvmTxResponse> {
+pub async fn v2_get_define_asset(
+    api: &Api,
+    asset: Path<String>,
+) -> Result<V2DefineAssetTxResponse> {
     let mut conn = api.storage.lock().await.acquire().await?;
-    let sql_query = format!("SELECT * FROM n2e WHERE tx='{}'", tx_hash.0.to_lowercase());
+    let sql_query = format!("SELECT * from defined_assets WHERE asset='{}'", asset.0);
 
     let row = sqlx::query(sql_query.as_str()).fetch_one(&mut conn).await?;
 
+    let asset: String = row.try_get("asset")?;
     let tx: String = row.try_get("tx")?;
     let block: String = row.try_get("block")?;
-    let sender: String = row.try_get("sender")?;
-    let receiver: String = row.try_get("receiver")?;
-    let asset: String = row.try_get("asset")?;
-    let amount: String = row.try_get("amount")?;
+    let issuer: String = row.try_get("issuer")?;
+    let max_units: String = row.try_get("max_units")?;
+    let decimal: i32 = row.try_get("decimal")?;
     let height: i64 = row.try_get("height")?;
     let timestamp: i64 = row.try_get("timestamp")?;
     let value: Value = row.try_get("content")?;
 
-    let res = V2NativeToEvmTx {
-        tx_hash: tx,
-        block_hash: block,
-        from: sender,
-        to: receiver,
+    let res = V2DefineAssetTx {
         asset,
-        amount,
+        tx,
+        block,
+        issuer,
+        max_units,
+        decimal,
         height,
         timestamp,
         value,
     };
 
-    Ok(V2NativeToEvmTxResponse::Ok(Json(V2NativeToEvmTxResult {
+    Ok(V2DefineAssetTxResponse::Ok(Json(V2DefineAssetTxResult {
         code: StatusCode::OK.as_u16(),
         message: "".to_string(),
         data: Some(res),

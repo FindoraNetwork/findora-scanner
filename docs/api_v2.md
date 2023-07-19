@@ -1,7 +1,7 @@
 # Findora Scanner V2 API Spec
 
 
-* `/api/v2/evm/tx/:hash`
+* `/api/v2/ex/evm/:hash`
 * Response:
 ```json
 {
@@ -40,7 +40,7 @@
 	"message": ""
 }
 ```
-* `/api/v2/evm/txs`
+* `/api/v2/txs/evm`
 * Response:
 ```json
 {
@@ -86,7 +86,7 @@
     "message": ""
 }
 ```
-* `/api/v2/delegation/tx/:hash`
+* `/api/v2/tx/delegation/:hash`
 * Response:
 ```json
 {
@@ -119,7 +119,7 @@
 	"message": ""
 }
 ```
-* `/api/v2/undelegation/tx/:hash`
+* `/api/v2/tx/undelegation/:hash`
 * Response
 ```json
 {
@@ -153,7 +153,7 @@
 	"message": ""
 }
 ```
-* `/v2/claim/tx/:hash`
+* `/v2/tx/claim/:hash`
 * Response
 ```json
 {
@@ -181,7 +181,7 @@
 	"message": ""
 }
 ```
-* `/v2/n2e/tx/:hash`
+* `/v2/tx/n2e/:hash`
 * Response:
 ```json
 {
@@ -205,6 +205,50 @@
 				},
 				"signer": "OmZMrZBVsPjQwvHsROCI3mRw2pdVnYER8Xa5lzQ3Ek0=",
 				"value": "1000000"
+			}
+		}
+	},
+	"message": ""
+}
+```
+* `/v2/asset/define/:asset`
+* Response:
+```json
+{
+	"code": 200,
+	"data": {
+		"asset": "dx8LUysx7w3sgKDN8voPw3HVqFU2eW7ZkxwE9HPATjM=",
+		"block": "cf457fd6bbd404761cf837ae56e74c2191f5f3662040ec2dd7a4f4004c1004a4",
+		"decimal": 6,
+		"height": 2798685,
+		"issuer": "fra1xczgryuz65as77gf8d5f07xd0wetd8qpm5hvgqkfgc60gxdjpmkshnq9ys",
+		"max_units": "",
+		"timestamp": 1661752937,
+		"tx": "f8ff841a53603e40b5628e9df7d662a72cc9d60c9035521d6dc530d35f2679f0",
+		"value": {
+			"DefineAsset": {
+				"body": {
+					"asset": {
+						"asset_rules": {
+							"decimals": 6,
+							"max_units": "",
+							"transfer_multisig_rules": null,
+							"transferable": true,
+							"updatable": false
+						},
+						"code": {
+							"val": [119, 31, 11, 83, 43, 49, 239, 13, 236, 128, 160, 205, 242, 250, 15, 195, 113, 213, 168, 85, 54, 121, 110, 217, 147, 28, 4, 244, 115, 192, 78, 51]
+						},
+						"issuer": {
+							"key": "NgSBk4LVOw95CTtol_jNe7K2nAHdLsQCyUY09BmyDu0="
+						},
+						"memo": "ARP"
+					}
+				},
+				"pubkey": {
+					"key": "NgSBk4LVOw95CTtol_jNe7K2nAHdLsQCyUY09BmyDu0="
+				},
+				"signature": "pPXgtGw8D6JmYYQ1fQlV5TJhhHI1T-yatNJnMXAzP8wMBd6mJjz9-RCM3-1YQ2vHm1DFBIpUf0ZLW_yp_Ea8DQ=="
 			}
 		}
 	},
