@@ -35,6 +35,7 @@ use crate::service::v2::delegation::{v2_get_delegation_tx, V2DelegationTxRespons
 use crate::service::v2::transaction_evm::{
     v2_get_evm_tx, v2_get_evm_txs, V2EvmTxResponse, V2EvmTxsResponse,
 };
+use crate::service::v2::undelegation::{v2_get_undelegation_tx, V2UndelegationTxResponse};
 use tokio::sync::Mutex;
 
 #[allow(dead_code)]
@@ -802,6 +803,20 @@ impl Api {
         tx_hash: Path<String>,
     ) -> poem::Result<V2DelegationTxResponse> {
         v2_get_delegation_tx(self, tx_hash)
+            .await
+            .map_err(handle_fetch_one_err)
+    }
+
+    #[oai(
+        path = "/v2/undelegation/tx/:tx_hash",
+        method = "get",
+        tag = "ApiTags::Transaction"
+    )]
+    async fn v2_get_undelegation_tx(
+        &self,
+        tx_hash: Path<String>,
+    ) -> poem::Result<V2UndelegationTxResponse> {
+        v2_get_undelegation_tx(self, tx_hash)
             .await
             .map_err(handle_fetch_one_err)
     }
