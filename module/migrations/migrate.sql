@@ -19,16 +19,14 @@ create table tx_types(
 create table native_txs(
     tx varchar(64) not null,
     block varchar(64) not null,
-    sender varchar(62) not null,
-    receiver varchar(62) not null,
-    asset varchar(44) not null,
-    amount varchar(32) not null,
     height bigint not null,
     timestamp bigint not null,
-    primary key (tx,receiver,amount,asset)
+    inputs jsonb not null,
+    outputs jsonb not null,
+    content jsonb not null,
+    primary key (tx)
 );
 create index nt_block_index on native_txs(block);
-create index nt_sender_index on native_txs(sender);
 create index nt_height_index on native_txs(height);
 create index nt_time_index on native_txs(timestamp);
 
