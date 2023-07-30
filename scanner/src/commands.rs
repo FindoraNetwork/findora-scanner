@@ -417,6 +417,8 @@ impl Migrate {
                         // transfer asset
                         let op_copy = op.clone();
                         let opt: TransferAssetOpt = serde_json::from_value(op).unwrap();
+                        let key = &opt.transfer_asset.body_signatures[0].address.key;
+                        let addr = pubkey_to_fra_address(key).unwrap();
                         let inputs =
                             serde_json::to_value(&opt.transfer_asset.body.transfer.inputs).unwrap();
                         let outputs =
@@ -425,6 +427,7 @@ impl Migrate {
                         save_native_tx(
                             &tx.to_lowercase(),
                             &block.to_lowercase(),
+                            &addr,
                             height,
                             timestamp,
                             &inputs,
