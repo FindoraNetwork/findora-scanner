@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+pub mod block;
 pub mod claim;
 pub mod define_asset;
 pub mod delegation;
