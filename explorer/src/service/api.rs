@@ -23,6 +23,11 @@ use crate::service::v1::validator::{
     ValidatorDetailResponse, ValidatorHistoryResponse, ValidatorListResponse,
     ValidatorSignedCountResponse,
 };
+use crate::service::v2::block::{
+    v2_get_blocks, v2_get_full_block_by_hash, v2_get_full_block_by_height,
+    v2_get_simple_block_by_hash, v2_get_simple_block_by_height, V2BlocksResponse,
+    V2FullBlockResponse, V2SimpleBlockResponse,
+};
 use crate::service::v2::claim::{v2_get_claim_tx, V2ClaimTxResponse};
 use crate::service::v2::define_asset::{v2_get_define_asset, V2DefineAssetTxResponse};
 use crate::service::v2::delegation::{v2_get_delegation_tx, V2DelegationTxResponse};
@@ -882,5 +887,92 @@ impl Api {
         v2_get_native_tx(self, tx_hash)
             .await
             .map_err(handle_fetch_one_err)
+    }
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // Block
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    #[oai(
+        path = "/v2/block/height/:height",
+        method = "get",
+        tag = "ApiTags::Block"
+    )]
+    async fn v2_get_block_by_height(
+        &self,
+        /// block height.
+        height: Path<i64>,
+    ) -> poem::Result<V2SimpleBlockResponse> {
+        v2_get_simple_block_by_height(self, height)
+            .await
+            .map_err(handle_fetch_one_err)
+    }
+
+    #[oai(
+        path = "/v2/block/full/height/:height",
+        method = "get",
+        tag = "ApiTags::Block"
+    )]
+    async fn v2_get_full_block_by_height(
+        &self,
+        /// block height.
+        height: Path<i64>,
+    ) -> poem::Result<V2FullBlockResponse> {
+        v2_get_full_block_by_height(self, height)
+            .await
+            .map_err(handle_fetch_one_err)
+    }
+
+    #[oai(path = "/v2/block/hash/:hash", method = "get", tag = "ApiTags::Block")]
+    async fn v2_get_block_by_hash(
+        &self,
+        /// block hash.
+        hash: Path<String>,
+    ) -> poem::Result<V2SimpleBlockResponse> {
+        v2_get_simple_block_by_hash(self, hash)
+            .await
+            .map_err(handle_fetch_one_err)
+    }
+
+    #[oai(
+        path = "/v2/block/full/hash/:hash",
+        method = "get",
+        tag = "ApiTags::Block"
+    )]
+    async fn v2_get_full_block_by_hash(
+        &self,
+        /// block hash.
+        hash: Path<String>,
+    ) -> poem::Result<V2FullBlockResponse> {
+        v2_get_full_block_by_hash(self, hash)
+            .await
+            .map_err(handle_fetch_one_err)
+    }
+
+    #[oai(path = "/v2/blocks", method = "get", tag = "ApiTags::Block")]
+    async fn v2_get_blocks(
+        &self,
+        /// starting height.
+        start_height: Query<Option<i64>>,
+        /// ending height.
+        end_height: Query<Option<i64>>,
+        /// starting timestamp.
+        start_time: Query<Option<i64>>,
+        /// ending timestamp.
+        end_time: Query<Option<i64>>,
+        /// page index, the default is 1.
+        page: Query<Option<i64>>,
+        /// page size, the default is 10.
+        page_size: Query<Option<i64>>,
+    ) -> poem::Result<V2BlocksResponse> {
+        v2_get_blocks(
+            self,
+            start_height,
+            end_height,
+            start_time,
+            end_time,
+            page,
+            page_size,
+        )
+        .await
+        .map_err(handle_fetch_one_err)
     }
 }
