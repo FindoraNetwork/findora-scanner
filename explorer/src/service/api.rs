@@ -23,15 +23,15 @@ use crate::service::v1::validator::{
     ValidatorDetailResponse, ValidatorHistoryResponse, ValidatorListResponse,
     ValidatorSignedCountResponse,
 };
+use crate::service::v2::asset_define::{v2_get_define_asset, V2DefineAssetTxResponse};
+use crate::service::v2::asset_issue::{v2_get_issue_asset, V2IssueAssetTxResponse};
 use crate::service::v2::block::{
     v2_get_blocks, v2_get_full_block_by_hash, v2_get_full_block_by_height,
     v2_get_simple_block_by_hash, v2_get_simple_block_by_height, V2BlocksResponse,
     V2FullBlockResponse, V2SimpleBlockResponse,
 };
 use crate::service::v2::claim::{v2_get_claim_tx, V2ClaimTxResponse};
-use crate::service::v2::define_asset::{v2_get_define_asset, V2DefineAssetTxResponse};
 use crate::service::v2::delegation::{v2_get_delegation_tx, V2DelegationTxResponse};
-use crate::service::v2::issue_asset::{v2_get_issue_asset, V2IssueAssetTxResponse};
 use crate::service::v2::native::{v2_get_native_tx, V2NativeTxResponse};
 use crate::service::v2::native_to_evm::{v2_get_n2e_tx, V2NativeToEvmTxResponse};
 use crate::service::v2::transaction_evm::{
@@ -851,34 +851,6 @@ impl Api {
     }
 
     #[oai(
-        path = "/v2/asset/define/:asset",
-        method = "get",
-        tag = "ApiTags::Asset"
-    )]
-    async fn v2_get_define_asset(
-        &self,
-        asset: Path<String>,
-    ) -> poem::Result<V2DefineAssetTxResponse> {
-        v2_get_define_asset(self, asset)
-            .await
-            .map_err(handle_fetch_one_err)
-    }
-
-    #[oai(
-        path = "/v2/asset/issue/:asset",
-        method = "get",
-        tag = "ApiTags::Asset"
-    )]
-    async fn v2_get_issue_asset(
-        &self,
-        asset: Path<String>,
-    ) -> poem::Result<V2IssueAssetTxResponse> {
-        v2_get_issue_asset(self, asset)
-            .await
-            .map_err(handle_fetch_one_err)
-    }
-
-    #[oai(
         path = "/v2/tx/native/:tx_hash",
         method = "get",
         tag = "ApiTags::Transaction"
@@ -974,5 +946,38 @@ impl Api {
         )
         .await
         .map_err(handle_fetch_one_err)
+    }
+
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // Define Asset
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    #[oai(
+        path = "/v2/asset/define/:asset",
+        method = "get",
+        tag = "ApiTags::Asset"
+    )]
+    async fn v2_get_define_asset(
+        &self,
+        asset: Path<String>,
+    ) -> poem::Result<V2DefineAssetTxResponse> {
+        v2_get_define_asset(self, asset)
+            .await
+            .map_err(handle_fetch_one_err)
+    }
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // Issue Asset
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    #[oai(
+        path = "/v2/asset/issue/:asset",
+        method = "get",
+        tag = "ApiTags::Asset"
+    )]
+    async fn v2_get_issue_asset(
+        &self,
+        asset: Path<String>,
+    ) -> poem::Result<V2IssueAssetTxResponse> {
+        v2_get_issue_asset(self, asset)
+            .await
+            .map_err(handle_fetch_one_err)
     }
 }

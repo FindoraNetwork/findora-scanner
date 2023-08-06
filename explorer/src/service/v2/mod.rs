@@ -1,9 +1,9 @@
 use serde::{Deserialize, Serialize};
+pub mod asset_define;
+pub mod asset_issue;
 pub mod block;
 pub mod claim;
-pub mod define_asset;
 pub mod delegation;
-pub mod issue_asset;
 pub mod native;
 pub mod native_to_evm;
 pub mod transaction_evm;

@@ -339,13 +339,8 @@ pub async fn v2_get_blocks(
     }
 
     // total items
-    let total: i64;
-    if blocks.is_empty() {
-        let res = sqlx::query(sql_total.as_str()).fetch_one(&mut conn).await;
-        total = res.unwrap().try_get("total")?;
-    } else {
-        total = blocks[0].block_header.height.parse()?;
-    }
+    let res = sqlx::query(sql_total.as_str()).fetch_one(&mut conn).await?;
+    let total = res.try_get("total")?;
 
     Ok(V2BlocksResponse::Ok(Json(V2BlocksResult {
         code: 200,
