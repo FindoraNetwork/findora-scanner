@@ -1,7 +1,7 @@
 use crate::commands::FRA_ASSET;
 use crate::types::{
     ClaimOpt, ConvertAccountOperation, DefineAssetOpt, DelegationOpt, FindoraEVMTx, IssueAssetOpt,
-    TransferAssetOpt, TxValue, UnDelegationOpt,
+    TransferAssetOpt, TxValue, UnDelegationOpt, XHubOpt,
 };
 use crate::util::pubkey_to_fra_address;
 use crate::{db, tx};
@@ -18,7 +18,7 @@ use module::rpc::{
 use module::schema::{
     Block as ModuleBlock, DelegationInfo, Transaction, V2ClaimTx, V2ConvertAccountTx,
     V2DefineAssetTx, V2DelegationTx, V2EvmTx, V2IssueAssetTx, V2NativeTransfer, V2UndelegationTx,
-    Validator,
+    Validator, XHubTx,
 };
 use module::utils::crypto::recover_signer;
 use reqwest::{Client, ClientBuilder, Url};
@@ -181,6 +181,7 @@ impl RPCCaller {
         let mut txs = Vec::new();
         let mut evm_txs = Vec::new();
         let mut validators = Vec::new();
+        let mut xhub_txs = Vec::new();
         let mut v2_evm_txs = Vec::new();
         let mut v2_convert_account_txs = Vec::new();
         let mut v2_undelegation_txs = Vec::new();
@@ -216,31 +217,55 @@ impl RPCCaller {
                     ////////////////////////////////////////////////////////////////////////////////
                     // v2: parse evm txs
                     ////////////////////////////////////////////////////////////////////////////////
-                    let evm_tx: FindoraEVMTx = serde_json::from_value(v).unwrap();
-                    let evm_tx_hash =
-                        H256::from_slice(Keccak256::digest(&rlp::encode(&evm_tx)).as_slice());
-                    let signer = recover_signer(&evm_tx.function.ethereum.transact).unwrap();
-                    let receiver = match evm_tx.function.ethereum.transact.action {
-                        TransactionAction::Call(to) => {
-                            format!("{to:?}")
+                    let evm_tx_str = serde_json::to_string(&v).unwrap();
+                    if evm_tx_str.contains("XHub") {
+                        // XHub
+                        let xhub_opt: XHubOpt = serde_json::from_value(v).unwrap();
+                        for o in &xhub_opt.function.xhub.nonconfidential_transfer.outputs {
+                            let asset = base64::encode_config(o.asset, base64::URL_SAFE);
+                            let receiver = pubkey_to_fra_address(&o.target).unwrap();
+                            let content = serde_json::from_str(&evm_tx_str).unwrap();
+                            xhub_txs.push(XHubTx {
+                                tx_hash: txid.clone(),
+                                block_hash: block_hash.clone(),
+                                sender: "".to_string(),
+                                receiver,
+                                asset,
+                                amount: o.amount,
+                                decimal: 6,
+                                height,
+                                timestamp: timestamp.timestamp(),
+                                content,
+                            })
                         }
-                        _ => "".to_string(),
-                    };
-                    let v: Value = serde_json::to_value(&evm_tx).unwrap();
-                    let evm_tx_hash = format!("{evm_tx_hash:?}");
-                    let sender = format!("{signer:?}");
-                    let amount = evm_tx.function.ethereum.transact.value.to_string();
-                    v2_evm_txs.push(V2EvmTx {
-                        tx_hash: txid,
-                        block_hash: block_hash.clone(),
-                        evm_tx_hash,
-                        sender,
-                        receiver,
-                        amount,
-                        height,
-                        timestamp: timestamp.timestamp(),
-                        content: v,
-                    })
+                    } else {
+                        // Ethereum
+                        let evm_tx: FindoraEVMTx = serde_json::from_value(v).unwrap();
+                        let evm_tx_hash =
+                            H256::from_slice(Keccak256::digest(&rlp::encode(&evm_tx)).as_slice());
+                        let signer = recover_signer(&evm_tx.function.ethereum.transact).unwrap();
+                        let receiver = match evm_tx.function.ethereum.transact.action {
+                            TransactionAction::Call(to) => {
+                                format!("{to:?}")
+                            }
+                            _ => "".to_string(),
+                        };
+                        let v: Value = serde_json::to_value(&evm_tx).unwrap();
+                        let evm_tx_hash = format!("{evm_tx_hash:?}");
+                        let sender = format!("{signer:?}");
+                        let amount = evm_tx.function.ethereum.transact.value.to_string();
+                        v2_evm_txs.push(V2EvmTx {
+                            tx_hash: txid,
+                            block_hash: block_hash.clone(),
+                            evm_tx_hash,
+                            sender,
+                            receiver,
+                            amount,
+                            height,
+                            timestamp: timestamp.timestamp(),
+                            content: v,
+                        })
+                    }
                 }
                 tx::TxCatalog::FindoraTx => {
                     let value: Value = serde_json::from_slice(&bytes)?;
@@ -385,8 +410,8 @@ impl RPCCaller {
                         } else if op_str.contains("TransferAsset") {
                             let op_copy = op.clone();
                             let opt: TransferAssetOpt = serde_json::from_value(op).unwrap();
-                            let key = &opt.transfer_asset.body_signatures[0].address.key;
-                            let address = pubkey_to_fra_address(key).unwrap();
+                            let pk = &opt.transfer_asset.body_signatures[0].address.key;
+                            let address = pubkey_to_fra_address(pk).unwrap();
                             v2_native_transfer_txs.push(V2NativeTransfer {
                                 tx_hash: txid.clone(),
                                 block_hash: block_hash.clone(),
@@ -455,6 +480,7 @@ impl RPCCaller {
             txs,
             evm_txs,
             validators,
+            xhub_txs,
             v2_evm_txs,
             v2_convert_account_txs,
             v2_undelegation_txs,

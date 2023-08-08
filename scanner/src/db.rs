@@ -63,6 +63,22 @@ pub async fn save(block: ModuleBlock, pool: &PgPool) -> Result<(), Error> {
             .await?;
     }
 
+    for tx in block.xhub_txs {
+        sqlx::query("INSERT INTO e2n VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) ON CONFLICT(tx_hash) DO UPDATE SET tx_hash=$1,block_hash=$2,sender=$3,receiver=$4,asset=$5,amount=$6,decimal=$7,height=$8,timestamp=$9,value=$10")
+            .bind(&tx.tx_hash)
+            .bind(&tx.block_hash)
+            .bind(&tx.sender)
+            .bind(&tx.receiver)
+            .bind(&tx.asset)
+            .bind(tx.amount)
+            .bind(tx.decimal)
+            .bind(tx.height)
+            .bind(tx.timestamp)
+            .bind(&tx.content)
+            .execute(pool)
+            .await?;
+    }
+
     for tx in block.v2_evm_txs {
         save_evm_tx(
             &tx.tx_hash.to_lowercase(),
@@ -160,8 +176,8 @@ pub async fn save(block: ModuleBlock, pool: &PgPool) -> Result<(), Error> {
     for tx in block.v2_issue_asset_txs {
         save_issue_asset_tx(
             &tx.asset,
-            &tx.tx_hash,
             &tx.tx_hash.to_lowercase(),
+            &tx.block_hash.to_lowercase(),
             &tx.issuer,
             tx.height,
             tx.timestamp,
@@ -238,6 +254,22 @@ pub async fn save(block: ModuleBlock, pool: &PgPool) -> Result<(), Error> {
                 "INSERT INTO transaction VALUES ($1, $2, $3, $4, $5, 1, $7, $8, $9, $10) ON CONFLICT(tx_hash) DO UPDATE SET ty=1, block_hash=$2, height=$3, timestamp=$4, code=$5, log=$7, origin=$8, result=$9, value=$10",
                 &tx.tx_hash, &tx.block_hash, &tx.height, &tx.timestamp, &tx.code, &tx.ty, &tx.log, &tx.origin, &tx.result, &tx.value
             )
+            .execute(pool)
+            .await?;
+    }
+
+    for tx in block.xhub_txs {
+        sqlx::query("INSERT INTO e2n VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) ON CONFLICT(tx_hash) DO UPDATE SET tx_hash=$1,block_hash=$2,sender=$3,receiver=$4,asset=$5,amount=$6,decimal=$7,height=$8,timestamp=$9,value=$10")
+            .bind(&tx.tx_hash)
+            .bind(&tx.block_hash)
+            .bind(&tx.sender)
+            .bind(&tx.receiver)
+            .bind(&tx.asset)
+            .bind(&tx.amount)
+            .bind(tx.decimal)
+            .bind(tx.height)
+            .bind(tx.timestamp)
+            .bind(&tx.content)
             .execute(pool)
             .await?;
     }

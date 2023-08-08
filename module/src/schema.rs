@@ -127,6 +127,7 @@ pub struct Block {
     pub txs: Vec<Transaction>,
     pub evm_txs: Vec<Transaction>,
     pub validators: Vec<Validator>,
+    pub xhub_txs: Vec<XHubTx>,
     pub v2_evm_txs: Vec<V2EvmTx>,
     pub v2_convert_account_txs: Vec<V2ConvertAccountTx>,
     pub v2_undelegation_txs: Vec<V2UndelegationTx>,
@@ -136,6 +137,20 @@ pub struct Block {
     pub v2_issue_asset_txs: Vec<V2IssueAssetTx>,
     pub v2_native_transfer_txs: Vec<V2NativeTransfer>,
     pub block_data: Value,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct XHubTx {
+    pub tx_hash: String,
+    pub block_hash: String,
+    pub sender: String,
+    pub receiver: String,
+    pub asset: String,
+    pub amount: i64,
+    pub decimal: i32,
+    pub height: i64,
+    pub timestamp: i64,
+    pub content: Value,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
