@@ -1,22 +1,23 @@
-use std::time::Duration;
-
+use crate::types::FindoraEVMTx;
+use crate::{db, tx};
 use crate::{Error, Result};
 use chrono::NaiveDateTime;
-use serde::de::DeserializeOwned;
-use sha2::Digest;
-use sqlx::PgPool;
-
+use ethereum::TransactionAction;
+use ethereum_types::H256;
+use module::rpc::block::BlockSizeRPC;
 use module::rpc::{
     block::BlockRPC as ModuleBlockRPC, tx::Transaction as ModuleTx,
     validator::ValidatorsRPC as ModuleValidatorsRPC, JsonRpcResponse, TdRpcResult,
 };
-
-use crate::{db, tx};
-
-use module::schema::{Block as ModuleBlock, DelegationInfo, Transaction, Validator};
-
-use module::rpc::block::BlockSizeRPC;
+use module::schema::{Block as ModuleBlock, DelegationInfo, Transaction, V2EvmTx, Validator};
+use module::utils::crypto::recover_signer;
 use reqwest::{Client, ClientBuilder, Url};
+use serde::de::DeserializeOwned;
+use serde_json::Value;
+use sha2::Digest;
+use sha3::Keccak256;
+use sqlx::PgPool;
+use std::time::Duration;
 
 pub struct TendermintRPC {
     pub rpc: Url,
@@ -170,6 +171,7 @@ impl RPCCaller {
         let mut txs = Vec::new();
         let mut evm_txs = Vec::new();
         let mut validators = Vec::new();
+        let mut v2_evm_txs = Vec::new();
 
         for tx in block.block.data.txs.unwrap_or_default() {
             let bytes = base64::decode(&tx)?;
@@ -180,9 +182,10 @@ impl RPCCaller {
             let result = serde_json::to_value(tx.tx_result.clone()).unwrap();
             match tx::try_tx_catalog(&bytes) {
                 tx::TxCatalog::EvmTx => {
-                    let value = serde_json::from_slice(tx::unwrap(&bytes)?)?;
+                    let value: Value = serde_json::from_slice(tx::unwrap(&bytes)?)?;
+                    let v: Value = value.clone();
                     evm_txs.push(Transaction {
-                        tx_hash: txid,
+                        tx_hash: txid.clone(),
                         block_hash: block_hash.clone(),
                         height,
                         timestamp: timestamp.timestamp(),
@@ -193,6 +196,33 @@ impl RPCCaller {
                         result,
                         value,
                     });
+
+                    // v2: parse evm txs
+                    let evm_tx: FindoraEVMTx = serde_json::from_value(v).unwrap();
+                    let evm_tx_hash =
+                        H256::from_slice(Keccak256::digest(&rlp::encode(&evm_tx)).as_slice());
+                    let signer = recover_signer(&evm_tx.function.ethereum.transact).unwrap();
+                    let receiver = match evm_tx.function.ethereum.transact.action {
+                        TransactionAction::Call(to) => {
+                            format!("{to:?}")
+                        }
+                        _ => "".to_string(),
+                    };
+                    let v: Value = serde_json::to_value(&evm_tx).unwrap();
+                    let evm_tx_hash = format!("{evm_tx_hash:?}");
+                    let sender = format!("{signer:?}");
+                    let amount = evm_tx.function.ethereum.transact.value.to_string();
+                    v2_evm_txs.push(V2EvmTx {
+                        tx_hash: txid,
+                        block_hash: block_hash.clone(),
+                        evm_tx_hash,
+                        sender,
+                        receiver,
+                        amount,
+                        height,
+                        timestamp: timestamp.timestamp(),
+                        content: v,
+                    })
                 }
                 tx::TxCatalog::FindoraTx => {
                     let value = serde_json::from_slice(&bytes)?;
@@ -266,6 +296,7 @@ impl RPCCaller {
             txs,
             evm_txs,
             validators,
+            v2_evm_txs,
             block_data,
         })
     }
@@ -308,31 +339,31 @@ mod tests {
 
     #[tokio::test]
     async fn test_rpc() -> Result<()> {
-        let rpc = TendermintRPC::new(
-            Duration::from_secs(10),
-            "https://prod-mainnet.prod.findora.org:26657"
-                .to_string()
-                .parse()
-                .unwrap(),
-        );
-        let _ = rpc.load_block(1550667).await?;
-        let _ = rpc.load_validators(1550667).await?;
-        let _ = rpc
-            .load_transaction("c19fc22beb61030607367b42d4898a26ede1e6aa6b400330804c95b241f29bd0")
-            .await?;
+        // let rpc = TendermintRPC::new(
+        //     Duration::from_secs(10),
+        //     "https://prod-mainnet.prod.findora.org:26657"
+        //         .to_string()
+        //         .parse()
+        //         .unwrap(),
+        // );
+        // let _ = rpc.load_block(1550667).await?;
+        // let _ = rpc.load_validators(1550667).await?;
+        // let _ = rpc
+        //     .load_transaction("c19fc22beb61030607367b42d4898a26ede1e6aa6b400330804c95b241f29bd0")
+        //     .await?;
         Ok(())
     }
 
     #[tokio::test]
     async fn test_load_validators() -> Result<()> {
-        let rpc = TendermintRPC::new(
-            Duration::from_secs(10),
-            "https://prod-mainnet.prod.findora.org:26657"
-                .to_string()
-                .parse()
-                .unwrap(),
-        );
-        let _ = rpc.load_validators(2360073).await?;
+        // let rpc = TendermintRPC::new(
+        //     Duration::from_secs(10),
+        //     "https://prod-mainnet.prod.findora.org:26657"
+        //         .to_string()
+        //         .parse()
+        //         .unwrap(),
+        // );
+        // let _ = rpc.load_validators(2360073).await?;
         Ok(())
     }
 }

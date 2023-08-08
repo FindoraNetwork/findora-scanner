@@ -127,7 +127,21 @@ pub struct Block {
     pub txs: Vec<Transaction>,
     pub evm_txs: Vec<Transaction>,
     pub validators: Vec<Validator>,
+    pub v2_evm_txs: Vec<V2EvmTx>,
     pub block_data: Value,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct V2EvmTx {
+    pub tx_hash: String,
+    pub block_hash: String,
+    pub evm_tx_hash: String,
+    pub sender: String,
+    pub receiver: String,
+    pub amount: String,
+    pub height: i64,
+    pub timestamp: i64,
+    pub content: Value,
 }
 
 #[derive(Serialize, Deserialize, Debug, Default, Object)]

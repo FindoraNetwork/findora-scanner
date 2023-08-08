@@ -1,4 +1,4 @@
-use module::schema::{Block as ModuleBlock, DelegationInfo};
+use module::schema::Block as ModuleBlock;
 use serde_json::Value;
 use sqlx::{Error, PgPool, Row};
 
@@ -63,6 +63,22 @@ pub async fn save(block: ModuleBlock, pool: &PgPool) -> Result<(), Error> {
             .await?;
     }
 
+    for tx in block.v2_evm_txs {
+        save_evm_tx(
+            &tx.tx_hash.to_lowercase(),
+            &tx.block_hash.to_lowercase(),
+            &tx.evm_tx_hash,
+            &tx.sender,
+            &tx.receiver,
+            &tx.amount,
+            tx.height,
+            tx.timestamp,
+            tx.content,
+            pool,
+        )
+        .await?;
+    }
+
     for v in block.validators {
         sqlx::query(
                 "INSERT INTO validators VALUES ($1, 0, $2) ON CONFLICT(address) DO UPDATE SET pubkey_type=0, pubkey=$2")
@@ -119,6 +135,22 @@ pub async fn save(block: ModuleBlock, pool: &PgPool) -> Result<(), Error> {
             )
             .execute(pool)
             .await?;
+    }
+
+    for tx in block.v2_evm_txs {
+        save_evm_tx(
+            &tx.tx_hash.to_lowercase(),
+            &tx.block_hash.to_lowercase(),
+            &tx.evm_tx_hash,
+            &tx.sender,
+            &tx.receiver,
+            &tx.amount,
+            tx.height,
+            tx.timestamp,
+            tx.content,
+            pool,
+        )
+        .await?;
     }
 
     for v in block.validators {
