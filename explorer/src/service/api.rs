@@ -34,7 +34,9 @@ use crate::service::v2::claim::{v2_get_claim_tx, V2ClaimTxResponse};
 use crate::service::v2::delegation::{v2_get_delegation_tx, V2DelegationTxResponse};
 use crate::service::v2::native::{v2_get_native_tx, V2NativeTxResponse};
 use crate::service::v2::native_to_evm::{v2_get_n2e_tx, V2NativeToEvmTxResponse};
-use crate::service::v2::other::{v2_statistics, V2ChainStatisticsResponse};
+use crate::service::v2::other::{
+    v2_distribute, v2_statistics, V2ChainStatisticsResponse, V2DistributeResponse,
+};
 use crate::service::v2::transaction_evm::{
     v2_get_evm_tx, v2_get_evm_txs, V2EvmTxResponse, V2EvmTxsResponse,
 };
@@ -991,5 +993,16 @@ impl Api {
     )]
     async fn v2_statistics(&self) -> poem::Result<V2ChainStatisticsResponse> {
         v2_statistics(self).await.map_err(handle_fetch_one_err)
+    }
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // Distribution
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    #[oai(
+        path = "/v2/txs/distribute",
+        method = "get",
+        tag = "ApiTags::Transaction"
+    )]
+    async fn v2_distribute(&self) -> poem::Result<V2DistributeResponse> {
+        v2_distribute(self).await.map_err(handle_fetch_one_err)
     }
 }
