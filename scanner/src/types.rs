@@ -230,7 +230,7 @@ pub struct AssetCode {
 
 #[derive(Serialize, Deserialize, Debug, Default)]
 pub struct AssetRules {
-    pub decimals: i64,
+    pub decimals: i32,
     pub max_units: String,
     pub transfer_multisig_rules: Option<Value>,
     pub transferable: bool,

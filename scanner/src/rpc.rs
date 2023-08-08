@@ -1,6 +1,12 @@
-use crate::types::FindoraEVMTx;
+use crate::commands::FRA_ASSET;
+use crate::types::{
+    ClaimOpt, ConvertAccountOperation, DefineAssetOpt, DelegationOpt, FindoraEVMTx, IssueAssetOpt,
+    TransferAssetOpt, TxValue, UnDelegationOpt,
+};
+use crate::util::pubkey_to_fra_address;
 use crate::{db, tx};
 use crate::{Error, Result};
+use base64::URL_SAFE;
 use chrono::NaiveDateTime;
 use ethereum::TransactionAction;
 use ethereum_types::H256;
@@ -9,7 +15,11 @@ use module::rpc::{
     block::BlockRPC as ModuleBlockRPC, tx::Transaction as ModuleTx,
     validator::ValidatorsRPC as ModuleValidatorsRPC, JsonRpcResponse, TdRpcResult,
 };
-use module::schema::{Block as ModuleBlock, DelegationInfo, Transaction, V2EvmTx, Validator};
+use module::schema::{
+    Block as ModuleBlock, DelegationInfo, Transaction, V2ClaimTx, V2ConvertAccountTx,
+    V2DefineAssetTx, V2DelegationTx, V2EvmTx, V2IssueAssetTx, V2NativeTransfer, V2UndelegationTx,
+    Validator,
+};
 use module::utils::crypto::recover_signer;
 use reqwest::{Client, ClientBuilder, Url};
 use serde::de::DeserializeOwned;
@@ -172,6 +182,13 @@ impl RPCCaller {
         let mut evm_txs = Vec::new();
         let mut validators = Vec::new();
         let mut v2_evm_txs = Vec::new();
+        let mut v2_convert_account_txs = Vec::new();
+        let mut v2_undelegation_txs = Vec::new();
+        let mut v2_delegation_txs = Vec::new();
+        let mut v2_claim_txs = Vec::new();
+        let mut v2_define_asset_txs = Vec::new();
+        let mut v2_issue_asset_txs = Vec::new();
+        let mut v2_native_transfer_txs = Vec::new();
 
         for tx in block.block.data.txs.unwrap_or_default() {
             let bytes = base64::decode(&tx)?;
@@ -196,8 +213,9 @@ impl RPCCaller {
                         result,
                         value,
                     });
-
+                    ////////////////////////////////////////////////////////////////////////////////
                     // v2: parse evm txs
+                    ////////////////////////////////////////////////////////////////////////////////
                     let evm_tx: FindoraEVMTx = serde_json::from_value(v).unwrap();
                     let evm_tx_hash =
                         H256::from_slice(Keccak256::digest(&rlp::encode(&evm_tx)).as_slice());
@@ -225,9 +243,10 @@ impl RPCCaller {
                     })
                 }
                 tx::TxCatalog::FindoraTx => {
-                    let value = serde_json::from_slice(&bytes)?;
+                    let value: Value = serde_json::from_slice(&bytes)?;
+                    let v: Value = value.clone();
                     txs.push(Transaction {
-                        tx_hash: txid,
+                        tx_hash: txid.clone(),
                         block_hash: block_hash.clone(),
                         height,
                         timestamp: timestamp.timestamp(),
@@ -238,6 +257,146 @@ impl RPCCaller {
                         result,
                         value,
                     });
+
+                    ////////////////////////////////////////////////////////////////////////////////
+                    // v2: parse findora tx
+                    ////////////////////////////////////////////////////////////////////////////////
+                    let tx_val: TxValue = serde_json::from_value(v).unwrap();
+                    for op in tx_val.body.operations {
+                        let op_str = serde_json::to_string(&op).unwrap();
+                        if op_str.contains("ConvertAccount") {
+                            // convert account
+                            let op_copy = op.clone();
+                            let opt: ConvertAccountOperation = serde_json::from_value(op).unwrap();
+                            let asset: String;
+                            if let Some(asset_bin) = &opt.convert_account.asset_type {
+                                asset = base64::encode_config(asset_bin, base64::URL_SAFE);
+                            } else {
+                                asset = FRA_ASSET.to_string();
+                            }
+                            let signer =
+                                pubkey_to_fra_address(&opt.convert_account.signer).unwrap();
+                            v2_convert_account_txs.push(V2ConvertAccountTx {
+                                tx_hash: txid.clone(),
+                                block_hash: block_hash.clone(),
+                                signer,
+                                receiver: opt.convert_account.receiver.ethereum,
+                                asset,
+                                amount: opt.convert_account.value,
+                                height,
+                                timestamp: timestamp.timestamp(),
+                                content: op_copy,
+                            });
+                        } else if op_str.contains("UnDelegation") {
+                            let op_copy = op.clone();
+                            let opt: UnDelegationOpt = serde_json::from_value(op).unwrap();
+                            let sender = pubkey_to_fra_address(&opt.undelegation.pubkey).unwrap();
+                            let (amount, new_delegator, target_validator) =
+                                match opt.undelegation.body.pu {
+                                    Some(pu) => {
+                                        let target_validator_addr =
+                                            hex::encode(pu.target_validator);
+                                        (
+                                            pu.am,
+                                            pu.new_delegator_id,
+                                            target_validator_addr.to_uppercase(),
+                                        )
+                                    }
+                                    _ => (0, "".to_string(), "".to_string()),
+                                };
+
+                            v2_undelegation_txs.push(V2UndelegationTx {
+                                tx_hash: txid.clone(),
+                                block_hash: block_hash.clone(),
+                                sender,
+                                amount,
+                                target_validator,
+                                new_delegator,
+                                height,
+                                timestamp: timestamp.timestamp(),
+                                content: op_copy,
+                            });
+                        } else if op_str.contains("Delegation") {
+                            let op_copy = op.clone();
+                            let opt: DelegationOpt = serde_json::from_value(op).unwrap();
+                            let sender = pubkey_to_fra_address(&opt.delegation.pubkey).unwrap();
+                            let new_validator =
+                                opt.delegation.body.new_validator.unwrap_or("".to_string());
+                            v2_delegation_txs.push(V2DelegationTx {
+                                tx_hash: txid.clone(),
+                                block_hash: block_hash.clone(),
+                                sender,
+                                amount: opt.delegation.body.amount,
+                                validator: opt.delegation.body.validator,
+                                new_validator,
+                                height,
+                                timestamp: timestamp.timestamp(),
+                                content: op_copy,
+                            });
+                        } else if op_str.contains("Claim") {
+                            let op_copy = op.clone();
+                            let opt: ClaimOpt = serde_json::from_value(op).unwrap();
+                            let sender = pubkey_to_fra_address(&opt.claim.pubkey).unwrap();
+                            v2_claim_txs.push(V2ClaimTx {
+                                tx_hash: txid.clone(),
+                                block_hash: block_hash.clone(),
+                                sender,
+                                amount: opt.claim.body.amount,
+                                height,
+                                timestamp: timestamp.timestamp(),
+                                content: op_copy,
+                            });
+                        } else if op_str.contains("DefineAsset") {
+                            let op_copy = op.clone();
+                            let opt: DefineAssetOpt = serde_json::from_value(op).unwrap();
+                            let issuer =
+                                pubkey_to_fra_address(&opt.define_asset.pubkey.key).unwrap();
+                            let asset = base64::encode_config(
+                                opt.define_asset.body.asset.code.val,
+                                URL_SAFE,
+                            );
+                            v2_define_asset_txs.push(V2DefineAssetTx {
+                                asset,
+                                tx_hash: txid.clone(),
+                                block_hash: block_hash.clone(),
+                                issuer,
+                                max_units: opt.define_asset.body.asset.asset_rules.max_units,
+                                decimals: opt.define_asset.body.asset.asset_rules.decimals,
+                                height,
+                                timestamp: timestamp.timestamp(),
+                                content: op_copy,
+                            });
+                        } else if op_str.contains("IssueAsset") {
+                            let op_copy = op.clone();
+                            let opt: IssueAssetOpt = serde_json::from_value(op).unwrap();
+                            let issuer =
+                                pubkey_to_fra_address(&opt.issue_asset.pubkey.key).unwrap();
+                            let asset =
+                                base64::encode_config(opt.issue_asset.body.code.val, URL_SAFE);
+                            v2_issue_asset_txs.push(V2IssueAssetTx {
+                                asset,
+                                tx_hash: txid.clone(),
+                                block_hash: block_hash.clone(),
+                                issuer,
+                                height,
+                                timestamp: timestamp.timestamp(),
+                                content: op_copy,
+                            });
+                        } else if op_str.contains("TransferAsset") {
+                            let op_copy = op.clone();
+                            let opt: TransferAssetOpt = serde_json::from_value(op).unwrap();
+                            let key = &opt.transfer_asset.body_signatures[0].address.key;
+                            let address = pubkey_to_fra_address(key).unwrap();
+                            v2_native_transfer_txs.push(V2NativeTransfer {
+                                tx_hash: txid.clone(),
+                                block_hash: block_hash.clone(),
+                                address,
+                                height,
+                                timestamp: timestamp.timestamp(),
+                                content: op_copy,
+                            });
+                        }
+                    }
                 }
                 tx::TxCatalog::Unknown => {}
             }
@@ -297,6 +456,13 @@ impl RPCCaller {
             evm_txs,
             validators,
             v2_evm_txs,
+            v2_convert_account_txs,
+            v2_undelegation_txs,
+            v2_delegation_txs,
+            v2_claim_txs,
+            v2_define_asset_txs,
+            v2_issue_asset_txs,
+            v2_native_transfer_txs,
             block_data,
         })
     }

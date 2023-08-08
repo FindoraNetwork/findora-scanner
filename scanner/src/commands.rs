@@ -27,7 +27,7 @@ const DEFAULT_RETIES: usize = 3;
 const DEFAULT_CONCURRENCY: usize = 8;
 //const DEFAULT_INTERVAL: Duration = Duration::from_secs(15);
 
-const FRA_ASSET: &str = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+pub const FRA_ASSET: &str = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
 
 #[derive(Parser)]
 pub enum ScannerCmd {
@@ -280,7 +280,6 @@ impl Migrate {
                 for op in tx_val.body.operations {
                     let op_str = serde_json::to_string(&op).unwrap();
                     if op_str.contains("ConvertAccount") {
-                        // convert account
                         let op_copy = op.clone();
                         let opt: ConvertAccountOperation = serde_json::from_value(op).unwrap();
                         let asset: String;
@@ -289,10 +288,11 @@ impl Migrate {
                         } else {
                             asset = FRA_ASSET.to_string();
                         }
+                        let signer = pubkey_to_fra_address(&opt.convert_account.signer).unwrap();
                         save_n2e_tx(
                             &tx.to_lowercase(),
                             &block.to_lowercase(),
-                            &opt.convert_account.signer,
+                            &signer,
                             &opt.convert_account.receiver.ethereum,
                             &asset,
                             &opt.convert_account.value,
@@ -419,19 +419,12 @@ impl Migrate {
                         let opt: TransferAssetOpt = serde_json::from_value(op).unwrap();
                         let key = &opt.transfer_asset.body_signatures[0].address.key;
                         let addr = pubkey_to_fra_address(key).unwrap();
-                        let inputs =
-                            serde_json::to_value(&opt.transfer_asset.body.transfer.inputs).unwrap();
-                        let outputs =
-                            serde_json::to_value(&opt.transfer_asset.body.transfer.outputs)
-                                .unwrap();
                         save_native_tx(
                             &tx.to_lowercase(),
                             &block.to_lowercase(),
                             &addr,
                             height,
                             timestamp,
-                            &inputs,
-                            &outputs,
                             &op_copy,
                             &pool,
                         )

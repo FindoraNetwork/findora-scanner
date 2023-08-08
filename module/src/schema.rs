@@ -128,7 +128,98 @@ pub struct Block {
     pub evm_txs: Vec<Transaction>,
     pub validators: Vec<Validator>,
     pub v2_evm_txs: Vec<V2EvmTx>,
+    pub v2_convert_account_txs: Vec<V2ConvertAccountTx>,
+    pub v2_undelegation_txs: Vec<V2UndelegationTx>,
+    pub v2_delegation_txs: Vec<V2DelegationTx>,
+    pub v2_claim_txs: Vec<V2ClaimTx>,
+    pub v2_define_asset_txs: Vec<V2DefineAssetTx>,
+    pub v2_issue_asset_txs: Vec<V2IssueAssetTx>,
+    pub v2_native_transfer_txs: Vec<V2NativeTransfer>,
     pub block_data: Value,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct V2NativeTransfer {
+    pub tx_hash: String,
+    pub block_hash: String,
+    pub address: String,
+    pub height: i64,
+    pub timestamp: i64,
+    pub content: Value,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct V2DefineAssetTx {
+    pub asset: String,
+    pub tx_hash: String,
+    pub block_hash: String,
+    pub issuer: String,
+    pub max_units: String,
+    pub decimals: i32,
+    pub height: i64,
+    pub timestamp: i64,
+    pub content: Value,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct V2IssueAssetTx {
+    pub asset: String,
+    pub tx_hash: String,
+    pub block_hash: String,
+    pub issuer: String,
+    pub height: i64,
+    pub timestamp: i64,
+    pub content: Value,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct V2ClaimTx {
+    pub tx_hash: String,
+    pub block_hash: String,
+    pub sender: String,
+    pub amount: i64,
+    pub height: i64,
+    pub timestamp: i64,
+    pub content: Value,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct V2DelegationTx {
+    pub tx_hash: String,
+    pub block_hash: String,
+    pub sender: String,
+    pub amount: i64,
+    pub validator: String,
+    pub new_validator: String,
+    pub height: i64,
+    pub timestamp: i64,
+    pub content: Value,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct V2UndelegationTx {
+    pub tx_hash: String,
+    pub block_hash: String,
+    pub sender: String,
+    pub amount: i64,
+    pub target_validator: String,
+    pub new_delegator: String,
+    pub height: i64,
+    pub timestamp: i64,
+    pub content: Value,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct V2ConvertAccountTx {
+    pub tx_hash: String,
+    pub block_hash: String,
+    pub signer: String,
+    pub receiver: String,
+    pub asset: String,
+    pub amount: String,
+    pub height: i64,
+    pub timestamp: i64,
+    pub content: Value,
 }
 
 #[derive(Serialize, Deserialize, Debug)]

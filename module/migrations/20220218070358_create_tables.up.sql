@@ -97,8 +97,6 @@ create table native_txs(
     address varchar(62) not null,
     height bigint not null,
     timestamp bigint not null,
-    inputs jsonb not null,
-    outputs jsonb not null,
     content jsonb not null,
     primary key (tx)
 );

@@ -79,6 +79,111 @@ pub async fn save(block: ModuleBlock, pool: &PgPool) -> Result<(), Error> {
         .await?;
     }
 
+    for tx in block.v2_convert_account_txs {
+        save_n2e_tx(
+            &tx.tx_hash.to_lowercase(),
+            &tx.block_hash.to_lowercase(),
+            &tx.signer,
+            &tx.receiver,
+            &tx.asset,
+            &tx.amount,
+            tx.height,
+            tx.timestamp,
+            &tx.content,
+            pool,
+        )
+        .await?;
+    }
+
+    for tx in block.v2_delegation_txs {
+        save_delegation_tx(
+            &tx.tx_hash.to_lowercase(),
+            &tx.block_hash.to_lowercase(),
+            &tx.sender,
+            tx.amount,
+            &tx.validator,
+            &tx.new_validator,
+            tx.height,
+            tx.timestamp,
+            &tx.content,
+            pool,
+        )
+        .await?;
+    }
+
+    for tx in block.v2_undelegation_txs {
+        save_undelegation_tx(
+            &tx.tx_hash.to_lowercase(),
+            &tx.block_hash.to_lowercase(),
+            &tx.sender,
+            tx.amount,
+            &tx.target_validator,
+            &tx.new_delegator,
+            tx.height,
+            tx.timestamp,
+            &tx.content,
+            pool,
+        )
+        .await?;
+    }
+
+    for tx in block.v2_claim_txs {
+        save_claim_tx(
+            &tx.tx_hash.to_lowercase(),
+            &tx.block_hash.to_lowercase(),
+            &tx.sender,
+            tx.amount,
+            tx.height,
+            tx.timestamp,
+            &tx.content,
+            pool,
+        )
+        .await?;
+    }
+
+    for tx in block.v2_define_asset_txs {
+        save_define_asset_tx(
+            &tx.asset,
+            &tx.tx_hash.to_lowercase(),
+            &tx.block_hash.to_lowercase(),
+            &tx.issuer,
+            &tx.max_units,
+            tx.decimals,
+            tx.height,
+            tx.timestamp,
+            &tx.content,
+            pool,
+        )
+        .await?;
+    }
+
+    for tx in block.v2_issue_asset_txs {
+        save_issue_asset_tx(
+            &tx.asset,
+            &tx.tx_hash,
+            &tx.tx_hash.to_lowercase(),
+            &tx.issuer,
+            tx.height,
+            tx.timestamp,
+            &tx.content,
+            pool,
+        )
+        .await?;
+    }
+
+    for tx in block.v2_native_transfer_txs {
+        save_native_tx(
+            &tx.tx_hash.to_lowercase(),
+            &tx.block_hash.to_lowercase(),
+            &tx.address,
+            tx.height,
+            tx.timestamp,
+            &tx.content,
+            pool,
+        )
+        .await?;
+    }
+
     for v in block.validators {
         sqlx::query(
                 "INSERT INTO validators VALUES ($1, 0, $2) ON CONFLICT(address) DO UPDATE SET pubkey_type=0, pubkey=$2")
@@ -148,6 +253,108 @@ pub async fn save(block: ModuleBlock, pool: &PgPool) -> Result<(), Error> {
             tx.height,
             tx.timestamp,
             tx.content,
+            pool,
+        )
+        .await?;
+    }
+
+    for tx in block.v2_convert_account_txs {
+        save_n2e_tx(
+            &tx.tx_hash.to_lowercase(),
+            &tx.block_hash.to_lowercase(),
+            &tx.signer,
+            &tx.receiver,
+            &tx.asset,
+            &tx.amount,
+            tx.height,
+            tx.timestamp,
+            &tx.content,
+            pool,
+        )
+        .await?;
+    }
+
+    for tx in block.v2_delegation_txs {
+        save_delegation_tx(
+            &tx.tx_hash.to_lowercase(),
+            &tx.block_hash.to_lowercase(),
+            &tx.sender,
+            tx.amount,
+            &tx.validator,
+            &tx.new_validator,
+            tx.height,
+            tx.timestamp,
+            &tx.content,
+            pool,
+        )
+        .await?;
+    }
+
+    for tx in block.v2_undelegation_txs {
+        save_undelegation_tx(
+            &tx.tx_hash.to_lowercase(),
+            &tx.block_hash.to_lowercase(),
+            &tx.sender,
+            tx.amount,
+            &tx.target_validator,
+            &tx.new_delegator,
+            tx.height,
+            tx.timestamp,
+            &tx.content,
+            pool,
+        )
+        .await?;
+    }
+
+    for tx in block.v2_claim_txs {
+        save_claim_tx(
+            &tx.tx_hash.to_lowercase(),
+            &tx.block_hash.to_lowercase(),
+            &tx.sender,
+            tx.amount,
+            tx.height,
+            tx.timestamp,
+            &tx.content,
+            pool,
+        )
+        .await?;
+    }
+    for tx in block.v2_define_asset_txs {
+        save_define_asset_tx(
+            &tx.asset,
+            &tx.tx_hash.to_lowercase(),
+            &tx.block_hash.to_lowercase(),
+            &tx.issuer,
+            &tx.max_units,
+            tx.decimals,
+            tx.height,
+            tx.timestamp,
+            &tx.content,
+            pool,
+        )
+        .await?;
+    }
+    for tx in block.v2_issue_asset_txs {
+        save_issue_asset_tx(
+            &tx.asset,
+            &tx.tx_hash,
+            &tx.tx_hash.to_lowercase(),
+            &tx.issuer,
+            tx.height,
+            tx.timestamp,
+            &tx.content,
+            pool,
+        )
+        .await?;
+    }
+    for tx in block.v2_native_transfer_txs {
+        save_native_tx(
+            &tx.tx_hash.to_lowercase(),
+            &tx.block_hash.to_lowercase(),
+            &tx.address,
+            tx.height,
+            tx.timestamp,
+            &tx.content,
             pool,
         )
         .await?;
@@ -292,19 +499,15 @@ pub async fn save_native_tx(
     address: &str,
     height: i64,
     timestamp: i64,
-    inputs: &Value,
-    outputs: &Value,
     content: &Value,
     pool: &PgPool,
 ) -> Result<(), Error> {
-    sqlx::query("INSERT INTO native_txs VALUES($1,$2,$3,$4,$5,$6,$7,$8) ON CONFLICT(tx) DO UPDATE SET tx=$1,block=$2,address=$3,height=$4,timestamp=$5,inputs=$6,outputs=$7,content=$8")
+    sqlx::query("INSERT INTO native_txs VALUES($1,$2,$3,$4,$5,$6) ON CONFLICT(tx) DO UPDATE SET tx=$1,block=$2,address=$3,height=$4,timestamp=$5,content=$6")
         .bind(tx)
         .bind(block)
         .bind(address)
         .bind(height)
         .bind(timestamp)
-        .bind(inputs)
-        .bind(outputs)
         .bind(content)
         .execute(pool)
         .await?;
@@ -401,7 +604,7 @@ pub async fn save_define_asset_tx(
     block: &str,
     issuer: &str,
     max_units: &str,
-    decimal: i64,
+    decimal: i32,
     height: i64,
     timestamp: i64,
     content: &Value,
