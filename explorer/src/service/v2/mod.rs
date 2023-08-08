@@ -6,6 +6,7 @@ pub mod claim;
 pub mod delegation;
 pub mod native;
 pub mod native_to_evm;
+pub mod other;
 pub mod transaction_evm;
 pub mod undelegation;
 
