@@ -183,17 +183,6 @@ pub async fn load_last_height(pool: &PgPool) -> Result<i64, Error> {
     Ok(lh.height)
 }
 
-pub async fn save_delegations(h: i64, info: &DelegationInfo, pool: &PgPool) -> Result<(), Error> {
-    let info = serde_json::to_value(info).unwrap();
-    sqlx::query(
-        "INSERT INTO delegations VALUES($1, $2) ON CONFLICT(height) DO UPDATE SET info=$2;",
-    )
-    .bind(h)
-    .bind(&info)
-    .execute(pool)
-    .await?;
-    Ok(())
-}
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // migrate
 ////////////////////////////////////////////////////////////////////////////////////////////////////

@@ -300,12 +300,6 @@ impl RPCCaller {
         db::save_last_height(target, &self.pool).await?;
         Ok(())
     }
-
-    pub async fn load_and_save_staking(&self) -> Result<i64> {
-        let (h, info) = self.rpc.load_delegations().await?;
-        db::save_delegations(h, &info, &self.pool).await?;
-        Ok(h)
-    }
 }
 
 #[cfg(test)]
