@@ -1,9 +1,12 @@
 use crate::service::api::Api;
+use crate::service::v1::chain::{AddressCount, AddressCountResponse, AddressCountResult};
 use anyhow::Result;
+use poem_openapi::param::Query;
 use poem_openapi::{payload::Json, ApiResponse, Object};
 use serde::{Deserialize, Serialize};
 use sqlx::types::chrono::Local;
 use sqlx::Row;
+use std::ops::Add;
 
 #[derive(ApiResponse)]
 pub enum V2ChainStatisticsResponse {
@@ -137,6 +140,45 @@ pub async fn v2_distribute(api: &Api) -> Result<V2DistributeResponse> {
             privacy,
             prism,
             evm_compatible,
+        }),
+    })))
+}
+
+pub async fn v2_address_count(
+    api: &Api,
+    start_time: Query<Option<i64>>,
+    end_time: Query<Option<i64>>,
+) -> Result<AddressCountResponse> {
+    let mut conn = api.storage.lock().await.acquire().await?;
+    let mut params: Vec<String> = vec![];
+    if let Some(start_time) = start_time.0 {
+        params.push(format!("timestamp > {start_time} "));
+    }
+    if let Some(end_time) = end_time.0 {
+        params.push(format!("timestamp < {end_time} "));
+    }
+
+    let mut sql_native = "select count(distinct address) as cnt from native_txs ".to_string();
+    let mut sql_evm = "select count(distinct sender) as cnt from evm_txs ".to_string();
+
+    if !params.is_empty() {
+        sql_native = sql_native.add("WHERE ").add(params.join(" AND ").as_str());
+        sql_evm = sql_evm.add("WHERE ").add(params.join(" AND ").as_str());
+    }
+
+    let row_native = sqlx::query(sql_native.as_str())
+        .fetch_one(&mut conn)
+        .await?;
+    let native_count: i64 = row_native.try_get("cnt")?;
+
+    let row_evm = sqlx::query(sql_evm.as_str()).fetch_one(&mut conn).await?;
+    let evm_count: i64 = row_evm.try_get("cnt")?;
+
+    Ok(AddressCountResponse::Ok(Json(AddressCountResult {
+        code: 200,
+        message: "".to_string(),
+        data: Some(AddressCount {
+            address_count: native_count + evm_count,
         }),
     })))
 }
