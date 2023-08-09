@@ -37,7 +37,7 @@ use crate::service::v2::native_to_evm::{
     v2_get_n2e_tx, v2_get_prism_records_send, V2NativeToEvmTxResponse, V2PrismSendResponse,
 };
 use crate::service::v2::other::{
-    v2_distribute, v2_statistics, V2ChainStatisticsResponse, V2DistributeResponse,
+    v2_address_count, v2_distribute, v2_statistics, V2ChainStatisticsResponse, V2DistributeResponse,
 };
 use crate::service::v2::transaction_evm::{
     v2_get_evm_tx, v2_get_evm_txs, V2EvmTxResponse, V2EvmTxsResponse,
@@ -1020,6 +1020,17 @@ impl Api {
         page_size: Query<Option<i64>>,
     ) -> poem::Result<V2PrismSendResponse> {
         v2_get_prism_records_send(self, address, page, page_size)
+            .await
+            .map_err(handle_fetch_one_err)
+    }
+
+    #[oai(path = "/v2/address/count", method = "get", tag = "ApiTags::Address")]
+    async fn v2_address_count(
+        &self,
+        start_time: Query<Option<i64>>,
+        end_time: Query<Option<i64>>,
+    ) -> poem::Result<AddressCountResponse> {
+        v2_address_count(self, start_time, end_time)
             .await
             .map_err(handle_fetch_one_err)
     }
