@@ -34,7 +34,7 @@ use crate::service::v2::claim::{v2_get_claim_tx, V2ClaimTxResponse};
 use crate::service::v2::delegation::{v2_get_delegation_tx, V2DelegationTxResponse};
 use crate::service::v2::native::{v2_get_native_tx, V2NativeTxResponse};
 use crate::service::v2::native_to_evm::{
-    v2_get_n2e_tx, v2_get_prism_records_send, V2NativeToEvmTxResponse, V2PrismSendResponse,
+    v2_get_n2e_tx, v2_get_prism_records_send, V2NativeToEvmTxResponse,
 };
 use crate::service::v2::other::{
     v2_address_count, v2_distribute, v2_statistics, V2ChainStatisticsResponse, V2DistributeResponse,
@@ -1018,7 +1018,7 @@ impl Api {
         address: Query<String>,
         page: Query<Option<i64>>,
         page_size: Query<Option<i64>>,
-    ) -> poem::Result<V2PrismSendResponse> {
+    ) -> poem::Result<V2PrismRecordResponse> {
         v2_get_prism_records_send(self, address, page, page_size)
             .await
             .map_err(handle_fetch_one_err)

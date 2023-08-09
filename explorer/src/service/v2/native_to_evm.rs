@@ -1,4 +1,7 @@
 use crate::service::api::Api;
+use crate::service::v1::transaction::{
+    ConvertAccount, V2PrismItem, V2PrismRecord, V2PrismRecordResponse, V2PrismRecordResult,
+};
 use anyhow::Result;
 use poem_openapi::param::Query;
 use poem_openapi::{param::Path, payload::Json, ApiResponse, Object};
@@ -72,43 +75,25 @@ pub async fn v2_get_n2e_tx(api: &Api, tx_hash: Path<String>) -> Result<V2NativeT
     })))
 }
 
-#[derive(ApiResponse)]
-pub enum V2PrismSendResponse {
-    #[oai(status = 200)]
-    Ok(Json<V2PrismSendResult>),
-    #[oai(status = 400)]
-    BadRequest(Json<V2PrismSendResult>),
-    #[oai(status = 500)]
-    InternalError(Json<V2PrismSendResult>),
+#[derive(Serialize, Deserialize, Debug, Default, Clone)]
+pub struct ConvertAccountReceiver {
+    #[serde(rename = "Ethereum")]
+    pub ethereum: String,
 }
 
-#[derive(Serialize, Deserialize, Debug, Default, Object)]
-pub struct V2PrismSendResult {
-    pub code: i32,
-    pub message: String,
-    pub data: Option<V2PrismSendRecord>,
+#[derive(Serialize, Deserialize, Debug, Default, Clone)]
+pub struct V2ConvertAccount {
+    pub nonce: Value,
+    pub asset_type: Option<Vec<u8>>,
+    pub receiver: ConvertAccountReceiver,
+    pub signer: String,
+    pub value: String,
 }
 
-#[derive(Serialize, Deserialize, Debug, Default, Object)]
-pub struct V2PrismSendRecord {
-    pub total: i64,
-    pub page: i64,
-    pub page_size: i64,
-    pub items: Vec<V2PrismSendItem>,
-}
-
-#[derive(Serialize, Deserialize, Debug, Default, Clone, Object)]
-pub struct V2PrismSendItem {
-    pub block_hash: String,
-    pub tx_hash: String,
-    pub from: String,
-    pub to: String,
-    pub asset: String,
-    pub amount: i64,
-    pub decimal: i64,
-    pub height: i64,
-    pub timestamp: i64,
-    pub data: Value,
+#[derive(Serialize, Deserialize, Debug, Default, Clone)]
+pub struct ConvertAccountOperation {
+    #[serde(rename = "ConvertAccount")]
+    pub convert_account: ConvertAccount,
 }
 
 pub async fn v2_get_prism_records_send(
@@ -116,14 +101,14 @@ pub async fn v2_get_prism_records_send(
     address: Query<String>,
     page: Query<Option<i64>>,
     page_size: Query<Option<i64>>,
-) -> Result<V2PrismSendResponse> {
+) -> Result<V2PrismRecordResponse> {
     let mut conn = api.storage.lock().await.acquire().await?;
     let page = page.0.unwrap_or(1);
     let page_size = page_size.0.unwrap_or(10);
-    let mut items: Vec<V2PrismSendItem> = vec![];
+    let mut items: Vec<V2PrismItem> = vec![];
 
     let sql_total = format!(
-        "select count(*) as cnt from n2e where sender='{}''",
+        "select count(*) as cnt from n2e where sender='{}'",
         address.0
     );
     let row_total = sqlx::query(sql_total.as_str()).fetch_one(&mut conn).await?;
@@ -136,17 +121,20 @@ pub async fn v2_get_prism_records_send(
         (page - 1) * page_size
     );
     let rows = sqlx::query(sql_query.as_str()).fetch_all(&mut conn).await?;
+
     for row in rows {
         let tx_hash: String = row.try_get("tx")?;
         let block_hash: String = row.try_get("block")?;
         let sender: String = row.try_get("sender")?;
         let receiver: String = row.try_get("receiver")?;
         let asset: String = row.try_get("asset")?;
-        let amount: i64 = row.try_get("amount")?;
+        let amount: String = row.try_get("amount")?;
         let height: i64 = row.try_get("height")?;
         let timestamp: i64 = row.try_get("timestamp")?;
         let content: Value = row.try_get("content")?;
-        items.push(V2PrismSendItem {
+        let ca: ConvertAccountOperation = serde_json::from_value(content)?;
+        let ca_bin = serde_json::to_vec(&ca.convert_account)?;
+        items.push(V2PrismItem {
             block_hash,
             tx_hash,
             from: sender,
@@ -156,14 +144,14 @@ pub async fn v2_get_prism_records_send(
             decimal: 6,
             height,
             timestamp,
-            data: content,
+            data: base64::encode(&ca_bin),
         });
     }
 
-    Ok(V2PrismSendResponse::Ok(Json(V2PrismSendResult {
+    Ok(V2PrismRecordResponse::Ok(Json(V2PrismRecordResult {
         code: 200,
         message: "".to_string(),
-        data: Some(V2PrismSendRecord {
+        data: Some(V2PrismRecord {
             total,
             page,
             page_size,

@@ -19,11 +19,16 @@
 * [2.5.1 Get claim tx by hash](#2.5.1)
 ### [2.6.Native To EVM](#2.6)
 * [2.6.1 Get native to evm tx by hash](#2.6.1)
+* [2.6.1 Get native to evm txs sent from the address](#2.6.2)
 ### [2.7.Define Asset](#2.7)
 * [2.7.1 Get defined asset](#2.7.1)
 ### [2.8.Issue Asset](#2.8)
 * [2.8.1 Get issued asset](#2.8.1)
 
+## Others
+* [3.1 Tx distributions](3.1)
+* [3.2 Tx statistics](3.2)
+* [3.3 Address count](3.3)
 
 <h2 id="1.1">1.1 Get block by hash</h2>
 * `GET /api/v2/block/:hash`
@@ -1649,6 +1654,8 @@ Response:
 	"message": ""
 }
 ```
+
+
 <h2 id="2.7">2.7 Define Asset</h2>
 <h3 id="2.7.1">2.7.1 Get defined assets</h3>
 
@@ -1703,6 +1710,54 @@ Response:
 	"message": ""
 }
 ```
+<h3 id="2.7.2">2.7.2 Get native to evm txs sent from the address</h3>
+* `GET /api/v2/tx/prism/records/send`
+
+| 参数        | 类型     | 说明             | 必传 |
+|-----------|--------|----------------|----|
+| address   | string | sender address | Y  |
+| page      | number | page index     | N  |
+| page_size | number | page size      | N  |
+
+* Request:
+  * `http://localhost/api/v2/tx/prism/records/send?address=fra15kmstkjfkyzjq8h3hnjkxeld8p5ugep5dn32n4lf5deprkxj03gsdy8cge&page=1&page_size=10`
+* Response:
+```json
+{
+	"code": 200,
+	"data": {
+		"items": [{
+			"amount": "330000000",
+			"asset": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+			"block_hash": "9d06dfb007ed467812a638e8d912dd9877d45f4f27fd97dd9d4010e89b46888c",
+			"data": "eyJub25jZSI6W1s2OSwxNTEsMTcyLDQ5LDEwNCwxOTMsMTA0LDIxOF0sMTY0NDBdLCJhc3NldF90eXBlIjpudWxsLCJyZWNlaXZlciI6eyJFdGhlcmV1bSI6IjB4MGNlZjkxOWVjMGMxYTNmOGIxODMwM2IyZGY1MTg1M2Q4YmQ3Y2E3YyJ9LCJzaWduZXIiOiJwYmNGMmtteEJTQWU4YnpsWTJmdE9HbkVaRFJzNHFuWDZhTnlFZGpTZkZFPSIsInZhbHVlIjoiMzMwMDAwMDAwIn0=",
+			"decimal": 6,
+			"from": "fra15kmstkjfkyzjq8h3hnjkxeld8p5ugep5dn32n4lf5deprkxj03gsdy8cge",
+			"height": 2004140,
+			"timestamp": 1648771031,
+			"to": "0x0cef919ec0c1a3f8b18303b2df51853d8bd7ca7c",
+			"tx_hash": "ab1a07390fb7f670684a08a7d033968165ca6d9b3a45899a9efcb2d2bc35ae0b"
+		}, {
+			"amount": "120000000",
+			"asset": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+			"block_hash": "bf617d97c30ced0c45838ca8799508dadc9e731e63e17631c900782ab71bee48",
+			"data": "eyJub25jZSI6W1s1LDEzOSwyNDAsMjM3LDE5Miw2MCwzNSwyNTVdLDE2Mzk3XSwiYXNzZXRfdHlwZSI6bnVsbCwicmVjZWl2ZXIiOnsiRXRoZXJldW0iOiIweDBjZWY5MTllYzBjMWEzZjhiMTgzMDNiMmRmNTE4NTNkOGJkN2NhN2MifSwic2lnbmVyIjoicGJjRjJrbXhCU0FlOGJ6bFkyZnRPR25FWkRSczRxblg2YU55RWRqU2ZGRT0iLCJ2YWx1ZSI6IjEyMDAwMDAwMCJ9",
+			"decimal": 6,
+			"from": "fra15kmstkjfkyzjq8h3hnjkxeld8p5ugep5dn32n4lf5deprkxj03gsdy8cge",
+			"height": 2000414,
+			"timestamp": 1648711151,
+			"to": "0x0cef919ec0c1a3f8b18303b2df51853d8bd7ca7c",
+			"tx_hash": "b16a983ee348952cae1e52985526dd18839a7fdc2c122fb1656ae8407e2d5fc0"
+		}],
+		"page": 1,
+		"page_size": 10,
+		"total": 2
+	},
+	"message": ""
+}
+```
+
+
 <h2 id="2.8">2.8 Issue Asset</h2>
 <h3 id="2.8.1">8.1 Get issued assets</h3>
 
@@ -1760,6 +1815,64 @@ Response:
         "signature": "DkydH0ONCMm5yiUKmWHEFZTLF3IfpYyyTkv-drg8ExvU6MyMxtEyr99PuWWManMJw3hpaopVATVpPN44w0WiCg=="
       }
     }
+  },
+  "message": ""
+}
+```
+
+<h2 id="3.1">3.1 Transaction distribution</h2>
+* `GET /api/v2/txs/distribute`
+* No params
+* Request:
+  * `http://localhost/api/v2/txs/distribute`
+* Response:
+```json
+{
+  "code": 200,
+  "data": {
+    "evm_compatible": 1011,
+    "prism": 5,
+    "privacy": 0,
+    "transparent": 302
+  },
+  "message": ""
+}
+```
+
+<h2 id="3.2">3.2 Transaction statistics</h2>
+* `GET /api/v2/txs/distribute`
+* No params
+* Request:
+  * `http://localhost:8778/api/v2/chain/statistics`
+* Response:
+```json
+{
+  "code": 200,
+  "data": {
+    "active_addrs": 33,
+    "daily_txs": 0,
+    "total_txs": 2021
+  },
+  "message": ""
+}
+```
+
+<h2 id="3.2">3.2 Transaction statistics</h2>
+* `GET /api/v2/address/count`
+
+| 参数         | 类型     | 说明              | 必传 |
+|------------|--------|-----------------|----|
+| start_time | number | start timestamp | N  |
+| end_time   | number | end timestamp   | N  |
+
+* Request:
+  * `http://localhost/api/v2/address/count`
+* Response:
+```json
+{
+  "code": 200,
+  "data": {
+    "address_count": 118
   },
   "message": ""
 }
