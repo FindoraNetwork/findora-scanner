@@ -126,9 +126,7 @@ pub async fn v2_get_prism_records_send(
         "select count(*) as cnt from n2e where sender='{}''",
         address.0
     );
-    let row_total = sqlx::query(sql_total.as_str())
-        .fetch_one(&mut conn)
-        .await?;
+    let row_total = sqlx::query(sql_total.as_str()).fetch_one(&mut conn).await?;
     let total: i64 = row_total.try_get("cnt")?;
 
     let sql_query = format!(
