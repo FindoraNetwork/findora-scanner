@@ -113,8 +113,8 @@ pub async fn v2_get_evm_txs(
     let page = page.0.unwrap_or(1);
     let page_size = page_size.0.unwrap_or(10);
 
-    let mut sql_query = String::from("SELECT * FROM evm_txs");
-    let mut sql_total = String::from("SELECT count(*) AS total FROM evm_txs");
+    let mut sql_query = String::from("SELECT * FROM evm_txs ");
+    let mut sql_total = String::from("SELECT count(*) AS total FROM evm_txs ");
 
     let mut params: Vec<String> = vec![];
     if let Some(sender) = from.0 {
@@ -125,8 +125,8 @@ pub async fn v2_get_evm_txs(
     }
 
     if !params.is_empty() {
-        sql_query = sql_query.add(" WHERE ").add(params.join("AND ").as_str());
-        sql_total = sql_total.add(" WHERE ").add(params.join("AND ").as_str());
+        sql_query = sql_query.add(" WHERE ").add(params.join(" AND ").as_str());
+        sql_total = sql_total.add(" WHERE ").add(params.join(" AND ").as_str());
     }
 
     sql_query = sql_query.add(

@@ -8,6 +8,7 @@
 ## Transaction
 ### [2.1.Native Tx](#2.1)
 * [2.1.1 Get native tx by hash](#2.1.1)
+* [2.1.2 Get native txs](#2.1.2)
 ### [2.2.EVM Tx](#2.2)
 * [2.2.1 Get evm tx by hash](#2.2.1)
 * [2.2.2 Get evm txs](#2.2.2)
@@ -19,11 +20,16 @@
 * [2.5.1 Get claim tx by hash](#2.5.1)
 ### [2.6.Native To EVM](#2.6)
 * [2.6.1 Get native to evm tx by hash](#2.6.1)
+* [2.6.2 Get native to evm txs sent from the address](#2.6.2)
 ### [2.7.Define Asset](#2.7)
 * [2.7.1 Get defined asset](#2.7.1)
 ### [2.8.Issue Asset](#2.8)
 * [2.8.1 Get issued asset](#2.8.1)
 
+## Others
+* [3.1 Tx distributions](3.1)
+* [3.2 Tx statistics](3.2)
+* [3.3 Address count](3.3)
 
 <h2 id="1.1">1.1 Get block by hash</h2>
 * `GET /api/v2/block/:hash`
@@ -1373,6 +1379,240 @@ Response:
 	"message": ""
 }
 ```
+
+<h3 id="2.1.2">2.1.2 Get native txs</h3>
+
+* `GET /api/v2/txs/native`
+
+| 参数        | 类型     | 说明               | 必传 |
+|-----------|--------|------------------|----|
+| from      | string | sender address   | N  |
+| to        | string | receiver address | N  |
+| page      | number | page index       | N  |
+| page_size | number | page size        | N  |
+
+* Request:
+  * `http://localhost/api/v2/txs/native?page=10&page_size=2`
+* Response:
+```json
+{
+	"code": 200,
+	"data": {
+		"page": 10,
+		"page_size": 2,
+		"total": 369,
+		"txs": [{
+			"block_hash": "830eaebeb7d1d540cb6011eac20c7c8856d4db570fadfa8dea61f277df20fd1b",
+			"height": 3001848,
+			"timestamp": 1665312347,
+			"tx_hash": "e442f4694b3b043624931694927c0d89aa36217447245a9523de15eddbdbd19c",
+			"value": {
+				"TransferAsset": {
+					"body": {
+						"inputs": [{
+							"Absolute": 109269
+						}],
+						"outputs": [{
+							"id": null,
+							"record": {
+								"amount": {
+									"NonConfidential": "10000"
+								},
+								"asset_type": {
+									"NonConfidential": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+								},
+								"public_key": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+							}
+						}, {
+							"id": null,
+							"record": {
+								"amount": {
+									"NonConfidential": "890047"
+								},
+								"asset_type": {
+									"NonConfidential": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+								},
+								"public_key": "q8IkTIeMQZrl1tyFRwny_OPMJyAYS1x73rDBmFwWT3g="
+							}
+						}],
+						"policies": {
+							"inputs_sig_commitments": [null],
+							"inputs_tracing_policies": [
+								[]
+							],
+							"outputs_sig_commitments": [null, null],
+							"outputs_tracing_policies": [
+								[],
+								[]
+							],
+							"valid": true
+						},
+						"transfer": {
+							"asset_tracing_memos": [
+								[],
+								[],
+								[]
+							],
+							"inputs": [{
+								"amount": {
+									"NonConfidential": "900047"
+								},
+								"asset_type": {
+									"NonConfidential": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+								},
+								"public_key": "q8IkTIeMQZrl1tyFRwny_OPMJyAYS1x73rDBmFwWT3g="
+							}],
+							"outputs": [{
+								"amount": {
+									"NonConfidential": "10000"
+								},
+								"asset_type": {
+									"NonConfidential": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+								},
+								"public_key": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+							}, {
+								"amount": {
+									"NonConfidential": "890047"
+								},
+								"asset_type": {
+									"NonConfidential": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+								},
+								"public_key": "q8IkTIeMQZrl1tyFRwny_OPMJyAYS1x73rDBmFwWT3g="
+							}],
+							"owners_memos": [null, null],
+							"proofs": {
+								"asset_tracing_proof": {
+									"asset_type_and_amount_proofs": [],
+									"inputs_identity_proofs": [
+										[]
+									],
+									"outputs_identity_proofs": [
+										[],
+										[]
+									]
+								},
+								"asset_type_and_amount_proof": "NoProof"
+							}
+						},
+						"transfer_type": "Standard"
+					},
+					"body_signatures": [{
+						"address": {
+							"key": "q8IkTIeMQZrl1tyFRwny_OPMJyAYS1x73rDBmFwWT3g="
+						},
+						"signature": "ozNOE5_V50hFoGiFPVV8a58OfDNaokTWo6SGPRLK-pDS1F61c6xeUrJEvBcSZC5dSafD1EQowMZxyczA5fY1BA=="
+					}]
+				}
+			}
+		}, {
+			"block_hash": "6c56b0d18926c65e383706783552c43a238a206f3cee02555e6e40cfddeef830",
+			"height": 3001817,
+			"timestamp": 1665311808,
+			"tx_hash": "5dd21f815befba2dd857fcc2d50bfcb9857d48767809258d66ef20ded5ea4914",
+			"value": {
+				"TransferAsset": {
+					"body": {
+						"inputs": [{
+							"Absolute": 114877
+						}],
+						"outputs": [{
+							"id": null,
+							"record": {
+								"amount": {
+									"NonConfidential": "10000"
+								},
+								"asset_type": {
+									"NonConfidential": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+								},
+								"public_key": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+							}
+						}, {
+							"id": null,
+							"record": {
+								"amount": {
+									"NonConfidential": "1990000"
+								},
+								"asset_type": {
+									"NonConfidential": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+								},
+								"public_key": "RZX_-q_gPRGsZbqUpw1mou6xiffk6o2Plxq8TE5ydE4="
+							}
+						}],
+						"policies": {
+							"inputs_sig_commitments": [null],
+							"inputs_tracing_policies": [
+								[]
+							],
+							"outputs_sig_commitments": [null, null],
+							"outputs_tracing_policies": [
+								[],
+								[]
+							],
+							"valid": true
+						},
+						"transfer": {
+							"asset_tracing_memos": [
+								[],
+								[],
+								[]
+							],
+							"inputs": [{
+								"amount": {
+									"NonConfidential": "2000000"
+								},
+								"asset_type": {
+									"NonConfidential": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+								},
+								"public_key": "RZX_-q_gPRGsZbqUpw1mou6xiffk6o2Plxq8TE5ydE4="
+							}],
+							"outputs": [{
+								"amount": {
+									"NonConfidential": "10000"
+								},
+								"asset_type": {
+									"NonConfidential": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+								},
+								"public_key": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+							}, {
+								"amount": {
+									"NonConfidential": "1990000"
+								},
+								"asset_type": {
+									"NonConfidential": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+								},
+								"public_key": "RZX_-q_gPRGsZbqUpw1mou6xiffk6o2Plxq8TE5ydE4="
+							}],
+							"owners_memos": [null, null],
+							"proofs": {
+								"asset_tracing_proof": {
+									"asset_type_and_amount_proofs": [],
+									"inputs_identity_proofs": [
+										[]
+									],
+									"outputs_identity_proofs": [
+										[],
+										[]
+									]
+								},
+								"asset_type_and_amount_proof": "NoProof"
+							}
+						},
+						"transfer_type": "Standard"
+					},
+					"body_signatures": [{
+						"address": {
+							"key": "RZX_-q_gPRGsZbqUpw1mou6xiffk6o2Plxq8TE5ydE4="
+						},
+						"signature": "sl1RapinEI1x1QCYK0OIS7DMIWdj7B7n1sSwiCB-rSt65klTXJKUDdXByDEHSCHFJfK50zACXSB2MQJot78wDg=="
+					}]
+				}
+			}
+		}]
+	},
+	"message": ""
+}
+```
+
 <h2 id="2.2">2.1.Evm</h2>
 <h3 id="2.2.1">2.2.1 Get evm tx by hash</h3>
 
@@ -1649,6 +1889,7 @@ Response:
 	"message": ""
 }
 ```
+
 <h2 id="2.7">2.7 Define Asset</h2>
 <h3 id="2.7.1">2.7.1 Get defined assets</h3>
 
@@ -1703,6 +1944,54 @@ Response:
 	"message": ""
 }
 ```
+<h3 id="2.7.2">2.7.2 Get native to evm txs sent from the address</h3>
+* `GET /api/v2/tx/prism/records/send`
+
+| 参数        | 类型     | 说明             | 必传 |
+|-----------|--------|----------------|----|
+| address   | string | sender address | Y  |
+| page      | number | page index     | N  |
+| page_size | number | page size      | N  |
+
+* Request:
+  * `http://localhost/api/v2/tx/prism/records/send?address=fra15kmstkjfkyzjq8h3hnjkxeld8p5ugep5dn32n4lf5deprkxj03gsdy8cge&page=1&page_size=10`
+* Response:
+```json
+{
+	"code": 200,
+	"data": {
+		"items": [{
+			"amount": "330000000",
+			"asset": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+			"block_hash": "9d06dfb007ed467812a638e8d912dd9877d45f4f27fd97dd9d4010e89b46888c",
+			"data": "eyJub25jZSI6W1s2OSwxNTEsMTcyLDQ5LDEwNCwxOTMsMTA0LDIxOF0sMTY0NDBdLCJhc3NldF90eXBlIjpudWxsLCJyZWNlaXZlciI6eyJFdGhlcmV1bSI6IjB4MGNlZjkxOWVjMGMxYTNmOGIxODMwM2IyZGY1MTg1M2Q4YmQ3Y2E3YyJ9LCJzaWduZXIiOiJwYmNGMmtteEJTQWU4YnpsWTJmdE9HbkVaRFJzNHFuWDZhTnlFZGpTZkZFPSIsInZhbHVlIjoiMzMwMDAwMDAwIn0=",
+			"decimal": 6,
+			"from": "fra15kmstkjfkyzjq8h3hnjkxeld8p5ugep5dn32n4lf5deprkxj03gsdy8cge",
+			"height": 2004140,
+			"timestamp": 1648771031,
+			"to": "0x0cef919ec0c1a3f8b18303b2df51853d8bd7ca7c",
+			"tx_hash": "ab1a07390fb7f670684a08a7d033968165ca6d9b3a45899a9efcb2d2bc35ae0b"
+		}, {
+			"amount": "120000000",
+			"asset": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+			"block_hash": "bf617d97c30ced0c45838ca8799508dadc9e731e63e17631c900782ab71bee48",
+			"data": "eyJub25jZSI6W1s1LDEzOSwyNDAsMjM3LDE5Miw2MCwzNSwyNTVdLDE2Mzk3XSwiYXNzZXRfdHlwZSI6bnVsbCwicmVjZWl2ZXIiOnsiRXRoZXJldW0iOiIweDBjZWY5MTllYzBjMWEzZjhiMTgzMDNiMmRmNTE4NTNkOGJkN2NhN2MifSwic2lnbmVyIjoicGJjRjJrbXhCU0FlOGJ6bFkyZnRPR25FWkRSczRxblg2YU55RWRqU2ZGRT0iLCJ2YWx1ZSI6IjEyMDAwMDAwMCJ9",
+			"decimal": 6,
+			"from": "fra15kmstkjfkyzjq8h3hnjkxeld8p5ugep5dn32n4lf5deprkxj03gsdy8cge",
+			"height": 2000414,
+			"timestamp": 1648711151,
+			"to": "0x0cef919ec0c1a3f8b18303b2df51853d8bd7ca7c",
+			"tx_hash": "b16a983ee348952cae1e52985526dd18839a7fdc2c122fb1656ae8407e2d5fc0"
+		}],
+		"page": 1,
+		"page_size": 10,
+		"total": 2
+	},
+	"message": ""
+}
+```
+
+
 <h2 id="2.8">2.8 Issue Asset</h2>
 <h3 id="2.8.1">8.1 Get issued assets</h3>
 
@@ -1760,6 +2049,64 @@ Response:
         "signature": "DkydH0ONCMm5yiUKmWHEFZTLF3IfpYyyTkv-drg8ExvU6MyMxtEyr99PuWWManMJw3hpaopVATVpPN44w0WiCg=="
       }
     }
+  },
+  "message": ""
+}
+```
+
+<h2 id="3.1">3.1 Transaction distribution</h2>
+* `GET /api/v2/txs/distribute`
+* No params
+* Request:
+  * `http://localhost/api/v2/txs/distribute`
+* Response:
+```json
+{
+  "code": 200,
+  "data": {
+    "evm_compatible": 1011,
+    "prism": 5,
+    "privacy": 0,
+    "transparent": 302
+  },
+  "message": ""
+}
+```
+
+<h2 id="3.2">3.2 Transaction statistics</h2>
+* `GET /api/v2/txs/distribute`
+* No params
+* Request:
+  * `http://localhost:8778/api/v2/chain/statistics`
+* Response:
+```json
+{
+  "code": 200,
+  "data": {
+    "active_addrs": 33,
+    "daily_txs": 0,
+    "total_txs": 2021
+  },
+  "message": ""
+}
+```
+
+<h2 id="3.2">3.2 Transaction statistics</h2>
+* `GET /api/v2/address/count`
+
+| 参数         | 类型     | 说明              | 必传 |
+|------------|--------|-----------------|----|
+| start_time | number | start timestamp | N  |
+| end_time   | number | end timestamp   | N  |
+
+* Request:
+  * `http://localhost/api/v2/address/count`
+* Response:
+```json
+{
+  "code": 200,
+  "data": {
+    "address_count": 118
   },
   "message": ""
 }

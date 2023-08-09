@@ -21,7 +21,38 @@ pub enum FindoraTxType {
     DefineAsset,
     IssueAsset,
 }
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// XHub: evm to native
+////////////////////////////////////////////////////////////////////////////////////////////////////
+#[derive(Serialize, Deserialize, Debug)]
+pub struct XHubOpt {
+    pub function: XHub,
+}
 
+#[derive(Serialize, Deserialize, Debug)]
+pub struct XHub {
+    #[serde(rename = "XHub")]
+    pub xhub: NonConfidentialTransfer,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct NonConfidentialTransfer {
+    #[serde(rename = "NonConfidentialTransfer")]
+    pub nonconfidential_transfer: XHubTransfer,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct XHubTransfer {
+    pub input_value: i64,
+    pub outputs: Vec<XHubOutput>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct XHubOutput {
+    pub amount: i64,
+    pub asset: [u8; 32],
+    pub target: String,
+}
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // evm tx
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -93,13 +124,14 @@ pub struct TransferAssetOpt {
 
 #[derive(Serialize, Deserialize, Debug, Default, Clone)]
 pub struct TransferAsset {
-    pub body: TransferBody,
+    pub body: Value,
     pub body_signatures: Vec<BodySignature>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Default, Clone)]
 pub struct BodySignature {
     pub address: SignatureKey,
+    pub signature: String,
 }
 
 #[derive(Serialize, Deserialize, Debug, Default, Clone)]
@@ -230,7 +262,7 @@ pub struct AssetCode {
 
 #[derive(Serialize, Deserialize, Debug, Default)]
 pub struct AssetRules {
-    pub decimals: i64,
+    pub decimals: i32,
     pub max_units: String,
     pub transfer_multisig_rules: Option<Value>,
     pub transferable: bool,

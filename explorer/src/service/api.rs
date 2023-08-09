@@ -32,15 +32,15 @@ use crate::service::v2::block::{
 };
 use crate::service::v2::claim::{v2_get_claim_tx, V2ClaimTxResponse};
 use crate::service::v2::delegation::{v2_get_delegation_tx, V2DelegationTxResponse};
-use crate::service::v2::native::{v2_get_native_tx, V2NativeTxResponse};
+use crate::service::v2::evm::{v2_get_evm_tx, v2_get_evm_txs, V2EvmTxResponse, V2EvmTxsResponse};
+use crate::service::v2::native::{
+    v2_get_native_tx, v2_get_native_txs, V2NativeTxResponse, V2NativeTxsResponse,
+};
 use crate::service::v2::native_to_evm::{
-    v2_get_n2e_tx, v2_get_prism_records_send, V2NativeToEvmTxResponse, V2PrismSendResponse,
+    v2_get_n2e_tx, v2_get_prism_records_send, V2NativeToEvmTxResponse,
 };
 use crate::service::v2::other::{
     v2_address_count, v2_distribute, v2_statistics, V2ChainStatisticsResponse, V2DistributeResponse,
-};
-use crate::service::v2::transaction_evm::{
-    v2_get_evm_tx, v2_get_evm_txs, V2EvmTxResponse, V2EvmTxsResponse,
 };
 use crate::service::v2::undelegation::{v2_get_undelegation_tx, V2UndelegationTxResponse};
 use crate::service::ApiTags;
@@ -865,6 +865,20 @@ impl Api {
             .await
             .map_err(handle_fetch_one_err)
     }
+
+    #[oai(path = "/v2/txs/native", method = "get", tag = "ApiTags::Transaction")]
+    async fn v2_get_native_txs(
+        &self,
+        from: Query<Option<String>>,
+        to: Query<Option<String>>,
+        page: Query<Option<i64>>,
+        page_size: Query<Option<i64>>,
+    ) -> poem::Result<V2NativeTxsResponse> {
+        v2_get_native_txs(self, from, to, page, page_size)
+            .await
+            .map_err(handle_fetch_one_err)
+    }
+
     ///////////////////////////////////////////////////////////////////////////////////////////////
     // Block
     ///////////////////////////////////////////////////////////////////////////////////////////////
@@ -1018,7 +1032,7 @@ impl Api {
         address: Query<String>,
         page: Query<Option<i64>>,
         page_size: Query<Option<i64>>,
-    ) -> poem::Result<V2PrismSendResponse> {
+    ) -> poem::Result<V2PrismRecordResponse> {
         v2_get_prism_records_send(self, address, page, page_size)
             .await
             .map_err(handle_fetch_one_err)
