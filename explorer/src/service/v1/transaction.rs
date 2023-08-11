@@ -623,7 +623,6 @@ pub async fn get_txs(
     api: &Api,
     block_hash: Query<Option<String>>,
     block_height: Query<Option<i64>>,
-    address: Query<Option<String>>,
     from: Query<Option<String>>,
     to: Query<Option<String>>,
     ty: Query<Option<i32>>,
@@ -643,22 +642,6 @@ pub async fn get_txs(
         params.push(format!("height={height} "));
     }
 
-    if let Some(addr) = address.0 {
-        let pk = public_key_from_bech32(addr.as_str());
-        if pk.is_err() {
-            return Ok(TxsResponse::Ok(Json(TxsRes {
-                code: 400,
-                message: "invalid from address".to_string(),
-                data: None,
-            })));
-        }
-        let pk = pk.unwrap();
-        let native_addr = public_key_to_base64(&pk);
-        params.push(format!(
-            "((value @? '$.body.operations[*].TransferAsset.body.transfer.inputs[*].public_key ? (@==\"{native_addr}\")') OR (value @? '$.body.operations[*].TransferAsset.body.transfer.outputs[*].public_key ? (@==\"{native_addr}\")')) "
-            ));
-    }
-
     if let Some(from_address) = from.0 {
         let pk = public_key_from_bech32(from_address.as_str());
         if pk.is_err() {
@@ -671,8 +654,9 @@ pub async fn get_txs(
         let pk = pk.unwrap();
         let base64_pk = public_key_to_base64(&pk);
         params.push(format!(
-            "(value @? '$.body.operations[*].TransferAsset.body.transfer.inputs[*].public_key ? (@==\"{}\")') ", base64_pk));
+            "(value @? '$.body.operations[*].TransferAsset.body_signatures[*].address.key ? (@==\"{}\")') ", base64_pk));
     }
+
     if let Some(to_address) = to.0 {
         let pk = public_key_from_bech32(to_address.as_str());
         if pk.is_err() {

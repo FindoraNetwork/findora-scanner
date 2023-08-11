@@ -125,8 +125,6 @@ impl Api {
         /// block height.
         height: Query<Option<i64>>,
         /// bech32 address, e.g. fra1p4vy5n9mlkdys7xczegj398xtyvw2nawz00nnfh4yr7fpjh297cqsxfv7v
-        address: Query<Option<String>>,
-        /// bech32 address, e.g. fra1p4vy5n9mlkdys7xczegj398xtyvw2nawz00nnfh4yr7fpjh297cqsxfv7v
         from: Query<Option<String>>,
         /// bech32 address, e.g. fra1p4vy5n9mlkdys7xczegj398xtyvw2nawz00nnfh4yr7fpjh297cqsxfv7v
         to: Query<Option<String>>,
@@ -144,7 +142,7 @@ impl Api {
         page_size: Query<Option<i64>>,
     ) -> poem::Result<TxsResponse> {
         service::v1::transaction::get_txs(
-            self, block_id, height, address, from, to, ty, start_time, end_time, page, page_size,
+            self, block_id, height, from, to, ty, start_time, end_time, page, page_size,
         )
         .await
         .map_err(handle_fetch_one_err)
