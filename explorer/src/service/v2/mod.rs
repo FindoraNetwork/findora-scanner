@@ -4,6 +4,7 @@ pub mod claim;
 pub mod delegation;
 pub mod native_to_evm;
 pub mod other;
+pub mod transaction;
 pub mod undelegation;
 
 #[allow(dead_code)]

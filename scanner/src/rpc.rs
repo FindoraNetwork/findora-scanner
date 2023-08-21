@@ -23,10 +23,16 @@ use module::schema::{
 use module::utils::crypto::recover_signer;
 use reqwest::{Client, ClientBuilder, Url};
 use serde::de::DeserializeOwned;
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sha2::Digest;
 use sqlx::PgPool;
 use std::time::Duration;
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Receivers {
+    pub items: Vec<String>,
+}
 
 pub struct TendermintRPC {
     pub rpc: Url,
@@ -245,8 +251,10 @@ impl RPCCaller {
 
                         v = serde_json::to_value(&wrap_evm_tx).unwrap();
                     }
-
-                    let receivers_val = serde_json::to_value(&addrs).unwrap();
+                    let r = Receivers {
+                        items: addrs.clone(),
+                    };
+                    let receivers_val = serde_json::to_value(&r).unwrap();
                     evm_txs.push(Transaction {
                         tx_hash: tx_hash.clone(),
                         block_hash: block_hash.clone(),
@@ -500,7 +508,10 @@ impl RPCCaller {
                         }
                     }
 
-                    let receivers_val = serde_json::to_value(&addrs).unwrap();
+                    let r = Receivers {
+                        items: addrs.clone(),
+                    };
+                    let receivers_val = serde_json::to_value(&r).unwrap();
                     txs.push(Transaction {
                         tx_hash: tx_hash.clone(),
                         block_hash: block_hash.clone(),
