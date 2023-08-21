@@ -394,7 +394,7 @@ impl Migrate {
                             &pool,
                         )
                         .await?;
-                        save_tx_type(&tx, FindoraTxType::DefineAsset as i32, &pool).await?;
+                        save_tx_type(&tx, FindoraTxType::DefineOrIssueAsset as i32, &pool).await?;
                     } else if op_str.contains("IssueAsset") {
                         debug!("IssueAsset, height: {}", height);
                         let op_copy = op.clone();
@@ -413,7 +413,7 @@ impl Migrate {
                             &pool,
                         )
                         .await?;
-                        save_tx_type(&tx, FindoraTxType::IssueAsset as i32, &pool).await?;
+                        save_tx_type(&tx, FindoraTxType::DefineOrIssueAsset as i32, &pool).await?;
                     } else if op_str.contains("TransferAsset") {
                         debug!("TransferAsset, height: {}", height);
                         let op_copy = op.clone();

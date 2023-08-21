@@ -393,7 +393,7 @@ impl RPCCaller {
                                 URL_SAFE,
                             );
                             sender = issuer.clone();
-                            ty_sub = FindoraTxType::DefineAsset as i32;
+                            ty_sub = FindoraTxType::DefineOrIssueAsset as i32;
                             v2_asset_txs.push(V2AssetTx {
                                 asset,
                                 tx_hash: tx_hash.clone(),
@@ -413,7 +413,7 @@ impl RPCCaller {
                             let asset =
                                 base64::encode_config(opt.issue_asset.body.code.val, URL_SAFE);
                             sender = issuer.clone();
-                            ty_sub = FindoraTxType::IssueAsset as i32;
+                            ty_sub = FindoraTxType::DefineOrIssueAsset as i32;
                             v2_asset_txs.push(V2AssetTx {
                                 asset,
                                 tx_hash: tx_hash.clone(),

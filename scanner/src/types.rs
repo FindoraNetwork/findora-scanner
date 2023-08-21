@@ -14,13 +14,12 @@ pub enum FindoraTxType {
     AbarToBar,
     AbarToAbar,
     BarToAbar,
-    NativeToEVM,  //8
-    EVMToNative,  //9
-    Delegation,   //10
-    Undelegation, //11
-    Claim,        //12
-    DefineAsset,  //13
-    IssueAsset,   //14
+    NativeToEVM,        //8
+    EVMToNative,        //9
+    Delegation,         //10
+    Undelegation,       //11
+    Claim,              //12
+    DefineOrIssueAsset, //13
 }
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // XHub: evm to native
