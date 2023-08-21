@@ -1,6 +1,6 @@
 use crate::commands::FRA_ASSET;
 use crate::types::{
-    ClaimOpt, ConvertAccountOperation, DefineAssetOpt, DelegationOpt, EthereumWrap, FindoraEVMTx,
+    ClaimOpt, ConvertAccountOpt, DefineAssetOpt, DelegationOpt, EthereumWrap, FindoraEVMTx,
     FindoraEVMTxWrap, FindoraTxType, IssueAssetOpt, OutputTypeHideAmountHide,
     OutputTypeHideAmountShow, OutputTypeShowAmountHide, OutputTypeShowAmountShow, TransactWrap,
     TransactWrapData, TransferAssetOpt, TxValue, UnDelegationOpt, XHubOpt,
@@ -290,7 +290,7 @@ impl RPCCaller {
                         if op_str.contains("ConvertAccount") {
                             debug!("[Native] ConvertAccount, height: {}", height);
                             let op_copy = op.clone();
-                            let opt: ConvertAccountOperation = serde_json::from_value(op).unwrap();
+                            let opt: ConvertAccountOpt = serde_json::from_value(op).unwrap();
                             let asset: String;
                             if let Some(asset_bin) = &opt.convert_account.asset_type {
                                 asset = base64::encode_config(asset_bin, base64::URL_SAFE);
@@ -300,7 +300,11 @@ impl RPCCaller {
                             let signer =
                                 pubkey_to_fra_address(&opt.convert_account.signer).unwrap();
                             let receiver = opt.convert_account.receiver.ethereum;
-                            addrs.push(receiver.clone());
+                            evm_addrs.push(Address {
+                                tx: tx_hash.clone(),
+                                address: receiver.clone(),
+                                timestamp: timestamp.timestamp(),
+                            });
                             sender = signer.clone();
                             ty_sub = FindoraTxType::NativeToEVM as i32;
                             v2_convert_account_txs.push(V2ConvertAccountTx {

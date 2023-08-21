@@ -121,7 +121,7 @@ pub struct ConvertAccount {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct ConvertAccountOperation {
+pub struct ConvertAccountOpt {
     #[serde(rename = "ConvertAccount")]
     pub convert_account: ConvertAccount,
 }

@@ -3,7 +3,7 @@ use crate::db::{
     save_tx_type, save_undelegation_tx,
 };
 use crate::types::{
-    ClaimOpt, ConvertAccountOperation, DefineAssetOpt, DelegationOpt, FindoraEVMTx, FindoraTxType,
+    ClaimOpt, ConvertAccountOpt, DefineAssetOpt, DelegationOpt, FindoraEVMTx, FindoraTxType,
     IssueAssetOpt, TransferAssetOpt, TxValue, UnDelegationOpt,
 };
 use crate::util::pubkey_to_fra_address;
@@ -282,7 +282,7 @@ impl Migrate {
                     if op_str.contains("ConvertAccount") {
                         debug!("ConvertAccount, height: {}", height);
                         let op_copy = op.clone();
-                        let opt: ConvertAccountOperation = serde_json::from_value(op).unwrap();
+                        let opt: ConvertAccountOpt = serde_json::from_value(op).unwrap();
                         let asset: String;
                         if let Some(asset_bin) = &opt.convert_account.asset_type {
                             asset = base64::encode_config(asset_bin, base64::URL_SAFE);
