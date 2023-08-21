@@ -1,12 +1,25 @@
 use crate::service::api::Api;
 use crate::service::util::{public_key_from_bech32, public_key_to_base64};
 use anyhow::Result;
-use module::schema::Transaction;
 use poem_openapi::param::Query;
 use poem_openapi::{param::Path, payload::Json, ApiResponse, Object};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sqlx::Row;
+
+#[derive(Serialize, Deserialize, Debug, Default, Object)]
+pub struct Transaction {
+    pub tx_hash: String,
+    pub block_hash: String,
+    pub height: i64,
+    pub timestamp: i64,
+    pub ty: i32,
+    pub code: i64,
+    pub log: String,
+    pub origin: String,
+    pub result: Value, // result.tx_result
+    pub value: Value,  // result.tx
+}
 
 #[derive(ApiResponse)]
 pub enum AddressResponse {

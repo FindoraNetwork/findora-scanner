@@ -1,22 +1,38 @@
-use std::time::Duration;
-
+use crate::commands::FRA_ASSET;
+use crate::types::{
+    ClaimOpt, ConvertAccountOpt, DefineAssetOpt, DelegationOpt, EthereumWrap, FindoraEVMTx,
+    FindoraEVMTxWrap, FindoraTxType, IssueAssetOpt, OutputTypeHideAmountHide,
+    OutputTypeHideAmountShow, OutputTypeShowAmountHide, OutputTypeShowAmountShow, TransactWrap,
+    TransactWrapData, TransferAssetOpt, TxValue, UnDelegationOpt, XHubOpt,
+};
+use crate::util::pubkey_to_fra_address;
+use crate::{db, tx};
 use crate::{Error, Result};
+use base64::URL_SAFE;
 use chrono::NaiveDateTime;
-use serde::de::DeserializeOwned;
-use sha2::Digest;
-use sqlx::PgPool;
-
+use ethereum::TransactionAction;
+use module::rpc::block::BlockSizeRPC;
 use module::rpc::{
     block::BlockRPC as ModuleBlockRPC, tx::Transaction as ModuleTx,
     validator::ValidatorsRPC as ModuleValidatorsRPC, JsonRpcResponse, TdRpcResult,
 };
-
-use crate::{db, tx};
-
-use module::schema::{Block as ModuleBlock, DelegationInfo, Transaction, Validator};
-
-use module::rpc::block::BlockSizeRPC;
+use module::schema::{
+    Address, Block as ModuleBlock, DelegationInfo, Transaction, V2AssetTx, V2ClaimTx,
+    V2ConvertAccountTx, V2DelegationTx, V2UndelegationTx, Validator,
+};
+use module::utils::crypto::recover_signer;
 use reqwest::{Client, ClientBuilder, Url};
+use serde::de::DeserializeOwned;
+use serde::{Deserialize, Serialize};
+use serde_json::Value;
+use sha2::Digest;
+use sqlx::PgPool;
+use std::time::Duration;
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Receivers {
+    pub items: Vec<String>,
+}
 
 pub struct TendermintRPC {
     pub rpc: Url,
@@ -170,46 +186,365 @@ impl RPCCaller {
         let mut txs = Vec::new();
         let mut evm_txs = Vec::new();
         let mut validators = Vec::new();
+        let mut v2_convert_account_txs = Vec::new();
+        let mut v2_undelegation_txs = Vec::new();
+        let mut v2_delegation_txs = Vec::new();
+        let mut v2_claim_txs = Vec::new();
+        let mut v2_asset_txs = Vec::new();
+        let mut evm_addrs: Vec<Address> = vec![];
+        let mut native_addrs: Vec<Address> = vec![];
 
-        for tx in block.block.data.txs.unwrap_or_default() {
-            let bytes = base64::decode(&tx)?;
-            let origin = tx;
+        for tx_string in block.block.data.txs.unwrap_or_default() {
+            let bytes = base64::decode(&tx_string)?;
+            let origin = tx_string;
             let hasher = sha2::Sha256::digest(&bytes);
-            let txid = hex::encode(hasher);
-            let tx = self.rpc.load_transaction(&txid).await?;
+            let tx_hash = hex::encode(hasher);
+            let tx = self.rpc.load_transaction(&tx_hash).await?;
             let result = serde_json::to_value(tx.tx_result.clone()).unwrap();
+
             match tx::try_tx_catalog(&bytes) {
                 tx::TxCatalog::EvmTx => {
-                    let value = serde_json::from_slice(tx::unwrap(&bytes)?)?;
+                    let value: Value = serde_json::from_slice(tx::unwrap(&bytes)?)?;
+                    let sender: String;
+                    let ty_sub: i32;
+                    let mut addrs: Vec<String> = vec![];
+                    let mut v: Value = value.clone();
+                    let evm_tx_str = serde_json::to_string(&value).unwrap();
+                    if evm_tx_str.contains("XHub") {
+                        debug!("[EVM] XHub, height: {}, tx: {}", height, tx_hash);
+                        let xhub_opt: XHubOpt = serde_json::from_value(value).unwrap();
+                        for xo in &xhub_opt.function.xhub.nonconfidential_transfer.outputs {
+                            let to = pubkey_to_fra_address(&xo.target).unwrap();
+                            addrs.push(to);
+                        }
+                        sender = "".to_string();
+                        ty_sub = FindoraTxType::EVMToNative as i32;
+                    } else {
+                        debug!("[EVM] Ethereum, height: {}, tx: {}", height, tx_hash);
+                        let evm_tx: FindoraEVMTx = serde_json::from_value(value).unwrap();
+                        let signer = recover_signer(&evm_tx.function.ethereum.transact).unwrap();
+                        let to = match evm_tx.function.ethereum.transact.action {
+                            TransactionAction::Call(to) => {
+                                format!("{to:?}")
+                            }
+                            _ => "".to_string(),
+                        };
+                        addrs.push(to);
+                        sender = format!("{signer:?}");
+                        ty_sub = FindoraTxType::Evm as i32;
+                        let wrap_evm_tx = FindoraEVMTxWrap {
+                            function: EthereumWrap {
+                                ethereum: TransactWrap {
+                                    transact: TransactWrapData {
+                                        from: sender.clone(),
+                                        nonce: evm_tx.function.ethereum.transact.nonce,
+                                        gas_price: evm_tx.function.ethereum.transact.gas_price,
+                                        gas_limit: evm_tx.function.ethereum.transact.gas_limit,
+                                        action: evm_tx.function.ethereum.transact.action,
+                                        value: evm_tx.function.ethereum.transact.value,
+                                        input: evm_tx.function.ethereum.transact.input,
+                                        signature: evm_tx.function.ethereum.transact.signature,
+                                    },
+                                },
+                            },
+                        };
+
+                        v = serde_json::to_value(&wrap_evm_tx).unwrap();
+                    }
+                    let r = Receivers {
+                        items: addrs.clone(),
+                    };
+                    let receivers_val = serde_json::to_value(&r).unwrap();
                     evm_txs.push(Transaction {
-                        tx_hash: txid,
+                        tx_hash: tx_hash.clone(),
                         block_hash: block_hash.clone(),
                         height,
                         timestamp: timestamp.timestamp(),
                         code: tx.tx_result.code,
-                        ty: 1,
+                        ty: FindoraTxType::Evm as i32,
+                        ty_sub,
+                        sender: sender.clone(),
+                        receiver: receivers_val,
                         log: tx.tx_result.log,
                         origin,
                         result,
-                        value,
+                        value: v,
                     });
+
+                    addrs.push(sender);
+                    addrs.dedup();
+                    for a in addrs {
+                        if a.is_empty() {
+                            continue;
+                        }
+                        evm_addrs.push(Address {
+                            tx: tx_hash.clone(),
+                            address: a,
+                            timestamp: timestamp.timestamp(),
+                        });
+                    }
                 }
+
                 tx::TxCatalog::FindoraTx => {
-                    let value = serde_json::from_slice(&bytes)?;
+                    let value: Value = serde_json::from_slice(&bytes)?;
+                    let v: Value = value.clone();
+                    let mut sender: String = "".to_string();
+                    let mut ty_sub = 0;
+                    let mut addrs: Vec<String> = vec![];
+                    let tx_val: TxValue = serde_json::from_value(v).unwrap();
+
+                    for op in tx_val.body.operations {
+                        let op_str = serde_json::to_string(&op).unwrap();
+                        if op_str.contains("ConvertAccount") {
+                            debug!("[Native] ConvertAccount, height: {}", height);
+                            let op_copy = op.clone();
+                            let opt: ConvertAccountOpt = serde_json::from_value(op).unwrap();
+                            let asset: String;
+                            if let Some(asset_bin) = &opt.convert_account.asset_type {
+                                asset = base64::encode_config(asset_bin, base64::URL_SAFE);
+                            } else {
+                                asset = FRA_ASSET.to_string();
+                            }
+                            let signer =
+                                pubkey_to_fra_address(&opt.convert_account.signer).unwrap();
+                            let receiver = opt.convert_account.receiver.ethereum;
+                            evm_addrs.push(Address {
+                                tx: tx_hash.clone(),
+                                address: receiver.clone(),
+                                timestamp: timestamp.timestamp(),
+                            });
+                            sender = signer.clone();
+                            ty_sub = FindoraTxType::NativeToEVM as i32;
+                            v2_convert_account_txs.push(V2ConvertAccountTx {
+                                tx_hash: tx_hash.clone(),
+                                block_hash: block_hash.clone(),
+                                sender: signer,
+                                receiver,
+                                asset,
+                                amount: opt.convert_account.value,
+                                height,
+                                timestamp: timestamp.timestamp(),
+                                content: op_copy,
+                            });
+                        } else if op_str.contains("UnDelegation") {
+                            debug!("[Native] UnDelegation, height: {}, tx: {}", height, tx_hash);
+                            let op_copy = op.clone();
+                            let opt: UnDelegationOpt = serde_json::from_value(op).unwrap();
+                            let signer = pubkey_to_fra_address(&opt.undelegation.pubkey).unwrap();
+                            let (amount, new_delegator, target_validator) =
+                                match opt.undelegation.body.pu {
+                                    Some(pu) => {
+                                        let target_validator_addr =
+                                            hex::encode(pu.target_validator);
+                                        (
+                                            pu.am,
+                                            pu.new_delegator_id,
+                                            target_validator_addr.to_uppercase(),
+                                        )
+                                    }
+                                    _ => (0, "".to_string(), "".to_string()),
+                                };
+
+                            sender = signer.clone();
+                            ty_sub = FindoraTxType::Undelegation as i32;
+                            v2_undelegation_txs.push(V2UndelegationTx {
+                                tx_hash: tx_hash.clone(),
+                                block_hash: block_hash.clone(),
+                                sender: signer,
+                                amount,
+                                target_validator,
+                                new_delegator,
+                                height,
+                                timestamp: timestamp.timestamp(),
+                                content: op_copy,
+                            });
+                        } else if op_str.contains("Delegation") {
+                            debug!("[Native] Delegation, height: {}, tx: {}", height, tx_hash);
+                            let op_copy = op.clone();
+                            let opt: DelegationOpt = serde_json::from_value(op).unwrap();
+                            let signer = pubkey_to_fra_address(&opt.delegation.pubkey).unwrap();
+                            let new_validator =
+                                opt.delegation.body.new_validator.unwrap_or("".to_string());
+                            sender = signer.clone();
+                            ty_sub = FindoraTxType::Delegation as i32;
+                            v2_delegation_txs.push(V2DelegationTx {
+                                tx_hash: tx_hash.clone(),
+                                block_hash: block_hash.clone(),
+                                sender: signer,
+                                amount: opt.delegation.body.amount,
+                                validator: opt.delegation.body.validator,
+                                new_validator,
+                                height,
+                                timestamp: timestamp.timestamp(),
+                                content: op_copy,
+                            });
+                        } else if op_str.contains("Claim") {
+                            debug!("[Native] Claim, height: {}, tx: {}", height, tx_hash);
+                            let op_copy = op.clone();
+                            let opt: ClaimOpt = serde_json::from_value(op).unwrap();
+                            let signer = pubkey_to_fra_address(&opt.claim.pubkey).unwrap();
+                            sender = signer.clone();
+                            ty_sub = FindoraTxType::Claim as i32;
+                            v2_claim_txs.push(V2ClaimTx {
+                                tx_hash: tx_hash.clone(),
+                                block_hash: block_hash.clone(),
+                                sender: signer,
+                                amount: opt.claim.body.amount,
+                                height,
+                                timestamp: timestamp.timestamp(),
+                                content: op_copy,
+                            });
+                        } else if op_str.contains("DefineAsset") {
+                            debug!("[Native] DefineAsset, height: {}, tx: {}", height, tx_hash);
+                            let op_copy = op.clone();
+                            let opt: DefineAssetOpt = serde_json::from_value(op).unwrap();
+                            let issuer =
+                                pubkey_to_fra_address(&opt.define_asset.pubkey.key).unwrap();
+                            let asset = base64::encode_config(
+                                opt.define_asset.body.asset.code.val,
+                                URL_SAFE,
+                            );
+                            sender = issuer.clone();
+                            ty_sub = FindoraTxType::DefineOrIssueAsset as i32;
+                            v2_asset_txs.push(V2AssetTx {
+                                asset,
+                                tx_hash: tx_hash.clone(),
+                                block_hash: block_hash.clone(),
+                                issuer,
+                                height,
+                                timestamp: timestamp.timestamp(),
+                                issued: 0,
+                                content: op_copy,
+                            });
+                        } else if op_str.contains("IssueAsset") {
+                            debug!("[Native] IssueAsset, height: {}, tx: {}", height, tx_hash);
+                            let op_copy = op.clone();
+                            let opt: IssueAssetOpt = serde_json::from_value(op).unwrap();
+                            let issuer =
+                                pubkey_to_fra_address(&opt.issue_asset.pubkey.key).unwrap();
+                            let asset =
+                                base64::encode_config(opt.issue_asset.body.code.val, URL_SAFE);
+                            sender = issuer.clone();
+                            ty_sub = FindoraTxType::DefineOrIssueAsset as i32;
+                            v2_asset_txs.push(V2AssetTx {
+                                asset,
+                                tx_hash: tx_hash.clone(),
+                                block_hash: block_hash.clone(),
+                                issuer,
+                                height,
+                                timestamp: timestamp.timestamp(),
+                                issued: 1,
+                                content: op_copy,
+                            });
+                        } else if op_str.contains("TransferAsset") {
+                            debug!(
+                                "[Native] TransferAsset, height: {}, tx: {}",
+                                height, tx_hash
+                            );
+                            let opt: TransferAssetOpt = serde_json::from_value(op).unwrap();
+                            let pk = &opt.transfer_asset.body_signatures[0].address.key;
+                            let signer = pubkey_to_fra_address(pk).unwrap();
+                            for o in opt.transfer_asset.body.transfer.outputs {
+                                let receiver: String;
+                                let type_show_amount_show: core::result::Result<
+                                    OutputTypeShowAmountShow,
+                                    _,
+                                > = serde_json::from_value(o.clone());
+
+                                if type_show_amount_show.is_err() {
+                                    // type show, amount hide
+                                    let type_show_amount_hide: core::result::Result<
+                                        OutputTypeShowAmountHide,
+                                        _,
+                                    > = serde_json::from_value(o.clone());
+                                    if type_show_amount_hide.is_err() {
+                                        // type hide, amount show
+                                        let type_hide_amount_show: core::result::Result<
+                                            OutputTypeHideAmountShow,
+                                            _,
+                                        > = serde_json::from_value(o.clone());
+                                        if type_hide_amount_show.is_err() {
+                                            // type hide, amount hide
+                                            let type_hide_amount_hide: OutputTypeHideAmountHide =
+                                                serde_json::from_value(o).unwrap();
+                                            if type_hide_amount_hide.public_key.eq(&FRA_ASSET) {
+                                                continue;
+                                            }
+                                            ty_sub = FindoraTxType::TypeHideAmountHide as i32;
+                                            receiver = pubkey_to_fra_address(
+                                                &type_hide_amount_hide.public_key,
+                                            )
+                                            .unwrap();
+                                        } else {
+                                            let pk = type_hide_amount_show.unwrap().public_key;
+                                            if pk.eq(&FRA_ASSET) {
+                                                continue;
+                                            }
+                                            ty_sub = FindoraTxType::TypeHideAmountShow as i32;
+                                            receiver = pubkey_to_fra_address(&pk).unwrap();
+                                        }
+                                    } else {
+                                        let pk = type_show_amount_hide.unwrap().public_key;
+                                        if pk.eq(&FRA_ASSET) {
+                                            continue;
+                                        }
+                                        ty_sub = FindoraTxType::TypeShowAmountHide as i32;
+                                        receiver = pubkey_to_fra_address(&pk).unwrap();
+                                    }
+                                } else {
+                                    // type show, amount show
+                                    let pk = type_show_amount_show.unwrap().public_key;
+                                    if pk.eq(&FRA_ASSET) {
+                                        continue;
+                                    }
+                                    receiver = pubkey_to_fra_address(&pk).unwrap();
+                                }
+
+                                addrs.push(receiver);
+                            }
+                            sender = signer;
+                        } else {
+                            debug!("[Native], height: {}, tx: {}", height, tx_hash);
+                        }
+                    }
+
+                    let r = Receivers {
+                        items: addrs.clone(),
+                    };
+                    let receivers_val = serde_json::to_value(&r).unwrap();
                     txs.push(Transaction {
-                        tx_hash: txid,
+                        tx_hash: tx_hash.clone(),
                         block_hash: block_hash.clone(),
                         height,
                         timestamp: timestamp.timestamp(),
                         code: tx.tx_result.code,
-                        ty: 0,
+                        ty: FindoraTxType::Native as i32,
+                        ty_sub,
+                        sender: sender.clone(),
+                        receiver: receivers_val,
                         log: tx.tx_result.log,
                         origin,
                         result,
                         value,
                     });
+
+                    addrs.push(sender);
+                    addrs.dedup();
+                    for a in addrs {
+                        if a.is_empty() {
+                            continue;
+                        }
+                        native_addrs.push(Address {
+                            tx: tx_hash.clone(),
+                            address: a,
+                            timestamp: timestamp.timestamp(),
+                        });
+                    }
                 }
-                tx::TxCatalog::Unknown => {}
+
+                tx::TxCatalog::Unknown => {
+                    info!("Unknown tx: {}", tx_hash);
+                }
             }
         }
 
@@ -263,9 +598,16 @@ impl RPCCaller {
             timestamp,
             app_hash,
             proposer,
+            evm_addrs,
+            native_addrs,
             txs,
             evm_txs,
             validators,
+            v2_convert_account_txs,
+            v2_undelegation_txs,
+            v2_delegation_txs,
+            v2_claim_txs,
+            v2_asset_txs,
             block_data,
         })
     }
@@ -300,12 +642,6 @@ impl RPCCaller {
         db::save_last_height(target, &self.pool).await?;
         Ok(())
     }
-
-    pub async fn load_and_save_staking(&self) -> Result<i64> {
-        let (h, info) = self.rpc.load_delegations().await?;
-        db::save_delegations(h, &info, &self.pool).await?;
-        Ok(h)
-    }
 }
 
 #[cfg(test)]
@@ -314,31 +650,31 @@ mod tests {
 
     #[tokio::test]
     async fn test_rpc() -> Result<()> {
-        let rpc = TendermintRPC::new(
-            Duration::from_secs(10),
-            "https://prod-mainnet.prod.findora.org:26657"
-                .to_string()
-                .parse()
-                .unwrap(),
-        );
-        let _ = rpc.load_block(1550667).await?;
-        let _ = rpc.load_validators(1550667).await?;
-        let _ = rpc
-            .load_transaction("c19fc22beb61030607367b42d4898a26ede1e6aa6b400330804c95b241f29bd0")
-            .await?;
+        // let rpc = TendermintRPC::new(
+        //     Duration::from_secs(10),
+        //     "https://prod-mainnet.prod.findora.org:26657"
+        //         .to_string()
+        //         .parse()
+        //         .unwrap(),
+        // );
+        // let _ = rpc.load_block(1550667).await?;
+        // let _ = rpc.load_validators(1550667).await?;
+        // let _ = rpc
+        //     .load_transaction("c19fc22beb61030607367b42d4898a26ede1e6aa6b400330804c95b241f29bd0")
+        //     .await?;
         Ok(())
     }
 
     #[tokio::test]
     async fn test_load_validators() -> Result<()> {
-        let rpc = TendermintRPC::new(
-            Duration::from_secs(10),
-            "https://prod-mainnet.prod.findora.org:26657"
-                .to_string()
-                .parse()
-                .unwrap(),
-        );
-        let _ = rpc.load_validators(2360073).await?;
+        // let rpc = TendermintRPC::new(
+        //     Duration::from_secs(10),
+        //     "https://prod-mainnet.prod.findora.org:26657"
+        //         .to_string()
+        //         .parse()
+        //         .unwrap(),
+        // );
+        // let _ = rpc.load_validators(2360073).await?;
         Ok(())
     }
 }

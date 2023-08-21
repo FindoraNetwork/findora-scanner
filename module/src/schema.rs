@@ -116,6 +116,13 @@ pub struct LegacyTransactionResponse {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
+pub struct Address {
+    pub tx: String,
+    pub address: String,
+    pub timestamp: i64,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Block {
     pub block_hash: String,
     pub height: i64,
@@ -124,10 +131,139 @@ pub struct Block {
     pub timestamp: NaiveDateTime,
     pub app_hash: String,
     pub proposer: String,
+    pub evm_addrs: Vec<Address>,
+    pub native_addrs: Vec<Address>,
     pub txs: Vec<Transaction>,
     pub evm_txs: Vec<Transaction>,
     pub validators: Vec<Validator>,
+    pub v2_convert_account_txs: Vec<V2ConvertAccountTx>,
+    pub v2_undelegation_txs: Vec<V2UndelegationTx>,
+    pub v2_delegation_txs: Vec<V2DelegationTx>,
+    pub v2_claim_txs: Vec<V2ClaimTx>,
+    pub v2_asset_txs: Vec<V2AssetTx>,
     pub block_data: Value,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct XHubTx {
+    pub tx_hash: String,
+    pub block_hash: String,
+    pub sender: String,
+    pub receiver: String,
+    pub asset: String,
+    pub amount: i64,
+    pub decimal: i32,
+    pub height: i64,
+    pub timestamp: i64,
+    pub content: Value,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct V2NativeTransfer {
+    pub tx_hash: String,
+    pub block_hash: String,
+    pub address: String,
+    pub height: i64,
+    pub timestamp: i64,
+    pub content: Value,
+}
+#[derive(Serialize, Deserialize, Debug)]
+pub struct V2AssetTx {
+    pub asset: String,
+    pub tx_hash: String,
+    pub block_hash: String,
+    pub issuer: String,
+    pub height: i64,
+    pub timestamp: i64,
+    pub content: Value,
+    pub issued: i32,
+}
+
+// #[derive(Serialize, Deserialize, Debug)]
+// pub struct V2DefineAssetTx {
+//     pub asset: String,
+//     pub tx_hash: String,
+//     pub block_hash: String,
+//     pub issuer: String,
+//     pub max_units: String,
+//     pub decimals: i32,
+//     pub height: i64,
+//     pub timestamp: i64,
+//     pub content: Value,
+// }
+//
+// #[derive(Serialize, Deserialize, Debug)]
+// pub struct V2IssueAssetTx {
+//     pub asset: String,
+//     pub tx_hash: String,
+//     pub block_hash: String,
+//     pub issuer: String,
+//     pub height: i64,
+//     pub timestamp: i64,
+//     pub content: Value,
+// }
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct V2ClaimTx {
+    pub tx_hash: String,
+    pub block_hash: String,
+    pub sender: String,
+    pub amount: i64,
+    pub height: i64,
+    pub timestamp: i64,
+    pub content: Value,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct V2DelegationTx {
+    pub tx_hash: String,
+    pub block_hash: String,
+    pub sender: String,
+    pub amount: i64,
+    pub validator: String,
+    pub new_validator: String,
+    pub height: i64,
+    pub timestamp: i64,
+    pub content: Value,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct V2UndelegationTx {
+    pub tx_hash: String,
+    pub block_hash: String,
+    pub sender: String,
+    pub amount: i64,
+    pub target_validator: String,
+    pub new_delegator: String,
+    pub height: i64,
+    pub timestamp: i64,
+    pub content: Value,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct V2ConvertAccountTx {
+    pub tx_hash: String,
+    pub block_hash: String,
+    pub sender: String,
+    pub receiver: String,
+    pub asset: String,
+    pub amount: String,
+    pub height: i64,
+    pub timestamp: i64,
+    pub content: Value,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct V2EvmTx {
+    pub tx_hash: String,
+    pub block_hash: String,
+    pub evm_tx_hash: String,
+    pub sender: String,
+    pub receiver: String,
+    pub amount: String,
+    pub height: i64,
+    pub timestamp: i64,
+    pub content: Value,
 }
 
 #[derive(Serialize, Deserialize, Debug, Default, Object)]
@@ -137,6 +273,9 @@ pub struct Transaction {
     pub height: i64,
     pub timestamp: i64,
     pub ty: i32,
+    pub ty_sub: i32,
+    pub sender: String,
+    pub receiver: Value,
     pub code: i64,
     pub log: String,
     pub origin: String,

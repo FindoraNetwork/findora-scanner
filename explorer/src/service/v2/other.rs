@@ -43,11 +43,19 @@ pub async fn v2_statistics(api: &Api) -> Result<V2ChainStatisticsResponse> {
     let total_txs = row.try_get("cnt")?;
 
     // total addrs
-    let sql_addr_count = "select count(distinct address) as cnt from native_txs".to_string();
-    let row = sqlx::query(sql_addr_count.as_str())
+    let sql_native_addr_count =
+        "select count(distinct address) as cnt from native_addrs".to_string();
+    let row = sqlx::query(sql_native_addr_count.as_str())
         .fetch_one(&mut conn)
         .await?;
-    let active_addrs = row.try_get("cnt")?;
+    let native_active_addrs: i64 = row.try_get("cnt")?;
+
+    let sql_evm_addr_count = "select count(distinct address) as cnt from evm_addrs".to_string();
+    let row = sqlx::query(sql_evm_addr_count.as_str())
+        .fetch_one(&mut conn)
+        .await?;
+    let evm_active_addrs: i64 = row.try_get("cnt")?;
+    let active_addrs = native_active_addrs + evm_active_addrs;
 
     // daily txs
     let start_time = Local::now().date_naive().and_hms_opt(0, 0, 0).unwrap();
@@ -99,23 +107,16 @@ pub struct V2TxsDistribute {
 pub async fn v2_distribute(api: &Api) -> Result<V2DistributeResponse> {
     let mut conn = api.storage.lock().await.acquire().await?;
 
-    let sql_native = "select count(*) as cnt from native_txs";
+    let sql_native = "select count(*) as cnt from transaction where ty=0";
     let row_native = sqlx::query(sql_native).fetch_one(&mut conn).await?;
     let native_count: i64 = row_native.try_get("cnt")?;
 
-    let sql_hide_amount_or_type =  "SELECT count(*) as cnt FROM native_txs WHERE (content @? '$.TransferAsset.body.transfer.outputs[*].asset_type.Confidential') OR (content @? '$.TransferAsset.body.transfer.outputs[*].amount.Confidential')";
-    let row_hide_amount_or_type = sqlx::query(sql_hide_amount_or_type)
-        .fetch_one(&mut conn)
-        .await?;
-    let hide_amount_or_type_count: i64 = row_hide_amount_or_type.try_get("cnt")?;
+    let sql_privacy =
+        "select count(*) as cnt from transaction where ty_sub=2 or ty_sub=3 or ty_sub=4";
+    let row_privacy = sqlx::query(sql_privacy).fetch_one(&mut conn).await?;
+    let privacy: i64 = row_privacy.try_get("cnt")?;
 
-    let sql_hide_amount_and_type = "SELECT count(*) as cnt FROM native_txs WHERE (content @? '$.TransferAsset.body.transfer.outputs[*].asset_type.Confidential') AND (content @? '$.TransferAsset.body.transfer.outputs[*].amount.Confidential')";
-    let row_sql_hide_amount_and_type = sqlx::query(sql_hide_amount_and_type)
-        .fetch_one(&mut conn)
-        .await?;
-    let hide_amount_and_type_count: i64 = row_sql_hide_amount_and_type.try_get("cnt")?;
-
-    let sql_evm = "SELECT count(*) as cnt FROM evm_txs";
+    let sql_evm = "SELECT count(*) as cnt FROM transaction where ty=1";
     let row_evm = sqlx::query(sql_evm).fetch_one(&mut conn).await?;
     let evm_count: i64 = row_evm.try_get("cnt")?;
 
@@ -127,19 +128,14 @@ pub async fn v2_distribute(api: &Api) -> Result<V2DistributeResponse> {
     let row_e2n = sqlx::query(sql_prism_e2n).fetch_one(&mut conn).await?;
     let e2n_count: i64 = row_e2n.try_get("cnt")?;
 
-    let privacy = hide_amount_or_type_count + hide_amount_and_type_count;
-    let transparent = native_count - privacy;
-    let prism = n2e_count + e2n_count;
-    let evm_compatible = evm_count;
-
     Ok(V2DistributeResponse::Ok(Json(V2DistributeResult {
         code: 200,
         message: "".to_string(),
         data: Some(V2TxsDistribute {
-            transparent,
+            transparent: native_count - privacy,
             privacy,
-            prism,
-            evm_compatible,
+            prism: n2e_count + e2n_count,
+            evm_compatible: evm_count,
         }),
     })))
 }
@@ -158,8 +154,8 @@ pub async fn v2_address_count(
         params.push(format!("timestamp < {end_time} "));
     }
 
-    let mut sql_native = "select count(distinct address) as cnt from native_txs ".to_string();
-    let mut sql_evm = "select count(distinct sender) as cnt from evm_txs ".to_string();
+    let mut sql_native = "select count(distinct address) as cnt from native_addrs ".to_string();
+    let mut sql_evm = "select count(distinct address) as cnt from evm_addrs ".to_string();
 
     if !params.is_empty() {
         sql_native = sql_native.add("WHERE ").add(params.join(" AND ").as_str());

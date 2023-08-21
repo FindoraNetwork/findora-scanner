@@ -1,13 +1,10 @@
 use serde::{Deserialize, Serialize};
-pub mod asset_define;
-pub mod asset_issue;
-pub mod block;
+pub mod asset;
 pub mod claim;
 pub mod delegation;
-pub mod native;
 pub mod native_to_evm;
 pub mod other;
-pub mod transaction_evm;
+pub mod transaction;
 pub mod undelegation;
 
 #[allow(dead_code)]

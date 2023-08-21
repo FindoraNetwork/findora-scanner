@@ -23,25 +23,16 @@ use crate::service::v1::validator::{
     ValidatorDetailResponse, ValidatorHistoryResponse, ValidatorListResponse,
     ValidatorSignedCountResponse,
 };
-use crate::service::v2::asset_define::{v2_get_define_asset, V2DefineAssetTxResponse};
-use crate::service::v2::asset_issue::{v2_get_issue_asset, V2IssueAssetTxResponse};
-use crate::service::v2::block::{
-    v2_get_blocks, v2_get_full_block_by_hash, v2_get_full_block_by_height,
-    v2_get_simple_block_by_hash, v2_get_simple_block_by_height, V2BlocksResponse,
-    V2FullBlockResponse, V2SimpleBlockResponse,
-};
+use crate::service::v2::asset::{v2_get_asset, V2AssetTxResponse};
 use crate::service::v2::claim::{v2_get_claim_tx, V2ClaimTxResponse};
 use crate::service::v2::delegation::{v2_get_delegation_tx, V2DelegationTxResponse};
-use crate::service::v2::native::{v2_get_native_tx, V2NativeTxResponse};
 use crate::service::v2::native_to_evm::{
-    v2_get_n2e_tx, v2_get_prism_records_send, V2NativeToEvmTxResponse, V2PrismSendResponse,
+    v2_get_n2e_tx, v2_get_prism_records_send, V2NativeToEvmTxResponse,
 };
 use crate::service::v2::other::{
     v2_address_count, v2_distribute, v2_statistics, V2ChainStatisticsResponse, V2DistributeResponse,
 };
-use crate::service::v2::transaction_evm::{
-    v2_get_evm_tx, v2_get_evm_txs, V2EvmTxResponse, V2EvmTxsResponse,
-};
+use crate::service::v2::transaction::v2_get_txs;
 use crate::service::v2::undelegation::{v2_get_undelegation_tx, V2UndelegationTxResponse};
 use crate::service::ApiTags;
 use poem_openapi::param::{Path, Query};
@@ -780,30 +771,6 @@ impl Api {
     // V2
     ///////////////////////////////////////////////////////////////////////////////////////////////
     #[oai(
-        path = "/v2/tx/evm/:tx_hash",
-        method = "get",
-        tag = "ApiTags::Transaction"
-    )]
-    async fn v2_get_evm_tx(&self, tx_hash: Path<String>) -> poem::Result<V2EvmTxResponse> {
-        v2_get_evm_tx(self, tx_hash)
-            .await
-            .map_err(handle_fetch_one_err)
-    }
-
-    #[oai(path = "/v2/txs/evm", method = "get", tag = "ApiTags::Transaction")]
-    async fn v2_get_evm_txs(
-        &self,
-        from: Query<Option<String>>,
-        to: Query<Option<String>>,
-        page: Query<Option<i64>>,
-        page_size: Query<Option<i64>>,
-    ) -> poem::Result<V2EvmTxsResponse> {
-        v2_get_evm_txs(self, from, to, page, page_size)
-            .await
-            .map_err(handle_fetch_one_err)
-    }
-
-    #[oai(
         path = "/v2/tx/delegation/:tx_hash",
         method = "get",
         tag = "ApiTags::Transaction"
@@ -853,133 +820,17 @@ impl Api {
             .map_err(handle_fetch_one_err)
     }
 
-    #[oai(
-        path = "/v2/tx/native/:tx_hash",
-        method = "get",
-        tag = "ApiTags::Transaction"
-    )]
-    async fn v2_get_native_tx(&self, tx_hash: Path<String>) -> poem::Result<V2NativeTxResponse> {
-        v2_get_native_tx(self, tx_hash)
-            .await
-            .map_err(handle_fetch_one_err)
-    }
     ///////////////////////////////////////////////////////////////////////////////////////////////
-    // Block
+    // Asset
     ///////////////////////////////////////////////////////////////////////////////////////////////
-    #[oai(
-        path = "/v2/block/height/:height",
-        method = "get",
-        tag = "ApiTags::Block"
-    )]
-    async fn v2_get_block_by_height(
+    #[oai(path = "/v2/asset", method = "get", tag = "ApiTags::Asset")]
+    async fn v2_get_asset(
         &self,
-        /// block height.
-        height: Path<i64>,
-    ) -> poem::Result<V2SimpleBlockResponse> {
-        v2_get_simple_block_by_height(self, height)
-            .await
-            .map_err(handle_fetch_one_err)
-    }
-
-    #[oai(
-        path = "/v2/block/full/height/:height",
-        method = "get",
-        tag = "ApiTags::Block"
-    )]
-    async fn v2_get_full_block_by_height(
-        &self,
-        /// block height.
-        height: Path<i64>,
-    ) -> poem::Result<V2FullBlockResponse> {
-        v2_get_full_block_by_height(self, height)
-            .await
-            .map_err(handle_fetch_one_err)
-    }
-
-    #[oai(path = "/v2/block/hash/:hash", method = "get", tag = "ApiTags::Block")]
-    async fn v2_get_block_by_hash(
-        &self,
-        /// block hash.
-        hash: Path<String>,
-    ) -> poem::Result<V2SimpleBlockResponse> {
-        v2_get_simple_block_by_hash(self, hash)
-            .await
-            .map_err(handle_fetch_one_err)
-    }
-
-    #[oai(
-        path = "/v2/block/full/hash/:hash",
-        method = "get",
-        tag = "ApiTags::Block"
-    )]
-    async fn v2_get_full_block_by_hash(
-        &self,
-        /// block hash.
-        hash: Path<String>,
-    ) -> poem::Result<V2FullBlockResponse> {
-        v2_get_full_block_by_hash(self, hash)
-            .await
-            .map_err(handle_fetch_one_err)
-    }
-
-    #[oai(path = "/v2/blocks", method = "get", tag = "ApiTags::Block")]
-    async fn v2_get_blocks(
-        &self,
-        /// starting height.
-        start_height: Query<Option<i64>>,
-        /// ending height.
-        end_height: Query<Option<i64>>,
-        /// starting timestamp.
-        start_time: Query<Option<i64>>,
-        /// ending timestamp.
-        end_time: Query<Option<i64>>,
-        /// page index, the default is 1.
-        page: Query<Option<i64>>,
-        /// page size, the default is 10.
-        page_size: Query<Option<i64>>,
-    ) -> poem::Result<V2BlocksResponse> {
-        v2_get_blocks(
-            self,
-            start_height,
-            end_height,
-            start_time,
-            end_time,
-            page,
-            page_size,
-        )
-        .await
-        .map_err(handle_fetch_one_err)
-    }
-
-    ///////////////////////////////////////////////////////////////////////////////////////////////
-    // Define Asset
-    ///////////////////////////////////////////////////////////////////////////////////////////////
-    #[oai(
-        path = "/v2/asset/define/:asset",
-        method = "get",
-        tag = "ApiTags::Asset"
-    )]
-    async fn v2_get_define_asset(
-        &self,
-        asset: Path<String>,
-    ) -> poem::Result<V2DefineAssetTxResponse> {
-        v2_get_define_asset(self, asset)
-            .await
-            .map_err(handle_fetch_one_err)
-    }
-    ///////////////////////////////////////////////////////////////////////////////////////////////
-    // Issue Asset
-    ///////////////////////////////////////////////////////////////////////////////////////////////
-    #[oai(
-        path = "/v2/asset/issue/:asset",
-        method = "get",
-        tag = "ApiTags::Asset"
-    )]
-    async fn v2_get_issue_asset(
-        &self,
-        asset: Path<String>,
-    ) -> poem::Result<V2IssueAssetTxResponse> {
-        v2_get_issue_asset(self, asset)
+        address: Query<String>,
+        page: Query<Option<i32>>,
+        page_size: Query<Option<i32>>,
+    ) -> poem::Result<V2AssetTxResponse> {
+        v2_get_asset(self, address, page, page_size)
             .await
             .map_err(handle_fetch_one_err)
     }
@@ -1016,7 +867,7 @@ impl Api {
         address: Query<String>,
         page: Query<Option<i64>>,
         page_size: Query<Option<i64>>,
-    ) -> poem::Result<V2PrismSendResponse> {
+    ) -> poem::Result<V2PrismRecordResponse> {
         v2_get_prism_records_send(self, address, page, page_size)
             .await
             .map_err(handle_fetch_one_err)
@@ -1031,5 +882,26 @@ impl Api {
         v2_address_count(self, start_time, end_time)
             .await
             .map_err(handle_fetch_one_err)
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    #[oai(path = "/v2/txs", method = "get", tag = "ApiTags::Transaction")]
+    async fn v2_get_txs(
+        &self,
+        block_id: Query<Option<String>>,
+        height: Query<Option<i64>>,
+        from: Query<Option<String>>,
+        to: Query<Option<String>>,
+        ty: Query<Option<i32>>,
+        start_time: Query<Option<i64>>,
+        end_time: Query<Option<i64>>,
+        page: Query<Option<i64>>,
+        page_size: Query<Option<i64>>,
+    ) -> poem::Result<TxsResponse> {
+        v2_get_txs(
+            self, block_id, height, from, to, ty, start_time, end_time, page, page_size,
+        )
+        .await
+        .map_err(handle_fetch_one_err)
     }
 }
