@@ -147,14 +147,16 @@ pub async fn save(block: ModuleBlock, pool: &PgPool) -> Result<(), Error> {
     }
 
     for addr in block.evm_addrs {
-        sqlx::query("INSERT INTO evm_addrs(address,timestamp) VALUES ($1,$2)")
+        sqlx::query("INSERT INTO evm_addrs(tx,address,timestamp) VALUES ($1,$2,$3)")
+            .bind(&addr.tx)
             .bind(&addr.address)
             .bind(addr.timestamp)
             .execute(pool)
             .await?;
     }
     for addr in block.native_addrs {
-        sqlx::query("INSERT INTO native_addrs(address,timestamp) VALUES ($1,$2)")
+        sqlx::query("INSERT INTO native_addrs(tx,address,timestamp) VALUES ($1,$2,$3)")
+            .bind(&addr.tx)
             .bind(&addr.address)
             .bind(addr.timestamp)
             .execute(pool)
@@ -296,14 +298,16 @@ pub async fn save(block: ModuleBlock, pool: &PgPool) -> Result<(), Error> {
         .await?;
     }
     for addr in block.evm_addrs {
-        sqlx::query("INSERT INTO evm_addrs(address,timestamp) VALUES ($1,$2)")
+        sqlx::query("INSERT INTO evm_addrs(tx,address,timestamp) VALUES ($1,$2,$3)")
+            .bind(&addr.tx)
             .bind(&addr.address)
             .bind(addr.timestamp)
             .execute(pool)
             .await?;
     }
     for addr in block.native_addrs {
-        sqlx::query("INSERT INTO native_addrs(address,timestamp) VALUES ($1,$2)")
+        sqlx::query("INSERT INTO native_addrs(tx,address,timestamp) VALUES ($1,$2,$3)")
+            .bind(&addr.tx)
             .bind(&addr.address)
             .bind(addr.timestamp)
             .execute(pool)

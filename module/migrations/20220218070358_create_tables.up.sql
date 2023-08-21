@@ -86,12 +86,14 @@ create table e2n_last_height (
 
 create table native_addrs(
     id bigserial primary key,
+    tx varchar(64) not null,
     address varchar(64) not null,
     timestamp bigint not null
 );
 
 create table evm_addrs(
     id bigserial primary key,
+    tx varchar(64) not null,
     address varchar(64) not null,
     timestamp bigint not null
 );

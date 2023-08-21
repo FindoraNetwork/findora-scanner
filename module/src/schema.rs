@@ -117,6 +117,7 @@ pub struct LegacyTransactionResponse {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Address {
+    pub tx: String,
     pub address: String,
     pub timestamp: i64,
 }

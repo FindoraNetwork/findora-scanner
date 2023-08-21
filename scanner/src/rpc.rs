@@ -266,10 +266,14 @@ impl RPCCaller {
                     addrs.push(sender);
                     addrs.dedup();
                     for a in addrs {
+                        if a.is_empty() {
+                            continue;
+                        }
                         evm_addrs.push(Address {
+                            tx: tx_hash.clone(),
                             address: a,
                             timestamp: timestamp.timestamp(),
-                        })
+                        });
                     }
                 }
 
@@ -512,10 +516,14 @@ impl RPCCaller {
                     addrs.push(sender);
                     addrs.dedup();
                     for a in addrs {
+                        if a.is_empty() {
+                            continue;
+                        }
                         native_addrs.push(Address {
+                            tx: tx_hash.clone(),
                             address: a,
                             timestamp: timestamp.timestamp(),
-                        })
+                        });
                     }
                 }
 
