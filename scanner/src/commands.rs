@@ -1,6 +1,6 @@
 use crate::db::{
-    save_claim_tx, save_define_asset_tx, save_delegation_tx, save_evm_tx, save_issue_asset_tx,
-    save_n2e_tx, save_native_tx, save_tx_type, save_undelegation_tx,
+    save_asset_tx, save_claim_tx, save_delegation_tx, save_evm_tx, save_n2e_tx, save_native_tx,
+    save_tx_type, save_undelegation_tx,
 };
 use crate::types::{
     ClaimOpt, ConvertAccountOperation, DefineAssetOpt, DelegationOpt, FindoraEVMTx, FindoraTxType,
@@ -27,7 +27,7 @@ const DEFAULT_RETIES: usize = 3;
 const DEFAULT_CONCURRENCY: usize = 8;
 //const DEFAULT_INTERVAL: Duration = Duration::from_secs(15);
 
-const FRA_ASSET: &str = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+pub const FRA_ASSET: &str = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
 
 #[derive(Parser)]
 pub enum ScannerCmd {
@@ -280,7 +280,7 @@ impl Migrate {
                 for op in tx_val.body.operations {
                     let op_str = serde_json::to_string(&op).unwrap();
                     if op_str.contains("ConvertAccount") {
-                        // convert account
+                        debug!("ConvertAccount, height: {}", height);
                         let op_copy = op.clone();
                         let opt: ConvertAccountOperation = serde_json::from_value(op).unwrap();
                         let asset: String;
@@ -289,10 +289,11 @@ impl Migrate {
                         } else {
                             asset = FRA_ASSET.to_string();
                         }
+                        let signer = pubkey_to_fra_address(&opt.convert_account.signer).unwrap();
                         save_n2e_tx(
                             &tx.to_lowercase(),
                             &block.to_lowercase(),
-                            &opt.convert_account.signer,
+                            &signer,
                             &opt.convert_account.receiver.ethereum,
                             &asset,
                             &opt.convert_account.value,
@@ -304,7 +305,7 @@ impl Migrate {
                         .await?;
                         save_tx_type(&tx, FindoraTxType::NativeToEVM as i32, &pool).await?;
                     } else if op_str.contains("UnDelegation") {
-                        // unstaking
+                        debug!("UnDelegation, height: {}", height);
                         let op_copy = op.clone();
                         let opt: UnDelegationOpt = serde_json::from_value(op).unwrap();
                         let sender = pubkey_to_fra_address(&opt.undelegation.pubkey).unwrap();
@@ -334,9 +335,9 @@ impl Migrate {
                             &pool,
                         )
                         .await?;
-                        save_tx_type(&tx, FindoraTxType::UnStaking as i32, &pool).await?;
+                        save_tx_type(&tx, FindoraTxType::Undelegation as i32, &pool).await?;
                     } else if op_str.contains("Delegation") {
-                        // staking
+                        debug!("Delegation, height: {}", height);
                         let op_copy = op.clone();
                         let opt: DelegationOpt = serde_json::from_value(op).unwrap();
                         let sender = pubkey_to_fra_address(&opt.delegation.pubkey).unwrap();
@@ -356,9 +357,9 @@ impl Migrate {
                             &pool,
                         )
                         .await?;
-                        save_tx_type(&tx, FindoraTxType::Staking as i32, &pool).await?;
+                        save_tx_type(&tx, FindoraTxType::Claim as i32, &pool).await?;
                     } else if op_str.contains("Claim") {
-                        // rewards
+                        debug!("Claim, height: {}", height);
                         let op_copy = op.clone();
                         let opt: ClaimOpt = serde_json::from_value(op).unwrap();
                         let sender = pubkey_to_fra_address(&opt.claim.pubkey).unwrap();
@@ -375,63 +376,56 @@ impl Migrate {
                         .await?;
                         save_tx_type(&tx, FindoraTxType::Claim as i32, &pool).await?;
                     } else if op_str.contains("DefineAsset") {
-                        // define asset
+                        debug!("DefineAsset, height: {}", height);
                         let op_copy = op.clone();
                         let opt: DefineAssetOpt = serde_json::from_value(op).unwrap();
                         let issuer = pubkey_to_fra_address(&opt.define_asset.pubkey.key).unwrap();
                         let asset =
                             base64::encode_config(opt.define_asset.body.asset.code.val, URL_SAFE);
-                        save_define_asset_tx(
+                        save_asset_tx(
                             &asset,
                             &tx.to_lowercase(),
                             &block.to_lowercase(),
                             &issuer,
-                            &opt.define_asset.body.asset.asset_rules.max_units,
-                            opt.define_asset.body.asset.asset_rules.decimals,
                             height,
                             timestamp,
+                            0,
                             &op_copy,
                             &pool,
                         )
                         .await?;
                         save_tx_type(&tx, FindoraTxType::DefineAsset as i32, &pool).await?;
                     } else if op_str.contains("IssueAsset") {
-                        // issue asset
+                        debug!("IssueAsset, height: {}", height);
                         let op_copy = op.clone();
                         let opt: IssueAssetOpt = serde_json::from_value(op).unwrap();
                         let issuer = pubkey_to_fra_address(&opt.issue_asset.pubkey.key).unwrap();
                         let asset = base64::encode_config(opt.issue_asset.body.code.val, URL_SAFE);
-                        save_issue_asset_tx(
+                        save_asset_tx(
                             &asset,
-                            &tx,
+                            &tx.to_lowercase(),
                             &block.to_lowercase(),
                             &issuer,
                             height,
                             timestamp,
+                            1,
                             &op_copy,
                             &pool,
                         )
                         .await?;
                         save_tx_type(&tx, FindoraTxType::IssueAsset as i32, &pool).await?;
                     } else if op_str.contains("TransferAsset") {
-                        // transfer asset
+                        debug!("TransferAsset, height: {}", height);
                         let op_copy = op.clone();
                         let opt: TransferAssetOpt = serde_json::from_value(op).unwrap();
                         let key = &opt.transfer_asset.body_signatures[0].address.key;
                         let addr = pubkey_to_fra_address(key).unwrap();
-                        let inputs =
-                            serde_json::to_value(&opt.transfer_asset.body.transfer.inputs).unwrap();
-                        let outputs =
-                            serde_json::to_value(&opt.transfer_asset.body.transfer.outputs)
-                                .unwrap();
                         save_native_tx(
                             &tx.to_lowercase(),
                             &block.to_lowercase(),
                             &addr,
                             height,
                             timestamp,
-                            &inputs,
-                            &outputs,
                             &op_copy,
                             &pool,
                         )

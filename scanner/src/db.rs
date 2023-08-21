@@ -1,4 +1,4 @@
-use module::schema::{Block as ModuleBlock, DelegationInfo};
+use module::schema::Block as ModuleBlock;
 use serde_json::Value;
 use sqlx::{Error, PgPool, Row};
 
@@ -31,13 +31,16 @@ pub async fn save(block: ModuleBlock, pool: &PgPool) -> Result<(), Error> {
 
     for tx in block.txs {
         sqlx::query(
-            "INSERT INTO transaction VALUES ($1, $2, $3, $4, $5, 0, $7, $8, $9, $10) ON CONFLICT(tx_hash) DO UPDATE SET ty=0, block_hash=$2, height=$3, timestamp=$4, code=$5, log=$7, origin=$8, result=$9, value=$10")
+            "INSERT INTO transaction VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) ON CONFLICT(tx_hash) DO UPDATE SET tx_hash=$1,block_hash=$2,height=$3,timestamp=$4,code=$5,ty=$6,ty_sub=$7,sender=$8,receiver=$9,log=$10,origin=$11,result=$12,value=$13")
             .bind(&tx.tx_hash)
             .bind(&tx.block_hash)
             .bind(tx.height)
             .bind(tx.timestamp)
             .bind(tx.code)
             .bind(tx.ty)
+            .bind(tx.ty_sub)
+            .bind(&tx.sender)
+            .bind(&tx.receiver)
             .bind(&tx.log)
             .bind(&tx.origin)
             .bind(&tx.result)
@@ -48,17 +51,112 @@ pub async fn save(block: ModuleBlock, pool: &PgPool) -> Result<(), Error> {
 
     for tx in block.evm_txs {
         sqlx::query(
-            "INSERT INTO transaction VALUES ($1, $2, $3, $4, $5, 1, $7, $8, $9, $10) ON CONFLICT(tx_hash) DO UPDATE SET ty=1, block_hash=$2, height=$3, timestamp=$4, code=$5, log=$7, origin=$8, result=$9, value=$10")
+            "INSERT INTO transaction VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) ON CONFLICT(tx_hash) DO UPDATE SET tx_hash=$1,block_hash=$2,height=$3,timestamp=$4,code=$5,ty=$6,ty_sub=$7,sender=$8,receiver=$9,log=$10,origin=$11,result=$12,value=$13")
             .bind(&tx.tx_hash)
             .bind(&tx.block_hash)
             .bind(tx.height)
             .bind(tx.timestamp)
             .bind(tx.code)
             .bind(tx.ty)
+            .bind(tx.ty_sub)
+            .bind(&tx.sender)
+            .bind(&tx.receiver)
             .bind(&tx.log)
             .bind(&tx.origin)
             .bind(&tx.result)
             .bind(&tx.value)
+            .execute(pool)
+            .await?;
+    }
+
+    for tx in block.v2_convert_account_txs {
+        save_n2e_tx(
+            &tx.tx_hash,
+            &tx.block_hash,
+            &tx.sender,
+            &tx.receiver,
+            &tx.asset,
+            &tx.amount,
+            tx.height,
+            tx.timestamp,
+            &tx.content,
+            pool,
+        )
+        .await?;
+    }
+
+    for tx in block.v2_delegation_txs {
+        save_delegation_tx(
+            &tx.tx_hash,
+            &tx.block_hash,
+            &tx.sender,
+            tx.amount,
+            &tx.validator,
+            &tx.new_validator,
+            tx.height,
+            tx.timestamp,
+            &tx.content,
+            pool,
+        )
+        .await?;
+    }
+
+    for tx in block.v2_undelegation_txs {
+        save_undelegation_tx(
+            &tx.tx_hash,
+            &tx.block_hash,
+            &tx.sender,
+            tx.amount,
+            &tx.target_validator,
+            &tx.new_delegator,
+            tx.height,
+            tx.timestamp,
+            &tx.content,
+            pool,
+        )
+        .await?;
+    }
+
+    for tx in block.v2_claim_txs {
+        save_claim_tx(
+            &tx.tx_hash,
+            &tx.block_hash,
+            &tx.sender,
+            tx.amount,
+            tx.height,
+            tx.timestamp,
+            &tx.content,
+            pool,
+        )
+        .await?;
+    }
+
+    for tx in block.v2_asset_txs {
+        save_asset_tx(
+            &tx.asset,
+            &tx.tx_hash,
+            &tx.block_hash,
+            &tx.issuer,
+            tx.height,
+            tx.timestamp,
+            tx.issued,
+            &tx.content,
+            pool,
+        )
+        .await?;
+    }
+
+    for addr in block.evm_addrs {
+        sqlx::query("INSERT INTO evm_addrs(address,timestamp) VALUES ($1,$2)")
+            .bind(&addr.address)
+            .bind(addr.timestamp)
+            .execute(pool)
+            .await?;
+    }
+    for addr in block.native_addrs {
+        sqlx::query("INSERT INTO native_addrs(address,timestamp) VALUES ($1,$2)")
+            .bind(&addr.address)
+            .bind(addr.timestamp)
             .execute(pool)
             .await?;
     }
@@ -105,8 +203,8 @@ pub async fn save(block: ModuleBlock, pool: &PgPool) -> Result<(), Error> {
 
     for tx in block.txs {
         sqlx::query!(
-                "INSERT INTO transaction VALUES ($1, $2, $3, $4, $5, 0, $7, $8, $9, $10) ON CONFLICT(tx_hash) DO UPDATE SET ty=0, block_hash=$2, height=$3, timestamp=$4, code=$5, log=$7, origin=$8, result=$9, value=$10",
-                &tx.tx_hash, &tx.block_hash, &tx.height, &tx.timestamp, &tx.code, &tx.ty, &tx.log, &tx.origin, &tx.result, &tx.value
+                "INSERT INTO transaction VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) ON CONFLICT(tx_hash) DO UPDATE SET tx_hash=$1,block_hash=$2,height=$3,timestamp=$4,code=$5,ty=$6,ty_sub=$7,sender=$8,receiver=$9,log=$10,origin=$11,result=$12,value=$13",
+                &tx.tx_hash, &tx.block_hash, &tx.height, &tx.timestamp, &tx.code, &tx.ty, &tx.ty_sub, &tx.sender,&tx.receiver,&tx.log, &tx.origin, &tx.result, &tx.value
             )
             .execute(pool)
             .await?;
@@ -114,13 +212,103 @@ pub async fn save(block: ModuleBlock, pool: &PgPool) -> Result<(), Error> {
 
     for tx in block.evm_txs {
         sqlx::query!(
-                "INSERT INTO transaction VALUES ($1, $2, $3, $4, $5, 1, $7, $8, $9, $10) ON CONFLICT(tx_hash) DO UPDATE SET ty=1, block_hash=$2, height=$3, timestamp=$4, code=$5, log=$7, origin=$8, result=$9, value=$10",
-                &tx.tx_hash, &tx.block_hash, &tx.height, &tx.timestamp, &tx.code, &tx.ty, &tx.log, &tx.origin, &tx.result, &tx.value
+                "INSERT INTO transaction VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) ON CONFLICT(tx_hash) DO UPDATE SET tx_hash=$1,block_hash=$2,height=$3,timestamp=$4,code=$5,ty=$6,ty_sub=$7,sender=$8,receiver=$9,log=$10,origin=$11,result=$12,value=$13",
+                 &tx.tx_hash, &tx.block_hash, &tx.height, &tx.timestamp, &tx.code, &tx.ty, &tx.ty_sub, &tx.sender,&tx.receiver,&tx.log, &tx.origin, &tx.result, &tx.value
             )
             .execute(pool)
             .await?;
     }
 
+    for tx in block.v2_convert_account_txs {
+        save_n2e_tx(
+            &tx.tx_hash,
+            &tx.block_hash,
+            &tx.sender,
+            &tx.receiver,
+            &tx.asset,
+            &tx.amount,
+            tx.height,
+            tx.timestamp,
+            &tx.content,
+            pool,
+        )
+        .await?;
+    }
+
+    for tx in block.v2_delegation_txs {
+        save_delegation_tx(
+            &tx.tx_hash,
+            &tx.block_hash,
+            &tx.sender,
+            tx.amount,
+            &tx.validator,
+            &tx.new_validator,
+            tx.height,
+            tx.timestamp,
+            &tx.content,
+            pool,
+        )
+        .await?;
+    }
+
+    for tx in block.v2_undelegation_txs {
+        save_undelegation_tx(
+            &tx.tx_hash,
+            &tx.block_hash,
+            &tx.sender,
+            tx.amount,
+            &tx.target_validator,
+            &tx.new_delegator,
+            tx.height,
+            tx.timestamp,
+            &tx.content,
+            pool,
+        )
+        .await?;
+    }
+
+    for tx in block.v2_claim_txs {
+        save_claim_tx(
+            &tx.tx_hash,
+            &tx.block_hash,
+            &tx.sender,
+            tx.amount,
+            tx.height,
+            tx.timestamp,
+            &tx.content,
+            pool,
+        )
+        .await?;
+    }
+
+    for tx in block.v2_asset_txs {
+        save_asset_tx(
+            &tx.asset,
+            &tx.tx_hash,
+            &tx.block_hash,
+            &tx.issuer,
+            tx.height,
+            tx.timestamp,
+            tx.issued,
+            &tx.content,
+            pool,
+        )
+        .await?;
+    }
+    for addr in block.evm_addrs {
+        sqlx::query("INSERT INTO evm_addrs(address,timestamp) VALUES ($1,$2)")
+            .bind(&addr.address)
+            .bind(addr.timestamp)
+            .execute(pool)
+            .await?;
+    }
+    for addr in block.native_addrs {
+        sqlx::query("INSERT INTO native_addrs(address,timestamp) VALUES ($1,$2)")
+            .bind(&addr.address)
+            .bind(addr.timestamp)
+            .execute(pool)
+            .await?;
+    }
     for v in block.validators {
         sqlx::query!(
                 "INSERT INTO validators VALUES ($1, 0, $2) ON CONFLICT(address) DO UPDATE SET pubkey_type=0, pubkey=$2",
@@ -141,6 +329,7 @@ pub async fn save(block: ModuleBlock, pool: &PgPool) -> Result<(), Error> {
             ).execute(pool)
             .await?;
     }
+
     Ok(())
 }
 
@@ -183,17 +372,6 @@ pub async fn load_last_height(pool: &PgPool) -> Result<i64, Error> {
     Ok(lh.height)
 }
 
-pub async fn save_delegations(h: i64, info: &DelegationInfo, pool: &PgPool) -> Result<(), Error> {
-    let info = serde_json::to_value(info).unwrap();
-    sqlx::query(
-        "INSERT INTO delegations VALUES($1, $2) ON CONFLICT(height) DO UPDATE SET info=$2;",
-    )
-    .bind(h)
-    .bind(&info)
-    .execute(pool)
-    .await?;
-    Ok(())
-}
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // migrate
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -271,19 +449,15 @@ pub async fn save_native_tx(
     address: &str,
     height: i64,
     timestamp: i64,
-    inputs: &Value,
-    outputs: &Value,
     content: &Value,
     pool: &PgPool,
 ) -> Result<(), Error> {
-    sqlx::query("INSERT INTO native_txs VALUES($1,$2,$3,$4,$5,$6,$7,$8) ON CONFLICT(tx) DO UPDATE SET tx=$1,block=$2,address=$3,height=$4,timestamp=$5,inputs=$6,outputs=$7,content=$8")
+    sqlx::query("INSERT INTO native_txs VALUES($1,$2,$3,$4,$5,$6) ON CONFLICT(tx) DO UPDATE SET tx=$1,block=$2,address=$3,height=$4,timestamp=$5,content=$6")
         .bind(tx)
         .bind(block)
         .bind(address)
         .bind(height)
         .bind(timestamp)
-        .bind(inputs)
-        .bind(outputs)
         .bind(content)
         .execute(pool)
         .await?;
@@ -374,54 +548,28 @@ pub async fn save_claim_tx(
 }
 
 #[allow(clippy::too_many_arguments)]
-pub async fn save_define_asset_tx(
-    asset: &str,
-    tx: &str,
-    block: &str,
-    issuer: &str,
-    max_units: &str,
-    decimal: i64,
-    height: i64,
-    timestamp: i64,
-    content: &Value,
-    pool: &PgPool,
-) -> Result<(), Error> {
-    sqlx::query("INSERT INTO defined_assets VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9) ON CONFLICT(asset) DO UPDATE SET asset=$1,tx=$2,block=$3,issuer=$4,max_units=$5,decimal=$6,height=$7,timestamp=$8,content=$9")
-        .bind(asset)
-        .bind(tx)
-        .bind(block)
-        .bind(issuer)
-        .bind(max_units)
-        .bind(decimal)
-        .bind(height)
-        .bind(timestamp)
-        .bind(content)
-        .execute(pool)
-        .await?;
-
-    Ok(())
-}
-
-#[allow(clippy::too_many_arguments)]
-pub async fn save_issue_asset_tx(
+pub async fn save_asset_tx(
     asset: &str,
     tx: &str,
     block: &str,
     issuer: &str,
     height: i64,
     timestamp: i64,
+    ty: i32,
     content: &Value,
     pool: &PgPool,
 ) -> Result<(), Error> {
-    sqlx::query("INSERT INTO issued_assets VALUES($1,$2,$3,$4,$5,$6,$7) ON CONFLICT(asset) DO UPDATE SET asset=$1,tx=$2,block=$3,issuer=$4,height=$5,timestamp=$6,content=$7")
+    sqlx::query("INSERT INTO assets VALUES($1,$2,$3,$4,$5,$6,$7,$8) ON CONFLICT(asset,tx,ty) DO UPDATE SET asset=$1,tx=$2,block=$3,issuer=$4,height=$5,timestamp=$6,ty=$7,content=$8")
         .bind(asset)
         .bind(tx)
         .bind(block)
         .bind(issuer)
         .bind(height)
         .bind(timestamp)
+        .bind(ty)
         .bind(content)
         .execute(pool)
         .await?;
+
     Ok(())
 }
