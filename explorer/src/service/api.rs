@@ -842,8 +842,11 @@ impl Api {
         method = "get",
         tag = "ApiTags::BlockChain"
     )]
-    async fn v2_statistics(&self) -> poem::Result<V2ChainStatisticsResponse> {
-        v2_statistics(self).await.map_err(handle_fetch_one_err)
+    async fn v2_statistics(
+        &self,
+        ty: Query<Option<i32>>,
+    ) -> poem::Result<V2ChainStatisticsResponse> {
+        v2_statistics(self, ty).await.map_err(handle_fetch_one_err)
     }
     ///////////////////////////////////////////////////////////////////////////////////////////////
     // Distribution
