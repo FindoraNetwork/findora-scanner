@@ -215,7 +215,11 @@ impl RPCCaller {
                         let xhub_opt: XHubOpt = serde_json::from_value(value).unwrap();
                         for xo in &xhub_opt.function.xhub.nonconfidential_transfer.outputs {
                             let to = pubkey_to_fra_address(&xo.target).unwrap();
-                            addrs.push(to);
+                            native_addrs.push(Address {
+                                tx: tx_hash.clone(),
+                                address: to,
+                                timestamp: timestamp.timestamp(),
+                            });
                         }
                         sender = "".to_string();
                         ty_sub = FindoraTxType::EVMToNative as i32;
