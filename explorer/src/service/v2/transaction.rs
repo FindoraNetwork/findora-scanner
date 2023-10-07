@@ -37,7 +37,7 @@ pub async fn v2_get_txs(
     }
     if let Some(to_address) = to.0 {
         params.push(format!(
-            "(receiver @? '$.items[*] ? (@==\"{}\")') ",
+            "(receiver @? '$.addrs[*] ? (@==\"{}\")') ",
             to_address
         ));
     }

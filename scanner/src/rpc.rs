@@ -31,7 +31,7 @@ use std::time::Duration;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Receivers {
-    pub items: Vec<String>,
+    pub addrs: Vec<String>,
 }
 
 pub struct TendermintRPC {
@@ -256,7 +256,7 @@ impl RPCCaller {
                         v = serde_json::to_value(&wrap_evm_tx).unwrap();
                     }
                     let r = Receivers {
-                        items: addrs.clone(),
+                        addrs: addrs.clone(),
                     };
                     let receivers_val = serde_json::to_value(&r).unwrap();
                     evm_txs.push(Transaction {
@@ -449,59 +449,64 @@ impl RPCCaller {
                             let pk = &opt.transfer_asset.body_signatures[0].address.key;
                             let signer = pubkey_to_fra_address(pk).unwrap();
                             for o in opt.transfer_asset.body.transfer.outputs {
-                                let receiver: String;
+                                let mut receiver: String = "".to_string();
                                 let type_show_amount_show: core::result::Result<
                                     OutputTypeShowAmountShow,
                                     _,
                                 > = serde_json::from_value(o.clone());
 
-                                if type_show_amount_show.is_err() {
+                                if let Ok(tsas) = type_show_amount_show {
+                                    // type show, amount show
+                                    let pk = tsas.public_key;
+                                    if pk.eq(&FRA_ASSET) {
+                                        continue;
+                                    }
+                                    receiver = pubkey_to_fra_address(&pk).unwrap();
+                                } else {
                                     // type show, amount hide
                                     let type_show_amount_hide: core::result::Result<
                                         OutputTypeShowAmountHide,
                                         _,
                                     > = serde_json::from_value(o.clone());
-                                    if type_show_amount_hide.is_err() {
-                                        // type hide, amount show
-                                        let type_hide_amount_show: core::result::Result<
-                                            OutputTypeHideAmountShow,
-                                            _,
-                                        > = serde_json::from_value(o.clone());
-                                        if type_hide_amount_show.is_err() {
-                                            // type hide, amount hide
-                                            let type_hide_amount_hide: OutputTypeHideAmountHide =
-                                                serde_json::from_value(o).unwrap();
-                                            if type_hide_amount_hide.public_key.eq(&FRA_ASSET) {
-                                                continue;
-                                            }
-                                            ty_sub = FindoraTxType::TypeHideAmountHide as i32;
-                                            receiver = pubkey_to_fra_address(
-                                                &type_hide_amount_hide.public_key,
-                                            )
-                                            .unwrap();
-                                        } else {
-                                            let pk = type_hide_amount_show.unwrap().public_key;
-                                            if pk.eq(&FRA_ASSET) {
-                                                continue;
-                                            }
-                                            ty_sub = FindoraTxType::TypeHideAmountShow as i32;
-                                            receiver = pubkey_to_fra_address(&pk).unwrap();
-                                        }
-                                    } else {
-                                        let pk = type_show_amount_hide.unwrap().public_key;
+
+                                    if let Ok(tsah) = type_show_amount_hide {
+                                        let pk = tsah.public_key;
                                         if pk.eq(&FRA_ASSET) {
                                             continue;
                                         }
                                         ty_sub = FindoraTxType::TypeShowAmountHide as i32;
                                         receiver = pubkey_to_fra_address(&pk).unwrap();
+                                    } else {
+                                        // type hide, amount show
+                                        let type_hide_amount_show: core::result::Result<
+                                            OutputTypeHideAmountShow,
+                                            _,
+                                        > = serde_json::from_value(o.clone());
+
+                                        if let Ok(thas) = type_hide_amount_show {
+                                            let pk = thas.public_key;
+                                            if pk.eq(&FRA_ASSET) {
+                                                continue;
+                                            }
+                                            ty_sub = FindoraTxType::TypeHideAmountShow as i32;
+                                            receiver = pubkey_to_fra_address(&pk).unwrap();
+                                        } else {
+                                            // type hide, amount hide
+                                            let type_hide_amount_hide: core::result::Result<
+                                                OutputTypeHideAmountHide,
+                                                _,
+                                            > = serde_json::from_value(o.clone());
+
+                                            if let Ok(thah) = type_hide_amount_hide {
+                                                if thah.public_key.eq(&FRA_ASSET) {
+                                                    continue;
+                                                }
+                                                ty_sub = FindoraTxType::TypeHideAmountHide as i32;
+                                                receiver = pubkey_to_fra_address(&thah.public_key)
+                                                    .unwrap();
+                                            }
+                                        }
                                     }
-                                } else {
-                                    // type show, amount show
-                                    let pk = type_show_amount_show.unwrap().public_key;
-                                    if pk.eq(&FRA_ASSET) {
-                                        continue;
-                                    }
-                                    receiver = pubkey_to_fra_address(&pk).unwrap();
                                 }
 
                                 addrs.push(receiver);
@@ -513,7 +518,7 @@ impl RPCCaller {
                     }
 
                     let r = Receivers {
-                        items: addrs.clone(),
+                        addrs: addrs.clone(),
                     };
                     let receivers_val = serde_json::to_value(&r).unwrap();
                     txs.push(Transaction {
