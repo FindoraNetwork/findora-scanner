@@ -367,7 +367,7 @@ impl Migrate {
                             &tx.to_lowercase(),
                             &block.to_lowercase(),
                             &sender,
-                            opt.claim.body.amount,
+                            opt.claim.body.amount.unwrap_or(0),
                             height,
                             timestamp,
                             &op_copy,

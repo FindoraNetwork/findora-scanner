@@ -299,7 +299,7 @@ pub struct Claim {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ClaimOptBody {
-    pub amount: i64,
+    pub amount: Option<i64>,
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
