@@ -393,7 +393,7 @@ impl RPCCaller {
                                 tx_hash: tx_hash.clone(),
                                 block_hash: block_hash.clone(),
                                 sender: signer,
-                                amount: opt.claim.body.amount,
+                                amount: opt.claim.body.amount.unwrap_or(0),
                                 height,
                                 timestamp: timestamp.timestamp(),
                                 content: op_copy,
