@@ -200,7 +200,18 @@ impl RPCCaller {
             let hasher = sha2::Sha256::digest(&bytes);
             let tx_hash = hex::encode(hasher);
             let tx = self.rpc.load_transaction(&tx_hash).await?;
-            let result = serde_json::to_value(tx.tx_result.clone()).unwrap();
+            let mut result_tmp = tx.tx_result.clone();
+            if !result_tmp.log.is_empty() {
+                let mut trim_log: Vec<u8> = vec![];
+                let log_bytes = result_tmp.log.as_bytes();
+                for b in log_bytes {
+                    if *b > 31 {
+                        trim_log.push(*b);
+                    }
+                }
+                result_tmp.log = String::from_utf8_lossy(&trim_log).parse().unwrap();
+            }
+            let result = serde_json::to_value(&result_tmp).unwrap();
 
             match tx::try_tx_catalog(&bytes) {
                 tx::TxCatalog::EvmTx => {
@@ -269,7 +280,7 @@ impl RPCCaller {
                         ty_sub,
                         sender: sender.clone(),
                         receiver: receivers_val,
-                        log: tx.tx_result.log,
+                        log: result_tmp.log,
                         origin,
                         result,
                         value: v,
@@ -531,7 +542,7 @@ impl RPCCaller {
                         ty_sub,
                         sender: sender.clone(),
                         receiver: receivers_val,
-                        log: tx.tx_result.log,
+                        log: result_tmp.log,
                         origin,
                         result,
                         value,
