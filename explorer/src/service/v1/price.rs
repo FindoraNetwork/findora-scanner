@@ -1,8 +1,12 @@
+use crate::service::api::Api;
+use anyhow::Result;
+use log::error;
 use poem_openapi::param::{Path, Query};
 use poem_openapi::types::Type;
 use poem_openapi::{payload::Json, ApiResponse, Object};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use sqlx::Row;
 
 #[derive(ApiResponse)]
 pub enum SimplePriceResponse {
@@ -20,7 +24,7 @@ pub enum SimplePriceResponse {
 pub struct SimplePriceResult {
     pub code: i32,
     pub message: String,
-    pub data: SimplePrice,
+    pub data: Option<SimplePrice>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Default, Object)]
@@ -49,14 +53,36 @@ pub enum MarketChartResponse {
 pub struct MarketChartResult {
     pub code: i32,
     pub message: String,
-    pub data: FraMarketChart,
+    pub data: Option<FraMarketChart>,
+}
+
+pub async fn get_fra_price(api: &Api) -> Result<FraPrice> {
+    let mut conn = api.storage.lock().await.acquire().await?;
+    let row = sqlx::query("SELECT price FROM prices")
+        .fetch_one(&mut conn)
+        .await?;
+    let p: String = row.try_get("price")?;
+    let fra_price = FraPrice { usd: p.parse()? };
+    Ok(fra_price)
+}
+
+pub async fn upsert_fra_price(api: &Api, price: &str) -> Result<()> {
+    let mut conn = api.storage.lock().await.acquire().await?;
+    sqlx::query("INSERT INTO prices VALUES($1,$2) ON CONFLICT(name) DO UPDATE SET price=$2")
+        .bind("fra")
+        .bind(price)
+        .execute(&mut conn)
+        .await?;
+
+    Ok(())
 }
 
 #[allow(clippy::let_unit_value)]
 pub async fn simple_price(
+    api: &Api,
     ids: Query<String>,
     vs_currencies: Query<String>,
-) -> poem::Result<SimplePriceResponse> {
+) -> Result<SimplePriceResponse> {
     if ids.is_empty() || vs_currencies.is_empty() {
         return Ok(SimplePriceResponse::BadRequest);
     }
@@ -67,29 +93,33 @@ pub async fn simple_price(
     );
     let resp1 = reqwest::get(url).await;
     if let Err(e) = resp1 {
-        return Ok(SimplePriceResponse::InternalError(Json(
-            SimplePriceResult {
-                code: 500,
-                message: e.to_string(),
-                data: Default::default(),
-            },
-        )));
+        error!("Get FRA price: {}", e.to_string());
+        let fra_price = get_fra_price(api).await?;
+        return Ok(SimplePriceResponse::Ok(Json(SimplePriceResult {
+            code: 200,
+            message: "".to_string(),
+            data: Some(SimplePrice { findora: fra_price }),
+        })));
     }
+
     let resp2 = resp1.unwrap().json::<SimplePrice>().await;
     if let Err(e) = resp2 {
-        return Ok(SimplePriceResponse::InternalError(Json(
-            SimplePriceResult {
-                code: 500,
-                message: e.to_string(),
-                data: Default::default(),
-            },
-        )));
+        error!("Parse FRA price: {}", e.to_string());
+        let fra_price = get_fra_price(api).await?;
+        return Ok(SimplePriceResponse::Ok(Json(SimplePriceResult {
+            code: 200,
+            message: "".to_string(),
+            data: Some(SimplePrice { findora: fra_price }),
+        })));
     }
+
+    let fra_price = resp2.unwrap().findora;
+    upsert_fra_price(api, fra_price.usd.to_string().as_str()).await?;
 
     Ok(SimplePriceResponse::Ok(Json(SimplePriceResult {
         code: 200,
         message: "".to_string(),
-        data: resp2.unwrap(),
+        data: Some(SimplePrice { findora: fra_price }),
     })))
 }
 
@@ -106,7 +136,7 @@ pub async fn market_chart(
     vs_currency: Query<String>,
     interval: Query<Option<String>>,
     days: Query<i32>,
-) -> poem::Result<MarketChartResponse> {
+) -> Result<MarketChartResponse> {
     if id.is_empty() || vs_currency.is_empty() || days.is_empty() {
         return Ok(MarketChartResponse::BadRequest);
     }
@@ -124,7 +154,7 @@ pub async fn market_chart(
             MarketChartResult {
                 code: 500,
                 message: e.to_string(),
-                data: Default::default(),
+                data: None,
             },
         )));
     }
@@ -134,7 +164,7 @@ pub async fn market_chart(
             MarketChartResult {
                 code: 500,
                 message: e.to_string(),
-                data: Default::default(),
+                data: None,
             },
         )));
     }
@@ -145,6 +175,6 @@ pub async fn market_chart(
     Ok(MarketChartResponse::Ok(Json(MarketChartResult {
         code: 200,
         message: "".to_string(),
-        data: fmc,
+        data: Some(fmc),
     })))
 }

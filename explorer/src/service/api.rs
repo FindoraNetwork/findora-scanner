@@ -484,7 +484,9 @@ impl Api {
         ids: Query<String>,
         vs_currencies: Query<String>,
     ) -> poem::Result<SimplePriceResponse> {
-        service::v1::price::simple_price(ids, vs_currencies).await
+        service::v1::price::simple_price(self, ids, vs_currencies)
+            .await
+            .map_err(handle_fetch_one_err)
     }
 
     #[oai(
@@ -499,7 +501,9 @@ impl Api {
         interval: Query<Option<String>>,
         days: Query<i32>,
     ) -> poem::Result<MarketChartResponse> {
-        service::v1::price::market_chart(id, vs_currency, interval, days).await
+        service::v1::price::market_chart(id, vs_currency, interval, days)
+            .await
+            .map_err(handle_fetch_one_err)
     }
 
     #[oai(path = "/address/count", method = "get", tag = "ApiTags::Address")]
