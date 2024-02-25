@@ -179,3 +179,9 @@ create index n2e_sender_index on n2e(sender);
 create index n2e_receiver_index on n2e(receiver);
 create index n2e_time_index on n2e(timestamp);
 create index n2e_height_index on n2e(height);
+
+create table prices(
+    name varchar(8) not null,
+    price varchar(16) not null,
+    primary key (name)
+);
