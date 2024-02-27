@@ -86,8 +86,13 @@ impl TendermintRPC {
         let resp = self.client.get(url).send().await?;
         let status = resp.status();
         if !status.is_success() {
-            return Err(resp.text().await?.into());
+            let resp_text = resp.text().await?;
+            if resp_text.contains("less than or equal to") {
+                return Err(Error::NotFound);
+            }
+            return Err(resp_text.into());
         }
+
         let bytes = resp.bytes().await?;
         if let Ok(r) = serde_json::from_slice::<'_, JsonRpcResponse<T>>(&bytes) {
             Ok(r.result)

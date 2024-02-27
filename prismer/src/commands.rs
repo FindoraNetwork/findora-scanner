@@ -147,7 +147,7 @@ impl Subscribe {
 
         let itv = env::var("INTERVAL")
             .ok()
-            .unwrap_or(String::from("12"))
+            .unwrap_or(String::from("15"))
             .parse::<u64>()?;
         let interval = Duration::from_secs(itv);
         info!("interval={:?}", interval);
@@ -162,7 +162,7 @@ impl Subscribe {
         } else if let Ok(h) = db::load_last_height(&pool).await {
             h + 1
         } else {
-            let prism_start = std::env::var("PRISM_START").unwrap_or(String::from("1"));
+            let prism_start = env::var("PRISM_START").unwrap_or("4004430".to_string());
             prism_start.parse::<i64>().unwrap()
         };
 
@@ -192,7 +192,9 @@ impl Subscribe {
                 Ok(_) => {
                     info!("Block at {} loaded.", cursor);
                 }
-                Err(Error::NotFound) => (),
+                Err(Error::NotFound) => {
+                    error!("Block {} not found.", cursor);
+                }
                 Err(e) => return Err(e),
             };
             tokio::time::sleep(interval).await;
