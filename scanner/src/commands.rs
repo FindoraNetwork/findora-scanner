@@ -166,7 +166,7 @@ impl Subscribe {
 
         let itv = env::var("INTERVAL")
             .ok()
-            .unwrap_or(String::from("12"))
+            .unwrap_or(String::from("15"))
             .parse::<u64>()?;
         let interval = Duration::from_secs(itv);
         info!("interval={:?}", interval);
@@ -210,7 +210,9 @@ impl Subscribe {
                 Ok(_) => {
                     info!("Block at {} loaded.", cursor);
                 }
-                Err(Error::NotFound) => (),
+                Err(Error::NotFound) => {
+                    error!("Block {} not found.", cursor);
+                }
                 Err(e) => return Err(e),
             };
             tokio::time::sleep(interval).await;
