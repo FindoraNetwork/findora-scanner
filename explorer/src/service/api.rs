@@ -25,7 +25,9 @@ use crate::service::v1::validator::{
 };
 use crate::service::v2::asset::{v2_get_asset, V2AssetTxResponse};
 use crate::service::v2::claim::{v2_get_claim_tx, V2ClaimTxResponse};
-use crate::service::v2::delegation::{v2_get_delegation_tx, V2DelegationTxResponse};
+use crate::service::v2::delegation::{
+    v2_get_delegation_tx, v2_get_delegation_txs, V2DelegationTxResponse, V2DelegationTxsResponse,
+};
 use crate::service::v2::native_to_evm::{
     v2_get_n2e_tx, v2_get_prism_records_send, V2NativeToEvmTxResponse,
 };
@@ -790,7 +792,21 @@ impl Api {
             .await
             .map_err(handle_fetch_one_err)
     }
-
+    #[oai(
+        path = "/v2/tx/delegations",
+        method = "get",
+        tag = "ApiTags::Transaction"
+    )]
+    async fn v2_get_delegation_txs(
+        &self,
+        address: Query<String>,
+        page: Query<Option<i64>>,
+        page_size: Query<Option<i64>>,
+    ) -> poem::Result<V2DelegationTxsResponse> {
+        v2_get_delegation_txs(self, address, page, page_size)
+            .await
+            .map_err(handle_fetch_one_err)
+    }
     #[oai(
         path = "/v2/tx/undelegation/:tx_hash",
         method = "get",
