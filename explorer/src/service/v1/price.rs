@@ -77,6 +77,29 @@ pub async fn upsert_fra_price(api: &Api, price: &str) -> Result<()> {
     Ok(())
 }
 
+pub async fn get_fra_market(api: &Api) -> Result<FraMarketChart> {
+    let mut conn = api.storage.lock().await.acquire().await?;
+    let row = sqlx::query("SELECT val FROM market")
+        .fetch_one(&mut conn)
+        .await?;
+    let val: Value = row.try_get("val")?;
+    let fmc: FraMarketChart = serde_json::from_value(val).unwrap();
+
+    Ok(fmc)
+}
+
+pub async fn upsert_fra_market(api: &Api, val: Value) -> Result<()> {
+    let mut conn = api.storage.lock().await.acquire().await?;
+    sqlx::query("INSERT INTO market VALUES($1,$2) ON CONFLICT(name) DO UPDATE SET val=$2")
+        .bind("fra")
+        .bind(val)
+        .execute(&mut conn)
+        .await
+        .unwrap();
+
+    Ok(())
+}
+
 #[allow(clippy::let_unit_value)]
 pub async fn simple_price(
     api: &Api,
@@ -102,7 +125,7 @@ pub async fn simple_price(
         })));
     }
 
-    let resp2 = resp1.unwrap().json::<SimplePrice>().await;
+    let resp2 = resp1?.json::<SimplePrice>().await;
     if let Err(e) = resp2 {
         error!("Parse FRA price: {}", e.to_string());
         let fra_price = get_fra_price(api).await?;
@@ -113,7 +136,7 @@ pub async fn simple_price(
         })));
     }
 
-    let fra_price = resp2.unwrap().findora;
+    let fra_price = resp2?.findora;
     upsert_fra_price(api, fra_price.usd.to_string().as_str()).await?;
 
     Ok(SimplePriceResponse::Ok(Json(SimplePriceResult {
@@ -132,6 +155,7 @@ pub struct FraMarketChart {
 
 #[allow(clippy::let_unit_value)]
 pub async fn market_chart(
+    api: &Api,
     id: Path<String>,
     vs_currency: Query<String>,
     interval: Query<Option<String>>,
@@ -150,27 +174,28 @@ pub async fn market_chart(
     }
     let resp1 = reqwest::get(url).await;
     if let Err(e) = resp1 {
-        return Ok(MarketChartResponse::InternalError(Json(
-            MarketChartResult {
-                code: 500,
-                message: e.to_string(),
-                data: None,
-            },
-        )));
+        error!("Get FRA market error: {:?}", e);
+        let fmc = get_fra_market(api).await?;
+        return Ok(MarketChartResponse::Ok(Json(MarketChartResult {
+            code: 200,
+            message: "".to_string(),
+            data: Some(fmc),
+        })));
     }
-    let resp2 = resp1.unwrap().text().await;
+    let resp2 = resp1?.json::<FraMarketChart>().await;
     if let Err(e) = resp2 {
-        return Ok(MarketChartResponse::InternalError(Json(
-            MarketChartResult {
-                code: 500,
-                message: e.to_string(),
-                data: None,
-            },
-        )));
+        error!("Parse FRA market cap error: {:?}", e);
+        let fmc = get_fra_market(api).await?;
+        return Ok(MarketChartResponse::Ok(Json(MarketChartResult {
+            code: 200,
+            message: "".to_string(),
+            data: Some(fmc),
+        })));
     }
 
-    let r = resp2.unwrap();
-    let fmc: FraMarketChart = serde_json::from_str(r.as_str()).unwrap();
+    let fmc = resp2?;
+    let v = serde_json::to_value(&fmc)?;
+    upsert_fra_market(api, v).await?;
 
     Ok(MarketChartResponse::Ok(Json(MarketChartResult {
         code: 200,
