@@ -6,6 +6,7 @@ use poem::{listener::TcpListener, EndpointExt, Route, Server};
 use poem_openapi::OpenApiService;
 use scanner::rpc::TendermintRPC;
 use sqlx::pool::PoolOptions;
+use sqlx::{Pool, Postgres};
 use std::time::Duration;
 use tokio::sync::Mutex;
 
@@ -22,8 +23,8 @@ async fn main() -> Result<()> {
         config.postgres.database
     );
 
-    let pool = PoolOptions::new()
-        .max_connections(100)
+    let pool: Pool<Postgres> = PoolOptions::new()
+        .max_connections(10)
         .connect(&postgres_config)
         .await
         .unwrap();
