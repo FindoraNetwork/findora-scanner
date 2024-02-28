@@ -185,3 +185,9 @@ create table prices(
     price varchar(16) not null,
     primary key (name)
 );
+
+create table market(
+    name varchar(8) not null,
+    val jsonb not null,
+    primary key (name)
+);

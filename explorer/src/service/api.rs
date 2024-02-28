@@ -501,7 +501,7 @@ impl Api {
         interval: Query<Option<String>>,
         days: Query<i32>,
     ) -> poem::Result<MarketChartResponse> {
-        service::v1::price::market_chart(id, vs_currency, interval, days)
+        service::v1::price::market_chart(self, id, vs_currency, interval, days)
             .await
             .map_err(handle_fetch_one_err)
     }
