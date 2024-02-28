@@ -94,8 +94,7 @@ pub async fn upsert_fra_market(api: &Api, val: Value) -> Result<()> {
         .bind("fra")
         .bind(val)
         .execute(&mut conn)
-        .await
-        .unwrap();
+        .await?;
 
     Ok(())
 }
