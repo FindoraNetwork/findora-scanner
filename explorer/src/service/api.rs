@@ -33,7 +33,10 @@ use crate::service::v2::other::{
     v2_address_count, v2_distribute, v2_statistics, V2ChainStatisticsResponse, V2DistributeResponse,
 };
 use crate::service::v2::transaction::v2_get_txs;
-use crate::service::v2::undelegation::{v2_get_undelegation_tx, V2UndelegationTxResponse};
+use crate::service::v2::undelegation::{
+    v2_get_undelegation_tx, v2_get_undelegation_txs, V2UndelegationTxResponse,
+    V2UndelegationTxsResponse,
+};
 use crate::service::ApiTags;
 use poem_openapi::param::{Path, Query};
 use poem_openapi::OpenApi;
@@ -801,7 +804,21 @@ impl Api {
             .await
             .map_err(handle_fetch_one_err)
     }
-
+    #[oai(
+        path = "/v2/tx/undelegations",
+        method = "get",
+        tag = "ApiTags::Transaction"
+    )]
+    async fn v2_get_undelegation_txs(
+        &self,
+        address: Query<String>,
+        page: Query<Option<i64>>,
+        page_size: Query<Option<i64>>,
+    ) -> poem::Result<V2UndelegationTxsResponse> {
+        v2_get_undelegation_txs(self, address, page, page_size)
+            .await
+            .map_err(handle_fetch_one_err)
+    }
     #[oai(
         path = "/v2/tx/claim/:tx_hash",
         method = "get",
