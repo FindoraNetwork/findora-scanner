@@ -256,7 +256,7 @@ pub struct PrismResult {
 pub struct PrismInfo {
     pub height: i64,
 }
-
+#[allow(dead_code)]
 pub async fn prism_sync_info(api: &Api) -> Result<PrismSyncResponse> {
     let mut conn = api.storage.lock().await.acquire().await?;
 
@@ -292,6 +292,7 @@ pub struct DelegateAddressNum {
     num: u64,
 }
 
+#[allow(dead_code)]
 pub async fn delegation_address_num(api: &Api) -> Result<DelegateAddressNumResponse> {
     let mut conn = api.storage.lock().await.acquire().await?;
 

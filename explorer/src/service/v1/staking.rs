@@ -339,7 +339,7 @@ pub struct DelegationInfoResult {
     pub message: String,
     pub data: Option<Value>,
 }
-
+#[allow(dead_code)]
 pub async fn delegation(api: &Api, pubkey: Path<String>) -> Result<DelegationInfoResponse> {
     let delegation_info_url = api
         .platform
@@ -607,7 +607,7 @@ pub struct DelegationAmountResult {
 pub struct DelegationAmountData {
     pub amount: u64,
 }
-
+#[allow(dead_code)]
 pub async fn get_delegation_amount(
     api: &Api,
     pubkey: Query<Option<String>>,
@@ -668,7 +668,7 @@ pub struct UndelegationAmountResult {
 pub struct UndelegationAmountData {
     pub amount: u64,
 }
-
+#[allow(dead_code)]
 pub async fn get_undelegation_amount(
     api: &Api,
     pubkey: Query<Option<String>>,

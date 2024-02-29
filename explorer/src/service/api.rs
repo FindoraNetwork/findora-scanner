@@ -6,17 +6,15 @@ use crate::service::v1::asset::{
 };
 use crate::service::v1::block::{BlocksResponse, FullBlockResponse, SimpleBlockResponse};
 use crate::service::v1::chain::{
-    AddressCountResponse, ChainStatisticsResponse, DelegateAddressNumResponse, DistributeResponse,
-    PrismSyncResponse,
+    AddressCountResponse, ChainStatisticsResponse, DistributeResponse,
 };
 use crate::service::v1::price::{MarketChartResponse, SimplePriceResponse};
 use crate::service::v1::staking::{
-    ClaimResponse, DelegationAmountResponse, DelegationInfoResponse, DelegationResponse,
-    SimpleDelegationResponse, UnDelegationResponse, UndelegationAmountResponse,
+    ClaimResponse, DelegationResponse, SimpleDelegationResponse, UnDelegationResponse,
     UndelegationResponse,
 };
 use crate::service::v1::transaction::{
-    ClaimAmountResponse, PmtxsResponse, TxResponse, TxsResponse, V2PrismRecordResponse,
+    PmtxsResponse, TxResponse, TxsResponse, V2PrismRecordResponse,
 };
 use crate::service::v1::validator::{
     CirculatingSupplyResponse, DelegatorListResponse, ValidatorDelegationResponse,
@@ -24,9 +22,9 @@ use crate::service::v1::validator::{
     ValidatorSignedCountResponse,
 };
 use crate::service::v2::asset::{v2_get_asset, V2AssetTxResponse};
-use crate::service::v2::claim::{v2_get_claim_tx, V2ClaimTxResponse};
+use crate::service::v2::claim::{v2_get_claim, v2_get_claims, V2ClaimResponse, V2ClaimsResponse};
 use crate::service::v2::delegation::{
-    v2_get_delegation_tx, v2_get_delegation_txs, V2DelegationTxResponse, V2DelegationTxsResponse,
+    v2_get_delegation, v2_get_delegations, V2DelegationResponse, V2DelegationsResponse,
 };
 use crate::service::v2::native_to_evm::{
     v2_get_n2e_tx, v2_get_prism_records_send, V2NativeToEvmTxResponse,
@@ -36,8 +34,7 @@ use crate::service::v2::other::{
 };
 use crate::service::v2::transaction::v2_get_txs;
 use crate::service::v2::undelegation::{
-    v2_get_undelegation_tx, v2_get_undelegation_txs, V2UndelegationTxResponse,
-    V2UndelegationTxsResponse,
+    v2_get_undelegation, v2_get_undelegations, V2UndelegationResponse, V2UndelegationsResponse,
 };
 use crate::service::ApiTags;
 use poem_openapi::param::{Path, Query};
@@ -82,35 +79,35 @@ impl Api {
             .map_err(handle_fetch_one_err)
     }
 
-    #[oai(path = "/txs/to", method = "get", tag = "ApiTags::Transaction")]
-    async fn get_txs_send_to(
-        &self,
-        /// bech32 address, e.g. fra1p4vy5n9mlkdys7xczegj398xtyvw2nawz00nnfh4yr7fpjh297cqsxfv7v
-        address: Query<String>,
-        /// page index, the default is 1.
-        page: Query<Option<i64>>,
-        /// page size, the default is 10.
-        page_size: Query<Option<i64>>,
-    ) -> poem::Result<TxsResponse> {
-        service::v1::transaction::get_txs_send_to(self, address, page, page_size)
-            .await
-            .map_err(handle_fetch_one_err)
-    }
+    // #[oai(path = "/txs/to", method = "get", tag = "ApiTags::Transaction")]
+    // async fn get_txs_send_to(
+    //     &self,
+    //     /// bech32 address, e.g. fra1p4vy5n9mlkdys7xczegj398xtyvw2nawz00nnfh4yr7fpjh297cqsxfv7v
+    //     address: Query<String>,
+    //     /// page index, the default is 1.
+    //     page: Query<Option<i64>>,
+    //     /// page size, the default is 10.
+    //     page_size: Query<Option<i64>>,
+    // ) -> poem::Result<TxsResponse> {
+    //     service::v1::transaction::get_txs_send_to(self, address, page, page_size)
+    //         .await
+    //         .map_err(handle_fetch_one_err)
+    // }
 
-    #[oai(path = "/txs/from", method = "get", tag = "ApiTags::Transaction")]
-    async fn get_txs_receive_from(
-        &self,
-        /// bech32 address, e.g. fra1p4vy5n9mlkdys7xczegj398xtyvw2nawz00nnfh4yr7fpjh297cqsxfv7v
-        address: Query<String>,
-        /// page index, the default is 1.
-        page: Query<Option<i64>>,
-        /// page size, the default is 10.
-        page_size: Query<Option<i64>>,
-    ) -> poem::Result<TxsResponse> {
-        service::v1::transaction::get_txs_receive_from(self, address, page, page_size)
-            .await
-            .map_err(handle_fetch_one_err)
-    }
+    // #[oai(path = "/txs/from", method = "get", tag = "ApiTags::Transaction")]
+    // async fn get_txs_receive_from(
+    //     &self,
+    //     /// bech32 address, e.g. fra1p4vy5n9mlkdys7xczegj398xtyvw2nawz00nnfh4yr7fpjh297cqsxfv7v
+    //     address: Query<String>,
+    //     /// page index, the default is 1.
+    //     page: Query<Option<i64>>,
+    //     /// page size, the default is 10.
+    //     page_size: Query<Option<i64>>,
+    // ) -> poem::Result<TxsResponse> {
+    //     service::v1::transaction::get_txs_receive_from(self, address, page, page_size)
+    //         .await
+    //         .map_err(handle_fetch_one_err)
+    // }
 
     #[allow(clippy::too_many_arguments)]
     #[oai(path = "/txs", method = "get", tag = "ApiTags::Transaction")]
@@ -144,39 +141,39 @@ impl Api {
         .map_err(handle_fetch_one_err)
     }
 
-    #[allow(clippy::too_many_arguments)]
-    #[oai(path = "/txs/raw", method = "get", tag = "ApiTags::Transaction")]
-    async fn get_txs_no_wrap(
-        &self,
-        /// block hash, e.g. 4B7C22FA8FC6913E091DC324830181BBA1F01EBFF53049F958EA5AA65327BFE0
-        block_id: Query<Option<String>>,
-        /// block height.
-        height: Query<Option<i64>>,
-        /// bech32 address, e.g. fra1p4vy5n9mlkdys7xczegj398xtyvw2nawz00nnfh4yr7fpjh297cqsxfv7v
-        address: Query<Option<String>>,
-        /// bech32 address, e.g. fra1p4vy5n9mlkdys7xczegj398xtyvw2nawz00nnfh4yr7fpjh297cqsxfv7v
-        from: Query<Option<String>>,
-        /// bech32 address, e.g. fra1p4vy5n9mlkdys7xczegj398xtyvw2nawz00nnfh4yr7fpjh297cqsxfv7v
-        to: Query<Option<String>>,
-        /// transaction type.
-        /// 0 - Findora native tx.
-        /// 1 - EVM tx.
-        ty: Query<Option<i32>>,
-        /// starting timestamp.
-        start_time: Query<Option<i64>>,
-        /// ending timestamp.
-        end_time: Query<Option<i64>>,
-        /// page index, the default is 1.
-        page: Query<Option<i64>>,
-        /// page size, the default is 10.
-        page_size: Query<Option<i64>>,
-    ) -> poem::Result<TxsResponse> {
-        service::v1::transaction::get_txs_raw(
-            self, block_id, height, address, from, to, ty, start_time, end_time, page, page_size,
-        )
-        .await
-        .map_err(handle_fetch_one_err)
-    }
+    // #[allow(clippy::too_many_arguments)]
+    // #[oai(path = "/txs/raw", method = "get", tag = "ApiTags::Transaction")]
+    // async fn get_txs_no_wrap(
+    //     &self,
+    //     /// block hash, e.g. 4B7C22FA8FC6913E091DC324830181BBA1F01EBFF53049F958EA5AA65327BFE0
+    //     block_id: Query<Option<String>>,
+    //     /// block height.
+    //     height: Query<Option<i64>>,
+    //     /// bech32 address, e.g. fra1p4vy5n9mlkdys7xczegj398xtyvw2nawz00nnfh4yr7fpjh297cqsxfv7v
+    //     address: Query<Option<String>>,
+    //     /// bech32 address, e.g. fra1p4vy5n9mlkdys7xczegj398xtyvw2nawz00nnfh4yr7fpjh297cqsxfv7v
+    //     from: Query<Option<String>>,
+    //     /// bech32 address, e.g. fra1p4vy5n9mlkdys7xczegj398xtyvw2nawz00nnfh4yr7fpjh297cqsxfv7v
+    //     to: Query<Option<String>>,
+    //     /// transaction type.
+    //     /// 0 - Findora native tx.
+    //     /// 1 - EVM tx.
+    //     ty: Query<Option<i32>>,
+    //     /// starting timestamp.
+    //     start_time: Query<Option<i64>>,
+    //     /// ending timestamp.
+    //     end_time: Query<Option<i64>>,
+    //     /// page index, the default is 1.
+    //     page: Query<Option<i64>>,
+    //     /// page size, the default is 10.
+    //     page_size: Query<Option<i64>>,
+    // ) -> poem::Result<TxsResponse> {
+    //     service::v1::transaction::get_txs_raw(
+    //         self, block_id, height, address, from, to, ty, start_time, end_time, page, page_size,
+    //     )
+    //     .await
+    //     .map_err(handle_fetch_one_err)
+    // }
 
     #[allow(clippy::too_many_arguments)]
     #[oai(
@@ -652,27 +649,27 @@ impl Api {
             .map_err(handle_fetch_one_err)
     }
 
-    #[oai(
-        path = "/chain/claim/:address",
-        method = "get",
-        tag = "ApiTags::BlockChain"
-    )]
-    async fn get_claim_amount(&self, address: Path<String>) -> poem::Result<ClaimAmountResponse> {
-        service::v1::transaction::get_claims_amount(self, address)
-            .await
-            .map_err(handle_fetch_one_err)
-    }
+    // #[oai(
+    //     path = "/chain/claim/:address",
+    //     method = "get",
+    //     tag = "ApiTags::BlockChain"
+    // )]
+    // async fn get_claim_amount(&self, address: Path<String>) -> poem::Result<ClaimAmountResponse> {
+    //     service::v1::transaction::get_claims_amount(self, address)
+    //         .await
+    //         .map_err(handle_fetch_one_err)
+    // }
 
-    #[oai(
-        path = "/staking/delegation_info/:address",
-        method = "get",
-        tag = "ApiTags::Staking"
-    )]
-    async fn get_delegation(&self, address: Path<String>) -> poem::Result<DelegationInfoResponse> {
-        service::v1::staking::delegation(self, address)
-            .await
-            .map_err(handle_fetch_one_err)
-    }
+    // #[oai(
+    //     path = "/staking/delegation_info/:address",
+    //     method = "get",
+    //     tag = "ApiTags::Staking"
+    // )]
+    // async fn get_delegation(&self, address: Path<String>) -> poem::Result<DelegationInfoResponse> {
+    //     service::v1::staking::delegation(self, address)
+    //         .await
+    //         .map_err(handle_fetch_one_err)
+    // }
 
     #[oai(
         path = "/staking/undelegation",
@@ -716,132 +713,143 @@ impl Api {
             .map_err(handle_fetch_one_err)
     }
 
-    #[oai(
-        path = "/staking/delegation/amount",
-        method = "get",
-        tag = "ApiTags::Staking"
-    )]
-    async fn get_delegation_amount(
-        &self,
-        /// base64 pubkey, e.g. OmZMrZBVsPjQwvHsROCI3mRw2pdVnYER8Xa5lzQ3Ek0=
-        pubkey: Query<Option<String>>,
-        /// starting timestamp.
-        start: Query<Option<i64>>,
-        /// ending timestamp.
-        end: Query<Option<i64>>,
-    ) -> poem::Result<DelegationAmountResponse> {
-        service::v1::staking::get_delegation_amount(self, pubkey, start, end)
-            .await
-            .map_err(handle_fetch_one_err)
-    }
+    // #[oai(
+    //     path = "/staking/delegation/amount",
+    //     method = "get",
+    //     tag = "ApiTags::Staking"
+    // )]
+    // async fn get_delegation_amount(
+    //     &self,
+    //     /// base64 pubkey, e.g. OmZMrZBVsPjQwvHsROCI3mRw2pdVnYER8Xa5lzQ3Ek0=
+    //     pubkey: Query<Option<String>>,
+    //     /// starting timestamp.
+    //     start: Query<Option<i64>>,
+    //     /// ending timestamp.
+    //     end: Query<Option<i64>>,
+    // ) -> poem::Result<DelegationAmountResponse> {
+    //     service::v1::staking::get_delegation_amount(self, pubkey, start, end)
+    //         .await
+    //         .map_err(handle_fetch_one_err)
+    // }
 
-    #[oai(
-        path = "/staking/undelegation/amount",
-        method = "get",
-        tag = "ApiTags::Staking"
-    )]
-    async fn get_undelegation_amount(
-        &self,
-        /// base64 pubkey, e.g. OmZMrZBVsPjQwvHsROCI3mRw2pdVnYER8Xa5lzQ3Ek0=
-        pubkey: Query<Option<String>>,
-        /// starting timestamp.
-        start: Query<Option<i64>>,
-        /// ending timestamp.
-        end: Query<Option<i64>>,
-    ) -> poem::Result<UndelegationAmountResponse> {
-        service::v1::staking::get_undelegation_amount(self, pubkey, start, end)
-            .await
-            .map_err(handle_fetch_one_err)
-    }
+    // #[oai(
+    //     path = "/staking/undelegation/amount",
+    //     method = "get",
+    //     tag = "ApiTags::Staking"
+    // )]
+    // async fn get_undelegation_amount(
+    //     &self,
+    //     /// base64 pubkey, e.g. OmZMrZBVsPjQwvHsROCI3mRw2pdVnYER8Xa5lzQ3Ek0=
+    //     pubkey: Query<Option<String>>,
+    //     /// starting timestamp.
+    //     start: Query<Option<i64>>,
+    //     /// ending timestamp.
+    //     end: Query<Option<i64>>,
+    // ) -> poem::Result<UndelegationAmountResponse> {
+    //     service::v1::staking::get_undelegation_amount(self, pubkey, start, end)
+    //         .await
+    //         .map_err(handle_fetch_one_err)
+    // }
 
-    #[oai(
-        path = "/chain/prism/sync",
-        method = "get",
-        tag = "ApiTags::BlockChain"
-    )]
-    async fn prism_sync_info(&self) -> poem::Result<PrismSyncResponse> {
-        service::v1::chain::prism_sync_info(self)
-            .await
-            .map_err(handle_fetch_one_err)
-    }
+    // #[oai(
+    //     path = "/chain/prism/sync",
+    //     method = "get",
+    //     tag = "ApiTags::BlockChain"
+    // )]
+    // async fn prism_sync_info(&self) -> poem::Result<PrismSyncResponse> {
+    //     service::v1::chain::prism_sync_info(self)
+    //         .await
+    //         .map_err(handle_fetch_one_err)
+    // }
 
-    #[oai(
-        path = "/chain/delegation/address/num",
-        method = "get",
-        tag = "ApiTags::BlockChain"
-    )]
-    async fn delegation_address_num(&self) -> poem::Result<DelegateAddressNumResponse> {
-        service::v1::chain::delegation_address_num(self)
-            .await
-            .map_err(handle_fetch_one_err)
-    }
+    // #[oai(
+    //     path = "/chain/delegation/address/num",
+    //     method = "get",
+    //     tag = "ApiTags::BlockChain"
+    // )]
+    // async fn delegation_address_num(&self) -> poem::Result<DelegateAddressNumResponse> {
+    //     service::v1::chain::delegation_address_num(self)
+    //         .await
+    //         .map_err(handle_fetch_one_err)
+    // }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////
     // V2
     ///////////////////////////////////////////////////////////////////////////////////////////////
     #[oai(
-        path = "/v2/tx/delegation/:tx_hash",
+        path = "/v2/staking/delegation/:tx_hash",
         method = "get",
-        tag = "ApiTags::Transaction"
+        tag = "ApiTags::Staking"
     )]
-    async fn v2_get_delegation_tx(
-        &self,
-        tx_hash: Path<String>,
-    ) -> poem::Result<V2DelegationTxResponse> {
-        v2_get_delegation_tx(self, tx_hash)
+    async fn v2_get_delegation(&self, tx_hash: Path<String>) -> poem::Result<V2DelegationResponse> {
+        v2_get_delegation(self, tx_hash)
             .await
             .map_err(handle_fetch_one_err)
     }
     #[oai(
-        path = "/v2/tx/delegations",
+        path = "/v2/staking/delegations",
         method = "get",
-        tag = "ApiTags::Transaction"
+        tag = "ApiTags::Staking"
     )]
-    async fn v2_get_delegation_txs(
+    async fn v2_get_delegations(
         &self,
         address: Query<String>,
         page: Query<Option<i64>>,
         page_size: Query<Option<i64>>,
-    ) -> poem::Result<V2DelegationTxsResponse> {
-        v2_get_delegation_txs(self, address, page, page_size)
+    ) -> poem::Result<V2DelegationsResponse> {
+        v2_get_delegations(self, address, page, page_size)
             .await
             .map_err(handle_fetch_one_err)
     }
     #[oai(
-        path = "/v2/tx/undelegation/:tx_hash",
+        path = "/v2/staking/undelegation/:tx_hash",
         method = "get",
-        tag = "ApiTags::Transaction"
+        tag = "ApiTags::Staking"
     )]
-    async fn v2_get_undelegation_tx(
+    async fn v2_get_undelegation(
         &self,
         tx_hash: Path<String>,
-    ) -> poem::Result<V2UndelegationTxResponse> {
-        v2_get_undelegation_tx(self, tx_hash)
+    ) -> poem::Result<V2UndelegationResponse> {
+        v2_get_undelegation(self, tx_hash)
             .await
             .map_err(handle_fetch_one_err)
     }
+
     #[oai(
-        path = "/v2/tx/undelegations",
+        path = "/v2/staking/undelegations",
         method = "get",
-        tag = "ApiTags::Transaction"
+        tag = "ApiTags::Staking"
     )]
-    async fn v2_get_undelegation_txs(
+    async fn v2_get_undelegations(
         &self,
         address: Query<String>,
         page: Query<Option<i64>>,
         page_size: Query<Option<i64>>,
-    ) -> poem::Result<V2UndelegationTxsResponse> {
-        v2_get_undelegation_txs(self, address, page, page_size)
+    ) -> poem::Result<V2UndelegationsResponse> {
+        v2_get_undelegations(self, address, page, page_size)
             .await
             .map_err(handle_fetch_one_err)
     }
+
     #[oai(
-        path = "/v2/tx/claim/:tx_hash",
+        path = "/v2/staking/claim/:tx_hash",
         method = "get",
-        tag = "ApiTags::Transaction"
+        tag = "ApiTags::Staking"
     )]
-    async fn v2_get_claim_tx(&self, tx_hash: Path<String>) -> poem::Result<V2ClaimTxResponse> {
-        v2_get_claim_tx(self, tx_hash)
+    async fn v2_get_claim(&self, tx_hash: Path<String>) -> poem::Result<V2ClaimResponse> {
+        v2_get_claim(self, tx_hash)
+            .await
+            .map_err(handle_fetch_one_err)
+    }
+
+    #[oai(path = "/v2/staking/claims", method = "get", tag = "ApiTags::Staking")]
+    async fn v2_get_claims(
+        &self,
+        address: Query<String>,
+        page: Query<Option<i64>>,
+        page_size: Query<Option<i64>>,
+    ) -> poem::Result<V2ClaimsResponse> {
+        v2_get_claims(self, address, page, page_size)
             .await
             .map_err(handle_fetch_one_err)
     }

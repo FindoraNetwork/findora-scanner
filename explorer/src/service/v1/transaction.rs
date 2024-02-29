@@ -481,6 +481,7 @@ pub async fn get_tx(api: &Api, tx_hash: Path<String>) -> Result<TxResponse> {
     })))
 }
 
+#[allow(dead_code)]
 pub async fn get_txs_receive_from(
     api: &Api,
     address: Query<String>,
@@ -548,7 +549,7 @@ pub async fn get_txs_receive_from(
         }),
     })))
 }
-
+#[allow(dead_code)]
 pub async fn get_txs_send_to(
     api: &Api,
     address: Query<String>,
@@ -744,7 +745,7 @@ pub async fn get_txs(
         }),
     })))
 }
-
+#[allow(dead_code)]
 #[allow(clippy::too_many_arguments)]
 pub async fn get_txs_raw(
     api: &Api,
@@ -1120,7 +1121,7 @@ pub struct ClaimAmountResult {
 pub struct ClaimAmount {
     pub amount: u64,
 }
-
+#[allow(dead_code)]
 pub async fn get_claims_amount(api: &Api, address: Path<String>) -> Result<ClaimAmountResponse> {
     let mut conn = api.storage.lock().await.acquire().await?;
 

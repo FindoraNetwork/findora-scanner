@@ -8,9 +8,9 @@ use serde_json::Value;
 use sqlx::Row;
 
 #[derive(ApiResponse)]
-pub enum V2UndelegationTxResponse {
+pub enum V2UndelegationResponse {
     #[oai(status = 200)]
-    Ok(Json<V2UndelegationTxResult>),
+    Ok(Json<V2UndelegationResult>),
     #[oai(status = 404)]
     NotFound,
     #[oai(status = 500)]
@@ -18,14 +18,14 @@ pub enum V2UndelegationTxResponse {
 }
 
 #[derive(Serialize, Deserialize, Debug, Object)]
-pub struct V2UndelegationTxResult {
+pub struct V2UndelegationResult {
     pub code: u16,
     pub message: String,
-    pub data: Option<V2UndelegationTx>,
+    pub data: Option<V2Undelegation>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Object)]
-pub struct V2UndelegationTx {
+pub struct V2Undelegation {
     pub tx_hash: String,
     pub block_hash: String,
     pub from: String,
@@ -37,10 +37,10 @@ pub struct V2UndelegationTx {
     pub value: Value,
 }
 
-pub async fn v2_get_undelegation_tx(
+pub async fn v2_get_undelegation(
     api: &Api,
     tx_hash: Path<String>,
-) -> Result<V2UndelegationTxResponse> {
+) -> Result<V2UndelegationResponse> {
     let mut conn = api.storage.lock().await.acquire().await?;
     let sql_query = format!(
         "SELECT tx,block,sender,amount,validator,new_validator,timestamp,height,content FROM undelegations WHERE tx='{}'",
@@ -59,7 +59,7 @@ pub async fn v2_get_undelegation_tx(
     let timestamp: i64 = row.try_get("timestamp")?;
     let value: Value = row.try_get("content")?;
 
-    let res = V2UndelegationTx {
+    let res = V2Undelegation {
         tx_hash: tx,
         block_hash: block,
         from: sender,
@@ -71,42 +71,44 @@ pub async fn v2_get_undelegation_tx(
         value,
     };
 
-    Ok(V2UndelegationTxResponse::Ok(Json(V2UndelegationTxResult {
+    Ok(V2UndelegationResponse::Ok(Json(V2UndelegationResult {
         code: StatusCode::OK.as_u16(),
         message: "".to_string(),
         data: Some(res),
     })))
 }
+
 #[derive(ApiResponse)]
-pub enum V2UndelegationTxsResponse {
+pub enum V2UndelegationsResponse {
     #[oai(status = 200)]
-    Ok(Json<V2UndelegationTxsResult>),
+    Ok(Json<V2UndelegationsResult>),
     #[oai(status = 404)]
     NotFound,
     #[oai(status = 500)]
     InternalError,
 }
+
 #[derive(Serialize, Deserialize, Debug, Object)]
-pub struct V2UndelegationTxsResult {
+pub struct V2UndelegationsResult {
     pub code: u16,
     pub message: String,
-    pub data: V2UndelegationTxsData,
+    pub data: V2UndelegationsData,
 }
 
 #[derive(Serialize, Deserialize, Debug, Object)]
-pub struct V2UndelegationTxsData {
+pub struct V2UndelegationsData {
     pub page: i64,
     pub page_size: i64,
     pub total: i64,
-    pub items: Option<Vec<V2UndelegationTx>>,
+    pub items: Option<Vec<V2Undelegation>>,
 }
 
-pub async fn v2_get_undelegation_txs(
+pub async fn v2_get_undelegations(
     api: &Api,
     address: Query<String>,
     page: Query<Option<i64>>,
     page_size: Query<Option<i64>>,
-) -> Result<V2UndelegationTxsResponse> {
+) -> Result<V2UndelegationsResponse> {
     let mut conn = api.storage.lock().await.acquire().await?;
     let page = page.0.unwrap_or(1);
     let page_size = page_size.0.unwrap_or(10);
@@ -122,7 +124,7 @@ pub async fn v2_get_undelegation_txs(
         address.0.to_lowercase(), page_size, (page-1)*page_size
     );
 
-    let mut res: Vec<V2UndelegationTx> = vec![];
+    let mut res: Vec<V2Undelegation> = vec![];
     let rows = sqlx::query(sql_query.as_str()).fetch_all(&mut conn).await?;
     for row in rows {
         let tx: String = row.try_get("tx")?;
@@ -134,7 +136,7 @@ pub async fn v2_get_undelegation_txs(
         let height: i64 = row.try_get("height")?;
         let timestamp: i64 = row.try_get("timestamp")?;
         let value: Value = row.try_get("content")?;
-        res.push(V2UndelegationTx {
+        res.push(V2Undelegation {
             tx_hash: tx,
             block_hash: block,
             from: sender,
@@ -147,16 +149,14 @@ pub async fn v2_get_undelegation_txs(
         });
     }
 
-    Ok(V2UndelegationTxsResponse::Ok(Json(
-        V2UndelegationTxsResult {
-            code: 200,
-            message: "".to_string(),
-            data: V2UndelegationTxsData {
-                page,
-                page_size,
-                total,
-                items: Some(res),
-            },
+    Ok(V2UndelegationsResponse::Ok(Json(V2UndelegationsResult {
+        code: 200,
+        message: "".to_string(),
+        data: V2UndelegationsData {
+            page,
+            page_size,
+            total,
+            items: Some(res),
         },
-    )))
+    })))
 }
