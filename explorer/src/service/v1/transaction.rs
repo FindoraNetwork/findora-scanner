@@ -206,7 +206,7 @@ pub async fn get_prism_received(
     let mut items: Vec<V2PrismItem> = vec![];
 
     let sql_counts = format!(
-        "SELECT count(*) AS cnt FROM e2n WHERE receiver=\'{}\'",
+        "SELECT count(*) AS cnt FROM e2n WHERE receiver='{}'",
         address.0
     );
     let row_counts = sqlx::query(sql_counts.as_str())
@@ -214,7 +214,7 @@ pub async fn get_prism_received(
         .await?;
     let total: i64 = row_counts.try_get("cnt")?;
 
-    let sql_query = format!("SELECT tx_hash,block_hash,sender,receiver,asset,amount,decimal,height,timestamp,value FROM e2n WHERE receiver=\'{}\' ORDER BY timestamp DESC LIMIT {} OFFSET {}", address.0, page_size, (page-1)*page_size);
+    let sql_query = format!("SELECT tx_hash,block_hash,sender,receiver,asset,amount,decimal,height,timestamp,value FROM e2n WHERE receiver='{}' ORDER BY timestamp DESC LIMIT {} OFFSET {}", address.0, page_size, (page-1)*page_size);
     let rows = sqlx::query(sql_query.as_str()).fetch_all(&mut conn).await?;
     for row in rows {
         let tx_hash: String = row.try_get("tx_hash")?;
