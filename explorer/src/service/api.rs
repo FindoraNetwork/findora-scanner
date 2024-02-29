@@ -906,7 +906,7 @@ impl Api {
     }
 
     #[oai(
-        path = "/v2/tx/prism/records/send",
+        path = "/v2/tx/prism/send",
         method = "get",
         tag = "ApiTags::Transaction"
     )]
