@@ -8,9 +8,9 @@ use serde_json::Value;
 use sqlx::Row;
 
 #[derive(ApiResponse)]
-pub enum V2DelegationTxResponse {
+pub enum V2DelegationResponse {
     #[oai(status = 200)]
-    Ok(Json<V2DelegationTxResult>),
+    Ok(Json<V2DelegationResult>),
     #[oai(status = 404)]
     NotFound,
     #[oai(status = 500)]
@@ -18,14 +18,14 @@ pub enum V2DelegationTxResponse {
 }
 
 #[derive(Serialize, Deserialize, Debug, Object)]
-pub struct V2DelegationTxResult {
+pub struct V2DelegationResult {
     pub code: u16,
     pub message: String,
-    pub data: Option<V2DelegationTx>,
+    pub data: Option<V2Delegation>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Object)]
-pub struct V2DelegationTx {
+pub struct V2Delegation {
     pub tx_hash: String,
     pub block_hash: String,
     pub amount: i64,
@@ -37,10 +37,7 @@ pub struct V2DelegationTx {
     pub value: Value,
 }
 
-pub async fn v2_get_delegation_tx(
-    api: &Api,
-    tx_hash: Path<String>,
-) -> Result<V2DelegationTxResponse> {
+pub async fn v2_get_delegation(api: &Api, tx_hash: Path<String>) -> Result<V2DelegationResponse> {
     let mut conn = api.storage.lock().await.acquire().await?;
     let sql_query = format!(
         "SELECT * FROM delegations WHERE tx='{}'",
@@ -59,7 +56,7 @@ pub async fn v2_get_delegation_tx(
     let timestamp: i64 = row.try_get("timestamp")?;
     let value: Value = row.try_get("content")?;
 
-    let res = V2DelegationTx {
+    let res = V2Delegation {
         tx_hash: tx,
         block_hash: block,
         from: sender,
@@ -71,7 +68,7 @@ pub async fn v2_get_delegation_tx(
         value,
     };
 
-    Ok(V2DelegationTxResponse::Ok(Json(V2DelegationTxResult {
+    Ok(V2DelegationResponse::Ok(Json(V2DelegationResult {
         code: StatusCode::OK.as_u16(),
         message: "".to_string(),
         data: Some(res),
@@ -79,9 +76,9 @@ pub async fn v2_get_delegation_tx(
 }
 
 #[derive(ApiResponse)]
-pub enum V2DelegationTxsResponse {
+pub enum V2DelegationsResponse {
     #[oai(status = 200)]
-    Ok(Json<V2DelegationTxsResult>),
+    Ok(Json<V2DelegationsResult>),
     #[oai(status = 404)]
     NotFound,
     #[oai(status = 500)]
@@ -89,7 +86,7 @@ pub enum V2DelegationTxsResponse {
 }
 
 #[derive(Serialize, Deserialize, Debug, Object)]
-pub struct V2DelegationTxsResult {
+pub struct V2DelegationsResult {
     pub code: u16,
     pub message: String,
     pub data: Option<V2DelegationTxsData>,
@@ -100,15 +97,15 @@ pub struct V2DelegationTxsData {
     pub page: i64,
     pub page_size: i64,
     pub total: i64,
-    pub items: Vec<V2DelegationTx>,
+    pub items: Vec<V2Delegation>,
 }
 
-pub async fn v2_get_delegation_txs(
+pub async fn v2_get_delegations(
     api: &Api,
     address: Query<String>,
     page: Query<Option<i64>>,
     page_size: Query<Option<i64>>,
-) -> Result<V2DelegationTxsResponse> {
+) -> Result<V2DelegationsResponse> {
     let page = page.0.unwrap_or(1);
     let page_size = page_size.0.unwrap_or(10);
     let mut conn = api.storage.lock().await.acquire().await?;
@@ -124,7 +121,7 @@ pub async fn v2_get_delegation_txs(
         address.0.to_lowercase(), page_size, (page-1)*page_size
     );
 
-    let mut res: Vec<V2DelegationTx> = vec![];
+    let mut res: Vec<V2Delegation> = vec![];
     let rows = sqlx::query(sql_query.as_str()).fetch_all(&mut conn).await?;
     for row in rows {
         let tx: String = row.try_get("tx")?;
@@ -136,7 +133,7 @@ pub async fn v2_get_delegation_txs(
         let height: i64 = row.try_get("height")?;
         let timestamp: i64 = row.try_get("timestamp")?;
         let value: Value = row.try_get("content")?;
-        res.push(V2DelegationTx {
+        res.push(V2Delegation {
             tx_hash: tx,
             block_hash: block,
             from: sender,
@@ -149,7 +146,7 @@ pub async fn v2_get_delegation_txs(
         });
     }
 
-    Ok(V2DelegationTxsResponse::Ok(Json(V2DelegationTxsResult {
+    Ok(V2DelegationsResponse::Ok(Json(V2DelegationsResult {
         code: 200,
         message: "".to_string(),
         data: Some(V2DelegationTxsData {
