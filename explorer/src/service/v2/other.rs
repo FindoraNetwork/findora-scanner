@@ -110,7 +110,7 @@ pub async fn v2_statistics(api: &Api, ty: Query<Option<i32>>) -> Result<V2ChainS
 
         let sql_daily_txs = format!(
             "select count(*) as cnt from transaction where timestamp>={}",
-            start_time.timestamp()
+            start_time.and_utc().timestamp()
         );
         let row_daily = sqlx::query(sql_daily_txs.as_str())
             .fetch_one(&mut conn)
