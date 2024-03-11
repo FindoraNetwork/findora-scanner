@@ -115,7 +115,6 @@ pub async fn simple_price(
     );
     let resp1 = reqwest::get(url).await;
     if let Err(e) = resp1 {
-        error!("Get FRA price: {}", e.to_string());
         let fra_price = get_fra_price(api).await?;
         return Ok(SimplePriceResponse::Ok(Json(SimplePriceResult {
             code: 200,
@@ -126,7 +125,6 @@ pub async fn simple_price(
 
     let resp2 = resp1?.json::<SimplePrice>().await;
     if let Err(e) = resp2 {
-        error!("Parse FRA price: {}", e.to_string());
         let fra_price = get_fra_price(api).await?;
         return Ok(SimplePriceResponse::Ok(Json(SimplePriceResult {
             code: 200,
@@ -173,7 +171,6 @@ pub async fn market_chart(
     }
     let resp1 = reqwest::get(url).await;
     if let Err(e) = resp1 {
-        error!("Get FRA market error: {:?}", e);
         let fmc = get_fra_market(api).await?;
         return Ok(MarketChartResponse::Ok(Json(MarketChartResult {
             code: 200,
@@ -183,7 +180,6 @@ pub async fn market_chart(
     }
     let resp2 = resp1?.json::<FraMarketChart>().await;
     if let Err(e) = resp2 {
-        error!("Parse FRA market cap error: {:?}", e);
         let fmc = get_fra_market(api).await?;
         return Ok(MarketChartResponse::Ok(Json(MarketChartResult {
             code: 200,
