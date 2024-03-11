@@ -1,6 +1,5 @@
 use crate::service::api::Api;
 use anyhow::Result;
-use log::error;
 use poem_openapi::param::{Path, Query};
 use poem_openapi::types::Type;
 use poem_openapi::{payload::Json, ApiResponse, Object};
@@ -114,7 +113,7 @@ pub async fn simple_price(
         ids.0, vs_currencies.0
     );
     let resp1 = reqwest::get(url).await;
-    if let Err(e) = resp1 {
+    if resp1.is_err() {
         let fra_price = get_fra_price(api).await?;
         return Ok(SimplePriceResponse::Ok(Json(SimplePriceResult {
             code: 200,
@@ -124,7 +123,7 @@ pub async fn simple_price(
     }
 
     let resp2 = resp1?.json::<SimplePrice>().await;
-    if let Err(e) = resp2 {
+    if resp2.is_err() {
         let fra_price = get_fra_price(api).await?;
         return Ok(SimplePriceResponse::Ok(Json(SimplePriceResult {
             code: 200,
@@ -170,7 +169,7 @@ pub async fn market_chart(
         url = format!("https://api.coingecko.com/api/v3/coins/{}/market_chart?vs_currency={}&days={}&interval={}", id.0, vs_currency.0, days.0, itv);
     }
     let resp1 = reqwest::get(url).await;
-    if let Err(e) = resp1 {
+    if resp1.is_err() {
         let fmc = get_fra_market(api).await?;
         return Ok(MarketChartResponse::Ok(Json(MarketChartResult {
             code: 200,
@@ -179,7 +178,7 @@ pub async fn market_chart(
         })));
     }
     let resp2 = resp1?.json::<FraMarketChart>().await;
-    if let Err(e) = resp2 {
+    if resp2.is_err() {
         let fmc = get_fra_market(api).await?;
         return Ok(MarketChartResponse::Ok(Json(MarketChartResult {
             code: 200,
