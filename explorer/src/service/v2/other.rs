@@ -61,7 +61,7 @@ pub async fn v2_statistics(api: &Api, ty: Query<Option<i32>>) -> Result<V2ChainS
                     "select count(distinct address) as cnt from native_addrs".to_string();
                 sql_daily_txs = format!(
                     "select count(*) as cnt from transaction where ty=0 and timestamp>={}",
-                    start_time.timestamp()
+                    start_time.and_utc().timestamp()
                 );
             }
             _ => {
@@ -69,7 +69,7 @@ pub async fn v2_statistics(api: &Api, ty: Query<Option<i32>>) -> Result<V2ChainS
                     "select count(distinct address) as cnt from evm_addrs".to_string();
                 sql_daily_txs = format!(
                     "select count(*) as cnt from transaction where ty=1 and timestamp>={}",
-                    start_time.timestamp()
+                    start_time.and_utc().timestamp()
                 );
             }
         }

@@ -7,7 +7,7 @@ use poem_openapi::param::{Path, Query};
 use poem_openapi::{payload::Json, ApiResponse, Object};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use sqlx::types::chrono::{Local, NaiveDateTime};
+use sqlx::types::chrono::{DateTime, Local};
 use sqlx::Row;
 
 #[derive(ApiResponse)]
@@ -465,6 +465,7 @@ pub async fn validator_signed_count(
         .date_naive()
         .and_hms_opt(0, 0, 0)
         .unwrap()
+        .and_utc()
         .timestamp()
         - (page - 1) * page_size * day_secs;
 
@@ -472,8 +473,8 @@ pub async fn validator_signed_count(
     for i in 0..page_size {
         let start_secs = nt - i * day_secs;
         let end_secs = nt - i * day_secs + day_secs;
-        let start_time = NaiveDateTime::from_timestamp_opt(start_secs, 0).unwrap();
-        let end_time = NaiveDateTime::from_timestamp_opt(end_secs, 0).unwrap();
+        let start_time = DateTime::from_timestamp(start_secs, 0).unwrap();
+        let end_time = DateTime::from_timestamp(end_secs, 0).unwrap();
 
         let sql_block_cnt = format!(
             "SELECT count(*) as cnt FROM block WHERE time>='{start_time}' AND time<'{end_time}'"
