@@ -234,7 +234,7 @@ impl RPCCaller {
                             native_addrs.push(Address {
                                 tx: tx_hash.clone(),
                                 address: to,
-                                timestamp: timestamp.timestamp(),
+                                timestamp: timestamp.and_utc().timestamp(),
                             });
                         }
                         sender = "".to_string();
@@ -279,7 +279,7 @@ impl RPCCaller {
                         tx_hash: tx_hash.clone(),
                         block_hash: block_hash.clone(),
                         height,
-                        timestamp: timestamp.timestamp(),
+                        timestamp: timestamp.and_utc().timestamp(),
                         code: tx.tx_result.code,
                         ty: FindoraTxType::Evm as i32,
                         ty_sub,
@@ -300,7 +300,7 @@ impl RPCCaller {
                         evm_addrs.push(Address {
                             tx: tx_hash.clone(),
                             address: a,
-                            timestamp: timestamp.timestamp(),
+                            timestamp: timestamp.and_utc().timestamp(),
                         });
                     }
                 }
@@ -331,7 +331,7 @@ impl RPCCaller {
                             evm_addrs.push(Address {
                                 tx: tx_hash.clone(),
                                 address: receiver.clone(),
-                                timestamp: timestamp.timestamp(),
+                                timestamp: timestamp.and_utc().timestamp(),
                             });
                             sender = signer.clone();
                             ty_sub = FindoraTxType::NativeToEVM as i32;
@@ -343,7 +343,7 @@ impl RPCCaller {
                                 asset,
                                 amount: opt.convert_account.value,
                                 height,
-                                timestamp: timestamp.timestamp(),
+                                timestamp: timestamp.and_utc().timestamp(),
                                 content: op_copy,
                             });
                         } else if op_str.contains("UnDelegation") {
@@ -375,7 +375,7 @@ impl RPCCaller {
                                 target_validator,
                                 new_delegator,
                                 height,
-                                timestamp: timestamp.timestamp(),
+                                timestamp: timestamp.and_utc().timestamp(),
                                 content: op_copy,
                             });
                         } else if op_str.contains("Delegation") {
@@ -395,7 +395,7 @@ impl RPCCaller {
                                 validator: opt.delegation.body.validator,
                                 new_validator,
                                 height,
-                                timestamp: timestamp.timestamp(),
+                                timestamp: timestamp.and_utc().timestamp(),
                                 content: op_copy,
                             });
                         } else if op_str.contains("Claim") {
@@ -411,7 +411,7 @@ impl RPCCaller {
                                 sender: signer,
                                 amount: opt.claim.body.amount.unwrap_or(0),
                                 height,
-                                timestamp: timestamp.timestamp(),
+                                timestamp: timestamp.and_utc().timestamp(),
                                 content: op_copy,
                             });
                         } else if op_str.contains("DefineAsset") {
@@ -432,7 +432,7 @@ impl RPCCaller {
                                 block_hash: block_hash.clone(),
                                 issuer,
                                 height,
-                                timestamp: timestamp.timestamp(),
+                                timestamp: timestamp.and_utc().timestamp(),
                                 issued: 0,
                                 content: op_copy,
                             });
@@ -452,7 +452,7 @@ impl RPCCaller {
                                 block_hash: block_hash.clone(),
                                 issuer,
                                 height,
-                                timestamp: timestamp.timestamp(),
+                                timestamp: timestamp.and_utc().timestamp(),
                                 issued: 1,
                                 content: op_copy,
                             });
@@ -541,7 +541,7 @@ impl RPCCaller {
                         tx_hash: tx_hash.clone(),
                         block_hash: block_hash.clone(),
                         height,
-                        timestamp: timestamp.timestamp(),
+                        timestamp: timestamp.and_utc().timestamp(),
                         code: tx.tx_result.code,
                         ty: FindoraTxType::Native as i32,
                         ty_sub,
@@ -562,7 +562,7 @@ impl RPCCaller {
                         native_addrs.push(Address {
                             tx: tx_hash.clone(),
                             address: a,
-                            timestamp: timestamp.timestamp(),
+                            timestamp: timestamp.and_utc().timestamp(),
                         });
                     }
                 }
