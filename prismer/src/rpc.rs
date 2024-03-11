@@ -282,7 +282,7 @@ impl RPCCaller {
                                         amount: amount.to_string(),
                                         decimal: decimal as i64,
                                         height,
-                                        timestamp: timestamp.timestamp(),
+                                        timestamp: timestamp.and_utc().timestamp(),
                                         value: result.clone(),
                                     });
 

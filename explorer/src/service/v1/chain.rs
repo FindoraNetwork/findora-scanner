@@ -217,12 +217,12 @@ pub async fn statistics(api: &Api, ty: Query<Option<i32>>) -> Result<ChainStatis
         format!(
             "SELECT COUNT(*) as cnt FROM transaction WHERE ty={} AND timestamp>={}",
             ty,
-            start_time.timestamp()
+            start_time.and_utc().timestamp()
         )
     } else {
         format!(
             "SELECT COUNT(*) as cnt FROM transaction WHERE timestamp>={}",
-            start_time.timestamp()
+            start_time.and_utc().timestamp()
         )
     };
     let row = sqlx::query(sql_str.as_str()).fetch_one(&mut conn).await?;

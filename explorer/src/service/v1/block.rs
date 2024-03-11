@@ -6,7 +6,7 @@ use poem_openapi::param::Query;
 use poem_openapi::{param::Path, payload::Json, ApiResponse, Object};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use sqlx::types::chrono::NaiveDateTime;
+use sqlx::types::chrono::DateTime;
 use sqlx::{Error, Row};
 use std::ops::Add;
 
@@ -285,13 +285,13 @@ pub async fn get_blocks(
     if let Some(start_time) = start_time.0 {
         params.push(format!(
             " time >= '{}' ",
-            NaiveDateTime::from_timestamp_opt(start_time, 0).unwrap()
+            DateTime::from_timestamp(start_time, 0).unwrap()
         ));
     }
     if let Some(end_time) = end_time.0 {
         params.push(format!(
             " time <= '{}' ",
-            NaiveDateTime::from_timestamp_opt(end_time, 0).unwrap()
+            DateTime::from_timestamp(end_time, 0).unwrap()
         ));
     }
     let page = page.0.unwrap_or(1);
