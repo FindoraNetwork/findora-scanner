@@ -793,7 +793,7 @@ impl Api {
     )]
     async fn v2_get_delegations(
         &self,
-        address: Query<String>,
+        address: Query<Option<String>>,
         page: Query<Option<i64>>,
         page_size: Query<Option<i64>>,
     ) -> poem::Result<V2DelegationsResponse> {
