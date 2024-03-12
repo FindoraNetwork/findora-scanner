@@ -105,25 +105,35 @@ pub struct V2UndelegationsData {
 
 pub async fn v2_get_undelegations(
     api: &Api,
-    address: Query<String>,
+    address: Query<Option<String>>,
     page: Query<Option<i64>>,
     page_size: Query<Option<i64>>,
 ) -> Result<V2UndelegationsResponse> {
     let mut conn = api.storage.lock().await.acquire().await?;
     let page = page.0.unwrap_or(1);
     let page_size = page_size.0.unwrap_or(10);
-    let sql_count = format!(
-        "SELECT count(*) AS cnt FROM undelegations WHERE sender='{}'",
-        address.0.to_lowercase()
-    );
+
+    let (sql_count, sql_query) = if let Some(addr) = address.0 {
+        (
+            format!(
+                "SELECT count(*) AS cnt FROM undelegations WHERE sender='{}'",
+                addr.to_lowercase()
+            ),
+            format!(
+            "SELECT tx,block,sender,amount,target_validator,new_delegator,height,timestamp,content \
+            FROM undelegations WHERE sender='{}' ORDER BY timestamp DESC LIMIT {} OFFSET {}",
+            addr.to_lowercase(), page_size, (page-1)*page_size),
+        )
+    } else {
+        (
+            "SELECT count(*) AS cnt FROM undelegations".to_string(),
+            format!("SELECT tx,block,sender,amount,target_validator,new_delegator,height,timestamp,content \
+            FROM undelegations ORDER BY timestamp DESC LIMIT {} OFFSET {}", page_size, (page-1)*page_size)
+        )
+    };
+
     let row_cnt = sqlx::query(sql_count.as_str()).fetch_one(&mut conn).await?;
     let total: i64 = row_cnt.try_get("cnt")?;
-
-    let sql_query = format!(
-        "SELECT tx,block,sender,amount,target_validator,new_delegator,height,timestamp,content FROM undelegations WHERE sender='{}' ORDER BY timestamp DESC LIMIT {} OFFSET {}",
-        address.0.to_lowercase(), page_size, (page-1)*page_size
-    );
-
     let mut res: Vec<V2Undelegation> = vec![];
     let rows = sqlx::query(sql_query.as_str()).fetch_all(&mut conn).await?;
     for row in rows {
