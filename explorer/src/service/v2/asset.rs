@@ -100,3 +100,56 @@ pub async fn v2_get_asset(
         }),
     })))
 }
+
+pub async fn v2_get_asset_list(
+    api: &Api,
+    page: Query<Option<i32>>,
+    page_size: Query<Option<i32>>,
+) -> Result<V2AssetTxResponse> {
+    let mut conn = api.storage.lock().await.acquire().await?;
+    let mut assets: Vec<V2AssetOp> = vec![];
+    let page = page.0.unwrap_or(1);
+    let page_size = page_size.0.unwrap_or(10);
+
+    let sql_total = "SELECT count(*) AS cnt FROM assets".to_string();
+    let row_count = sqlx::query(sql_total.as_str()).fetch_one(&mut conn).await?;
+    let total: i64 = row_count.try_get("cnt")?;
+
+    let sql_query = format!(
+        "SELECT * FROM assets ORDER BY height desc limit {} offset {}",
+        page_size,
+        (page - 1) * page_size
+    );
+    let rows = sqlx::query(sql_query.as_str()).fetch_all(&mut conn).await?;
+    for row in rows {
+        let asset: String = row.try_get("asset")?;
+        let tx: String = row.try_get("tx")?;
+        let block: String = row.try_get("block")?;
+        let issuer: String = row.try_get("issuer")?;
+        let height: i64 = row.try_get("height")?;
+        let timestamp: i64 = row.try_get("timestamp")?;
+        let ty: i32 = row.try_get("ty")?;
+        let value: Value = row.try_get("content")?;
+        assets.push(V2AssetOp {
+            asset,
+            tx,
+            block,
+            issuer,
+            height,
+            timestamp,
+            ty,
+            value,
+        });
+    }
+
+    Ok(V2AssetTxResponse::Ok(Json(V2AssetTxResult {
+        code: 200,
+        message: "".to_string(),
+        data: Some(V2AssetData {
+            page,
+            page_size,
+            total,
+            assets,
+        }),
+    })))
+}

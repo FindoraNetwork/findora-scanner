@@ -21,7 +21,7 @@ use crate::service::v1::validator::{
     ValidatorDetailResponse, ValidatorHistoryResponse, ValidatorListResponse,
     ValidatorSignedCountResponse,
 };
-use crate::service::v2::asset::{v2_get_asset, V2AssetTxResponse};
+use crate::service::v2::asset::{v2_get_asset, v2_get_asset_list, V2AssetTxResponse};
 use crate::service::v2::claim::{v2_get_claim, v2_get_claims, V2ClaimResponse, V2ClaimsResponse};
 use crate::service::v2::delegation::{
     v2_get_delegation, v2_get_delegations, V2DelegationResponse, V2DelegationsResponse,
@@ -876,6 +876,17 @@ impl Api {
         page_size: Query<Option<i32>>,
     ) -> poem::Result<V2AssetTxResponse> {
         v2_get_asset(self, address, page, page_size)
+            .await
+            .map_err(handle_fetch_one_err)
+    }
+
+    #[oai(path = "/v2/asset/list", method = "get", tag = "ApiTags::Asset")]
+    async fn v2_get_asset_list(
+        &self,
+        page: Query<Option<i32>>,
+        page_size: Query<Option<i32>>,
+    ) -> poem::Result<V2AssetTxResponse> {
+        v2_get_asset_list(self, page, page_size)
             .await
             .map_err(handle_fetch_one_err)
     }
