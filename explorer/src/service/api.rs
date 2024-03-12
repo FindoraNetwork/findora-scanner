@@ -845,7 +845,7 @@ impl Api {
     #[oai(path = "/v2/staking/claims", method = "get", tag = "ApiTags::Staking")]
     async fn v2_get_claims(
         &self,
-        address: Query<String>,
+        address: Query<Option<String>>,
         page: Query<Option<i64>>,
         page_size: Query<Option<i64>>,
     ) -> poem::Result<V2ClaimsResponse> {
