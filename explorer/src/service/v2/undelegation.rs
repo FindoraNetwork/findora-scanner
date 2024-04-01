@@ -43,7 +43,7 @@ pub async fn v2_get_undelegation(
 ) -> Result<V2UndelegationResponse> {
     let mut conn = api.storage.lock().await.acquire().await?;
     let sql_query = format!(
-        "SELECT tx,block,sender,amount,validator,new_validator,timestamp,height,content FROM undelegations WHERE tx='{}'",
+        "SELECT tx,block,sender,amount,target_validator,new_delegator,height,timestamp,content FROM undelegations WHERE tx='{}'",
         tx_hash.0.to_lowercase()
     );
 

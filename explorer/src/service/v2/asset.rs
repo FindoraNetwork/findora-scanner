@@ -61,7 +61,7 @@ pub async fn v2_get_asset(
     let row_count = sqlx::query(sql_total.as_str()).fetch_one(&mut conn).await?;
     let total: i64 = row_count.try_get("cnt")?;
     let sql_query = format!(
-        "SELECT * from assets WHERE asset='{}' order by height desc limit {} offset {}",
+        "SELECT asset,tx,block,issuer,height,timestamp,ty,content from assets WHERE asset='{}' order by height desc limit {} offset {}",
         address.0,
         page_size,
         (page - 1) * page_size
@@ -116,7 +116,7 @@ pub async fn v2_get_asset_list(
     let total: i64 = row_count.try_get("cnt")?;
 
     let sql_query = format!(
-        "SELECT * FROM assets ORDER BY height desc limit {} offset {}",
+        "SELECT asset,tx,block,issuer,height,timestamp,ty,content FROM assets ORDER BY height desc limit {} offset {}",
         page_size,
         (page - 1) * page_size
     );
