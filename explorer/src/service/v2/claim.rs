@@ -38,7 +38,7 @@ pub struct V2Claim {
 pub async fn v2_get_claim(api: &Api, tx_hash: Path<String>) -> Result<V2ClaimResponse> {
     let mut conn = api.storage.lock().await.acquire().await?;
     let sql_query = format!(
-        "SELECT * FROM claims WHERE tx='{}'",
+        "SELECT tx,block,sender,amount,height,timestamp,content FROM claims WHERE tx='{}'",
         tx_hash.0.to_lowercase()
     );
 

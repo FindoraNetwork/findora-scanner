@@ -40,7 +40,7 @@ pub struct V2Delegation {
 pub async fn v2_get_delegation(api: &Api, tx_hash: Path<String>) -> Result<V2DelegationResponse> {
     let mut conn = api.storage.lock().await.acquire().await?;
     let sql_query = format!(
-        "SELECT * FROM delegations WHERE tx='{}'",
+        "SELECT tx,block,amount,sender,validator,new_validator,height,timestamp,content FROM delegations WHERE tx='{}'",
         tx_hash.0.to_lowercase()
     );
 
