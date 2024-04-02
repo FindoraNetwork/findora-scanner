@@ -22,6 +22,8 @@ use crate::service::v2::claim::{v2_get_claim, v2_get_claims, V2ClaimResponse, V2
 use crate::service::v2::delegation::{
     v2_get_delegation, v2_get_delegations, V2DelegationResponse, V2DelegationsResponse,
 };
+
+use crate::service::v2::evm_to_native::V2EvmToNativeTxsResponse;
 use crate::service::v2::native_to_evm::V2NativeToEvmTxsResponse;
 use crate::service::v2::native_to_evm::{
     v2_get_n2e_tx, v2_get_prism_records_send, V2NativeToEvmTxResponse,
@@ -539,6 +541,22 @@ impl Api {
     //         .await
     //         .map_err(handle_fetch_one_err)
     // }
+
+    #[oai(
+        path = "/v2/txs/prism/e2n",
+        method = "get",
+        tag = "ApiTags::Transaction"
+    )]
+    async fn get_prism_e2n_txs(
+        &self,
+        page: Query<Option<i32>>,
+        page_size: Query<Option<i32>>,
+    ) -> poem::Result<V2EvmToNativeTxsResponse> {
+        service::v2::evm_to_native::v2_get_e2n_txs(self, page, page_size)
+            .await
+            .map_err(handle_fetch_one_err)
+    }
+
     #[oai(
         path = "/v2/txs/prism/n2e",
         method = "get",
