@@ -1,4 +1,4 @@
-# Findora V2 API Spec
+# Findora Explorer V2 API Spec
 
 * [1.1 根据地址获取Asset](#1.1)
 * [1.2 获取asset集合](#1.2)
@@ -7,6 +7,9 @@
 * [1.5 根据交易hash获取delegate记录](#1.5)
 * [1.6 获取delegate记录](#1.6)
 * [1.7 获取undelegate记录](#1.7)
+* [1.8 根据交易hash获取undelegate记录](#1.8)
+* [1.9 获取交易](#1.9)
+* [1.10 获取用户发出的prism交易记录](#1.10)
 
 <h3 id="1.1">1.1 根据地址查询Asset</h3>
 
@@ -332,7 +335,7 @@
 
 <h3 id="1.5">1.5 根据交易hash获取delegate记录</h3>
 
-* `GET /v2/staking/delegation/:tx_hash`
+* `GET /api/v2/staking/delegation/:tx_hash`
 * 参数
 
 | 参数      | 类型     | 必传 | 说明   |
@@ -375,7 +378,7 @@
 
 <h3 id="1.6">1.6 获取delegate记录</h3>
 
-* `GET /v2/staking/delegations`
+* `GET /api/v2/staking/delegations`
 * 参数
 
 | 参数        | 类型     | 必传 | 说明                   |
@@ -450,7 +453,7 @@
 ```
 <h3 id="1.7">1.7 获取undelegate记录</h3>
 
-* `GET /v2/staking/undelegations`
+* `GET /api/v2/staking/undelegations`
 * 参数
 
 | 参数        | 类型     | 必传 | 说明                   |
@@ -463,6 +466,7 @@
   * 获取undelegate记录： `/api/v2/staking/undelegations?page=1&page_size=2`
   * 获取用户的undelegate记录：`/api/v2/staking/undelegations?address=fra1vrvnc9kfnnl02rhafvdn4yssll4rz0flfc73xkj3w9tlsggy38rskgv35t&page=1&page_size=2`
 * Response:
+  * 按区块高度降序排列
 ```json
 {
 	"code": 200,
@@ -526,20 +530,207 @@
 }
 ```
 
+<h3 id="1.8">1.8 根据交易hash获取undelegate记录</h3>
+
+* `GET /api/v2/staking/undelegation/:tx_hash`
+* 参数
+
+| 参数      | 类型     | 必传 | 说明   |
+|---------|--------|----|------|
+| tx_hash | string | Y  | 交易哈希 |
 
 
+* Request: `/api/v2/staking/undelegation/583d9071df8299978e227d4b62d122225e4d2bc7fce0f581b4396b5c35f63dbd`
+* Response:
+```json
+{
+	"code": 200,
+	"data": {
+		"amount": 96442598104,
+		"block_hash": "53E86050C1B6519B8A6B6A09086810A92B97DC2905F6C14BF319B5D694CF74EF",
+		"from": "fra1vrvnc9kfnnl02rhafvdn4yssll4rz0flfc73xkj3w9tlsggy38rskgv35t",
+		"height": 5162087,
+		"new_delegator": "5ax5Bb8xQ4Ag7eV_cA8PGAAJ2_M-BPZhrF3R5uzd17o=",
+		"target_validator": "E012AA66C83999E3862C8AA534B9CE66FC14A37A",
+		"timestamp": 1705780393,
+		"tx_hash": "583d9071df8299978e227d4b62d122225e4d2bc7fce0f581b4396b5c35f63dbd",
+		"value": {
+			"UnDelegation": {
+				"body": {
+					"nonce": [
+						[90, 0, 11, 166, 133, 201, 223, 219], 129078
+					],
+					"pu": {
+						"am": 96442598104,
+						"new_delegator_id": "5ax5Bb8xQ4Ag7eV_cA8PGAAJ2_M-BPZhrF3R5uzd17o=",
+						"target_validator": [224, 18, 170, 102, 200, 57, 153, 227, 134, 44, 138, 165, 52, 185, 206, 102, 252, 20, 163, 122]
+					}
+				},
+				"pubkey": "YNk8Fsmc_vUO_UsbOpIQ_-oxPT9OPRNaUXFX-CEEicc=",
+				"signature": "0bwIKjNsCqfDMPp6iAtOM81nMHw4voGwyl_YjNazfx2A6Wt-BWWR0B-bruWANPMNncGRbBuYs2Brjigd566LAw=="
+			}
+		}
+	},
+	"message": ""
+}
+```
 
+<h3 id="1.9">1.9 获取交易</h3>
 
+* `GET /api/v2/txs`
 
+* 参数
 
+| 参数           | 类型     | 必传 | 说明    |
+|--------------|--------|----|-------|
+| block_hash   | string | N  | 区块哈希  |
+| block_height | number | N  | 区块高度  |
+| from         | string | N  | 发送者地址 |
+| to           | string | N  | 接收者地址 |
+| ty           | number | N  | 交易类型  |
+| start_time   | number | N  | 开始时间戳 |
+| end_time     | number | N  | 截止时间戳 |
+| page         | number | N  | 页码    |
+| page_size    | number | N  | 页大小   |
 
+* Request: `/api/v2/txs?page=1&page_size=2`
+* Response:
+  * 按timestamp降序排列
+```json
+{
+	"code": 200,
+	"data": {
+		"page": 1,
+		"page_size": 2,
+		"total": 2460630,
+		"txs": [{
+			"block_hash": "B92B8B1AB4BB145AA66E4EA245706A8F833AD7FBED02D2603CA9003CD0324E9D",
+			"code": 0,
+			"evm_tx_hash": "",
+			"height": 5478292,
+			"log": "",
+			"origin": "ZXZtOnsic2lnbmF0dXJlIjpudWxsLCJmdW5jdGlvbiI6eyJFdGhlcmV1bSI6eyJUcmFuc2FjdCI6eyJub25jZSI6IjB4OTBiOTAiLCJnYXNfcHJpY2UiOiIweDI1NDBiZTQwMCIsImdhc19saW1pdCI6IjB4MjQ5ZjAiLCJhY3Rpb24iOnsiQ2FsbCI6IjB4YjUyZWYyOTI2NTFmODY5MjA1M2FjM2QzOTkyMWE0M2ZlMTM1MzNjOCJ9LCJ2YWx1ZSI6IjB4MCIsImlucHV0IjpbMTk4LDY0LDExNyw0NSwwLDAsMCwwLDAsMCwwLDAsMCwwLDAsMCwxNzUsMjUsMTA4LDQ1LDEyMCwxMTIsMTgxLDIwLDExMSwyLDIxMiwxNTUsMSwyOSwyNDksMjUsMTI0LDksNjMsMjU0LDAsMCwwLDAsMCwwLDAsMCwwLDAsMCwwLDAsMCwwLDAsMCwwLDAsMCwwLDAsMCwwLDAsMCwwLDAsMCwwLDE2LDBdLCJzaWduYXR1cmUiOnsidiI6NDM0MCwiciI6IjB4OWUwNmExYjhjYzBmMjFiYzBmMTZiZTk1YzAzNjY5ZDQxMzE1NWE1M2E0ODc4MTJkNTUzNGFlY2JmNDViMjJjYiIsInMiOiIweDJiYmZkNDZjYzQwZDc5OWI2MjhlMjVmMzE4NmNjODZmNmU2YWRiZDE2NTU2ZWFmNDIwMzNmNjA4NTBiOWU4ODgifX19fX0=",
+			"result": {
+				"code": 0,
+				"codespace": "",
+				"data": "eyJDYWxsIjp7ImV4aXRfcmVhc29uIjp7IlN1Y2NlZWQiOiJTdG9wcGVkIn0sInZhbHVlIjpbXSwidXNlZF9nYXMiOiIweDlkNmIiLCJsb2dzIjpbXX19",
+				"events": [{
+					"attributes": [{
+						"key": "c2VuZGVy",
+						"value": "MHhkM2UwNzViZDAzMTQ5MDk3ZmExMzViMThhODc1NmI1MDI0YTQ1ZTVl"
+					}, {
+						"key": "dG8=",
+						"value": "MHhiNTJlZjI5MjY1MWY4NjkyMDUzYWMzZDM5OTIxYTQzZmUxMzUzM2M4"
+					}, {
+						"key": "Y29udHJhY3RfYWRkcmVzcw==",
+						"value": "MHgwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAw"
+					}, {
+						"key": "dHJhbnNhY3Rpb25faGFzaA==",
+						"value": "MHg3MzgxYWEyMTBiMWJjMmU4NmYxMTExN2Q5ZTFlODZjYmYyYmU2ZWE2YjdhZWQwODhiZjk2N2MzNmJjZjA5MGIw"
+					}, {
+						"key": "cmVhc29u",
+						"value": "U3VjY2VlZChTdG9wcGVkKQ=="
+					}],
+					"type": "ethereum_TransactionExecuted"
+				}],
+				"gasUsed": "40299",
+				"gasWanted": "150000",
+				"info": "",
+				"log": ""
+			},
+			"timestamp": 1712037200,
+			"tx_hash": "11969300f45e0db1b5a74a1c102a252a2b443cb5cb1346e41d30bed234b4efe3",
+			"ty": 1,
+			"value": {
+				"function": {
+					"Ethereum": {
+						"Transact": {
+							"action": {
+								"Call": "0xb52ef292651f8692053ac3d39921a43fe13533c8"
+							},
+							"from": "0xd3e075bd03149097fa135b18a8756b5024a45e5e",
+							"gas_limit": "0x249f0",
+							"gas_price": "0x2540be400",
+							"input": [198, 64, 117, 45, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 175, 25, 108, 45, 120, 112, 181, 20, 111, 2, 212, 155, 1, 29, 249, 25, 124, 9, 63, 254, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 16, 0],
+							"nonce": "0x90b90",
+							"signature": {
+								"r": "0x9e06a1b8cc0f21bc0f16be95c03669d413155a53a487812d5534aecbf45b22cb",
+								"s": "0x2bbfd46cc40d799b628e25f3186cc86f6e6adbd16556eaf42033f60850b9e888",
+								"v": 4340
+							},
+							"value": "0x0"
+						}
+					}
+				}
+			}
+		}, {
+			"block_hash": "8C4C163BCC93062974D2D5E6165DD0C399EAA1BAF615901610197C9F37509E2E",
+			"code": 0,
+			"evm_tx_hash": "",
+			"height": 5478291,
+			"log": "",
+			"origin": "ZXZtOnsic2lnbmF0dXJlIjpudWxsLCJmdW5jdGlvbiI6eyJFdGhlcmV1bSI6eyJUcmFuc2FjdCI6eyJub25jZSI6IjB4OTBiOGYiLCJnYXNfcHJpY2UiOiIweDI1NDBiZTQwMCIsImdhc19saW1pdCI6IjB4MjQ5ZjAiLCJhY3Rpb24iOnsiQ2FsbCI6IjB4YjUyZWYyOTI2NTFmODY5MjA1M2FjM2QzOTkyMWE0M2ZlMTM1MzNjOCJ9LCJ2YWx1ZSI6IjB4MCIsImlucHV0IjpbMTk4LDY0LDExNyw0NSwwLDAsMCwwLDAsMCwwLDAsMCwwLDAsMCwwLDAsMCwwLDAsMCwwLDAsMCwwLDAsMCwwLDAsMCwwLDAsMCwxNiwwLDAsMCwwLDAsMCwwLDAsMCwwLDAsMCwwLDYsNTAsMTg2LDE2Miw5OCwxNTMsMjAxLDE1MSw0NiwyMTIsMjE3LDE3NSwyNTAsNjMsMjA4LDg3LDE2NywzNCw4MiwyNTVdLCJzaWduYXR1cmUiOnsidiI6NDM0MCwiciI6IjB4OTc0ZDBkYjQ1ZTQxMDM2ZmI3YjFmM2Q3ODNkZGE1ZTVlYjM4NTM4YzlmMzNhYzdmNjkxODk2YmY3OGU0MjhlNCIsInMiOiIweDFlOWYxMWVhYjRmMDU2MGFhNDU3ZTQ5OGI0ODg5ZmI0N2JhODRiNjY3MjhkODJkNjMwNjNhMWZjZjM0NzI3MjYifX19fX0=",
+			"result": {
+				"code": 0,
+				"codespace": "",
+				"data": "eyJDYWxsIjp7ImV4aXRfcmVhc29uIjp7IlN1Y2NlZWQiOiJTdG9wcGVkIn0sInZhbHVlIjpbXSwidXNlZF9nYXMiOiIweDlkNmIiLCJsb2dzIjpbXX19",
+				"events": [{
+					"attributes": [{
+						"key": "c2VuZGVy",
+						"value": "MHhkM2UwNzViZDAzMTQ5MDk3ZmExMzViMThhODc1NmI1MDI0YTQ1ZTVl"
+					}, {
+						"key": "dG8=",
+						"value": "MHhiNTJlZjI5MjY1MWY4NjkyMDUzYWMzZDM5OTIxYTQzZmUxMzUzM2M4"
+					}, {
+						"key": "Y29udHJhY3RfYWRkcmVzcw==",
+						"value": "MHgwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAw"
+					}, {
+						"key": "dHJhbnNhY3Rpb25faGFzaA==",
+						"value": "MHgzNGU4NzRjNzAxNDdlZmIxOGE5ODM0ZDkxMTg1YTI3ZTI1YjFjZWY1YTAwOTBjYTBmNzVjMjMyYTAxM2QyMWFi"
+					}, {
+						"key": "cmVhc29u",
+						"value": "U3VjY2VlZChTdG9wcGVkKQ=="
+					}],
+					"type": "ethereum_TransactionExecuted"
+				}],
+				"gasUsed": "40299",
+				"gasWanted": "150000",
+				"info": "",
+				"log": ""
+			},
+			"timestamp": 1712037185,
+			"tx_hash": "039a2481e3b7b81dfb344e0627fca9bccb8e249f18b5892fd234833e128995a5",
+			"ty": 1,
+			"value": {
+				"function": {
+					"Ethereum": {
+						"Transact": {
+							"action": {
+								"Call": "0xb52ef292651f8692053ac3d39921a43fe13533c8"
+							},
+							"from": "0xd3e075bd03149097fa135b18a8756b5024a45e5e",
+							"gas_limit": "0x249f0",
+							"gas_price": "0x2540be400",
+							"input": [198, 64, 117, 45, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 16, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 6, 50, 186, 162, 98, 153, 201, 151, 46, 212, 217, 175, 250, 63, 208, 87, 167, 34, 82, 255],
+							"nonce": "0x90b8f",
+							"signature": {
+								"r": "0x974d0db45e41036fb7b1f3d783dda5e5eb38538c9f33ac7f691896bf78e428e4",
+								"s": "0x1e9f11eab4f0560aa457e498b4889fb47ba84b66728d82d63063a1fcf3472726",
+								"v": 4340
+							},
+							"value": "0x0"
+						}
+					}
+				}
+			}
+		}]
+	},
+	"message": ""
+}
+```
 
+<h3 id="1.10">1.10 获取用户发出的prism交易记录</h3>
 
-
-
-
-
-
-
+* `GET /v2/tx/prism/send`
 
 

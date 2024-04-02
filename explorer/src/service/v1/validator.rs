@@ -148,6 +148,7 @@ impl Validator {
     }
 }
 
+#[allow(dead_code)]
 pub async fn validator_delegation(
     api: &Api,
     address: Query<String>,
@@ -175,6 +176,7 @@ pub async fn validator_delegation(
     )))
 }
 
+#[allow(dead_code)]
 pub async fn validator_list(api: &Api) -> Result<ValidatorListResponse> {
     let mut conn = api.storage.lock().await.acquire().await?;
 
@@ -220,6 +222,7 @@ pub async fn validator_list(api: &Api) -> Result<ValidatorListResponse> {
     })))
 }
 
+#[allow(dead_code)]
 pub async fn validator_detail(api: &Api, address: Path<String>) -> Result<ValidatorDetailResponse> {
     let validator_detail_url = api
         .platform
@@ -245,6 +248,7 @@ pub async fn validator_detail(api: &Api, address: Path<String>) -> Result<Valida
     })))
 }
 
+#[allow(dead_code)]
 pub async fn delegator_list(api: &Api, address: Path<String>) -> Result<DelegatorListResponse> {
     let delegator_list_url = api
         .platform
@@ -328,6 +332,7 @@ pub struct ValidatorHistoryItem {
     pub timestamp: i64,
 }
 
+#[allow(dead_code)]
 pub async fn validator_history(
     api: &Api,
     address: Query<String>,
@@ -450,6 +455,7 @@ pub struct ValidatorDetail {
     pub cur_height: i64,
 }
 
+#[allow(dead_code)]
 pub async fn validator_signed_count(
     api: &Api,
     address: Query<String>,
