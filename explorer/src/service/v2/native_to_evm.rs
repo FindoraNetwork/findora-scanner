@@ -11,6 +11,82 @@ use serde_json::Value;
 use sqlx::Row;
 
 #[derive(ApiResponse)]
+pub enum V2NativeToEvmTxsResponse {
+    #[oai(status = 200)]
+    Ok(Json<V2NativeToEvmTxsResult>),
+    #[oai(status = 404)]
+    NotFound,
+    #[oai(status = 500)]
+    InternalError,
+}
+
+#[derive(Serialize, Deserialize, Debug, Object)]
+pub struct V2NativeToEvmTxsResult {
+    pub code: u16,
+    pub message: String,
+    pub data: V2NativeToEvmTxsData,
+}
+
+#[derive(Serialize, Deserialize, Debug, Object)]
+pub struct V2NativeToEvmTxsData {
+    pub total: i64,
+    pub page: i32,
+    pub page_size: i32,
+    pub txs: Vec<V2NativeToEvmTx>,
+}
+
+pub async fn v2_get_n2e_txs(
+    api: &Api,
+    page: Query<Option<i32>>,
+    page_size: Query<Option<i32>>,
+) -> Result<V2NativeToEvmTxsResponse> {
+    let mut conn = api.storage.lock().await.acquire().await?;
+    let page = page.0.unwrap_or(1);
+    let page_size = page_size.0.unwrap_or(10);
+
+    let sql_total = "SELECT count(*) FROM n2e";
+    let row = sqlx::query(sql_total).fetch_one(&mut conn).await?;
+    let total: i64 = row.try_get("count")?;
+
+    let sql_query = format!("SELECT tx,block,sender,receiver,asset,amount,height,timestamp,content FROM n2e ORDER BY timestamp DESC LIMIT {} OFFSET {}", page_size, (page-1)*page_size);
+    let mut res: Vec<V2NativeToEvmTx> = vec![];
+    let rows = sqlx::query(sql_query.as_str()).fetch_all(&mut conn).await?;
+    for row in rows {
+        let tx: String = row.try_get("tx")?;
+        let block: String = row.try_get("block")?;
+        let sender: String = row.try_get("sender")?;
+        let receiver: String = row.try_get("receiver")?;
+        let asset: String = row.try_get("asset")?;
+        let amount: String = row.try_get("amount")?;
+        let height: i64 = row.try_get("height")?;
+        let timestamp: i64 = row.try_get("timestamp")?;
+        let value: Value = row.try_get("content")?;
+        res.push(V2NativeToEvmTx {
+            tx_hash: tx,
+            block_hash: block,
+            from: sender,
+            to: receiver,
+            asset,
+            amount,
+            height,
+            timestamp,
+            value,
+        })
+    }
+
+    Ok(V2NativeToEvmTxsResponse::Ok(Json(V2NativeToEvmTxsResult {
+        code: 200,
+        message: "".to_string(),
+        data: V2NativeToEvmTxsData {
+            total,
+            page,
+            page_size,
+            txs: res,
+        },
+    })))
+}
+
+#[derive(ApiResponse)]
 pub enum V2NativeToEvmTxResponse {
     #[oai(status = 200)]
     Ok(Json<V2NativeToEvmTxResult>),

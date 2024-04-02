@@ -1,6 +1,7 @@
 mod service;
 use crate::service::api::Api;
 use anyhow::Result;
+use log::info;
 use poem::middleware::Cors;
 use poem::{listener::TcpListener, EndpointExt, Route, Server};
 use poem_openapi::OpenApiService;
@@ -28,7 +29,7 @@ async fn main() -> Result<()> {
         .connect(&postgres_config)
         .await
         .unwrap();
-
+    info!("Connecting DB...ok");
     // tendermint rpc
     let tendermint_rpc_client = TendermintRPC::new(
         Duration::from_secs(60),
@@ -57,7 +58,7 @@ async fn main() -> Result<()> {
 
     let server_addr = format!("{}:{}", config.server.addr, config.server.port);
     let cors = Cors::new();
-
+    info!("Starting server...ok");
     Server::new(TcpListener::bind(server_addr))
         .run(
             Route::new()

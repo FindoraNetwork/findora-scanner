@@ -16,16 +16,13 @@ use crate::service::v1::staking::{
 use crate::service::v1::transaction::{
     PmtxsResponse, TxResponse, TxsResponse, V2PrismRecordResponse,
 };
-use crate::service::v1::validator::{
-    CirculatingSupplyResponse, DelegatorListResponse, ValidatorDelegationResponse,
-    ValidatorDetailResponse, ValidatorHistoryResponse, ValidatorListResponse,
-    ValidatorSignedCountResponse,
-};
+use crate::service::v1::validator::CirculatingSupplyResponse;
 use crate::service::v2::asset::{v2_get_asset, v2_get_asset_list, V2AssetTxResponse};
 use crate::service::v2::claim::{v2_get_claim, v2_get_claims, V2ClaimResponse, V2ClaimsResponse};
 use crate::service::v2::delegation::{
     v2_get_delegation, v2_get_delegations, V2DelegationResponse, V2DelegationsResponse,
 };
+use crate::service::v2::native_to_evm::V2NativeToEvmTxsResponse;
 use crate::service::v2::native_to_evm::{
     v2_get_n2e_tx, v2_get_prism_records_send, V2NativeToEvmTxResponse,
 };
@@ -409,31 +406,31 @@ impl Api {
             .map_err(handle_fetch_one_err)
     }
 
-    #[oai(
-        path = "/chain/validator_list",
-        method = "get",
-        tag = "ApiTags::BlockChain"
-    )]
-    async fn validator_list(&self) -> poem::Result<ValidatorListResponse> {
-        service::v1::validator::validator_list(self)
-            .await
-            .map_err(handle_fetch_one_err)
-    }
+    // #[oai(
+    //     path = "/chain/validator_list",
+    //     method = "get",
+    //     tag = "ApiTags::BlockChain"
+    // )]
+    // async fn validator_list(&self) -> poem::Result<ValidatorListResponse> {
+    //     service::v1::validator::validator_list(self)
+    //         .await
+    //         .map_err(handle_fetch_one_err)
+    // }
 
-    #[oai(
-        path = "/chain/validator_detail/:address",
-        method = "get",
-        tag = "ApiTags::BlockChain"
-    )]
-    async fn validator_detail(
-        &self,
-        /// validator address, e.g. 917454FB61CFBDB1995BC57C7A821E41FFB1AF43
-        address: Path<String>,
-    ) -> poem::Result<ValidatorDetailResponse> {
-        service::v1::validator::validator_detail(self, address)
-            .await
-            .map_err(handle_fetch_one_err)
-    }
+    // #[oai(
+    //     path = "/chain/validator_detail/:address",
+    //     method = "get",
+    //     tag = "ApiTags::BlockChain"
+    // )]
+    // async fn validator_detail(
+    //     &self,
+    //     /// validator address, e.g. 917454FB61CFBDB1995BC57C7A821E41FFB1AF43
+    //     address: Path<String>,
+    // ) -> poem::Result<ValidatorDetailResponse> {
+    //     service::v1::validator::validator_detail(self, address)
+    //         .await
+    //         .map_err(handle_fetch_one_err)
+    // }
 
     #[oai(
         path = "/chain/circulating_supply",
@@ -446,39 +443,39 @@ impl Api {
             .map_err(handle_fetch_one_err)
     }
 
-    #[oai(
-        path = "/chain/validator/signed_count",
-        method = "get",
-        tag = "ApiTags::BlockChain"
-    )]
-    async fn validator_signed_count(
-        &self,
-        /// validator address, e.g. 917454FB61CFBDB1995BC57C7A821E41FFB1AF43
-        address: Query<String>,
-        /// page index, the default is 1.
-        page: Query<Option<i64>>,
-        /// page size, the default is 10.
-        page_size: Query<Option<i64>>,
-    ) -> poem::Result<ValidatorSignedCountResponse> {
-        service::v1::validator::validator_signed_count(self, address, page, page_size)
-            .await
-            .map_err(handle_fetch_one_err)
-    }
+    // #[oai(
+    //     path = "/chain/validator/signed_count",
+    //     method = "get",
+    //     tag = "ApiTags::BlockChain"
+    // )]
+    // async fn validator_signed_count(
+    //     &self,
+    //     /// validator address, e.g. 917454FB61CFBDB1995BC57C7A821E41FFB1AF43
+    //     address: Query<String>,
+    //     /// page index, the default is 1.
+    //     page: Query<Option<i64>>,
+    //     /// page size, the default is 10.
+    //     page_size: Query<Option<i64>>,
+    // ) -> poem::Result<ValidatorSignedCountResponse> {
+    //     service::v1::validator::validator_signed_count(self, address, page, page_size)
+    //         .await
+    //         .map_err(handle_fetch_one_err)
+    // }
 
-    #[oai(
-        path = "/chain/delegator_list/:address",
-        method = "get",
-        tag = "ApiTags::BlockChain"
-    )]
-    async fn delegator_list(
-        &self,
-        /// delegator address, e.g. 000E33AB7471186F3B1DE9FC08BB9C480F453590
-        address: Path<String>,
-    ) -> poem::Result<DelegatorListResponse> {
-        service::v1::validator::delegator_list(self, address)
-            .await
-            .map_err(handle_fetch_one_err)
-    }
+    // #[oai(
+    //     path = "/chain/delegator_list/:address",
+    //     method = "get",
+    //     tag = "ApiTags::BlockChain"
+    // )]
+    // async fn delegator_list(
+    //     &self,
+    //     /// delegator address, e.g. 000E33AB7471186F3B1DE9FC08BB9C480F453590
+    //     address: Path<String>,
+    // ) -> poem::Result<DelegatorListResponse> {
+    //     service::v1::validator::delegator_list(self, address)
+    //         .await
+    //         .map_err(handle_fetch_one_err)
+    // }
 
     #[oai(path = "/simple/price", method = "get", tag = "ApiTags::Price")]
     async fn simple_price(
@@ -528,17 +525,31 @@ impl Api {
             .map_err(handle_fetch_one_err)
     }
 
+    // #[oai(
+    //     path = "/chain/validator_delegation",
+    //     method = "get",
+    //     tag = "ApiTags::BlockChain"
+    // )]
+    // async fn validator_delegation(
+    //     &self,
+    //     /// validator address, e.g. 000E33AB7471186F3B1DE9FC08BB9C480F453590
+    //     address: Query<String>,
+    // ) -> poem::Result<ValidatorDelegationResponse> {
+    //     service::v1::validator::validator_delegation(self, address)
+    //         .await
+    //         .map_err(handle_fetch_one_err)
+    // }
     #[oai(
-        path = "/chain/validator_delegation",
+        path = "/v2/txs/prism/n2e",
         method = "get",
-        tag = "ApiTags::BlockChain"
+        tag = "ApiTags::Transaction"
     )]
-    async fn validator_delegation(
+    async fn get_prism_n2e_txs(
         &self,
-        /// validator address, e.g. 000E33AB7471186F3B1DE9FC08BB9C480F453590
-        address: Query<String>,
-    ) -> poem::Result<ValidatorDelegationResponse> {
-        service::v1::validator::validator_delegation(self, address)
+        page: Query<Option<i32>>,
+        page_size: Query<Option<i32>>,
+    ) -> poem::Result<V2NativeToEvmTxsResponse> {
+        service::v2::native_to_evm::v2_get_n2e_txs(self, page, page_size)
             .await
             .map_err(handle_fetch_one_err)
     }
@@ -630,24 +641,24 @@ impl Api {
             .map_err(handle_fetch_one_err)
     }
 
-    #[oai(
-        path = "/chain/validator/history",
-        method = "get",
-        tag = "ApiTags::BlockChain"
-    )]
-    async fn get_validator_history(
-        &self,
-        /// validator address, e.g. 9E6717392EFDCFA101E33449A7C2A238251315B1
-        address: Query<String>,
-        /// page index, the default is 1.
-        page: Query<Option<i64>>,
-        /// page size, the default is 10.
-        page_size: Query<Option<i64>>,
-    ) -> poem::Result<ValidatorHistoryResponse> {
-        service::v1::validator::validator_history(self, address, page, page_size)
-            .await
-            .map_err(handle_fetch_one_err)
-    }
+    // #[oai(
+    //     path = "/chain/validator/history",
+    //     method = "get",
+    //     tag = "ApiTags::BlockChain"
+    // )]
+    // async fn get_validator_history(
+    //     &self,
+    //     /// validator address, e.g. 9E6717392EFDCFA101E33449A7C2A238251315B1
+    //     address: Query<String>,
+    //     /// page index, the default is 1.
+    //     page: Query<Option<i64>>,
+    //     /// page size, the default is 10.
+    //     page_size: Query<Option<i64>>,
+    // ) -> poem::Result<ValidatorHistoryResponse> {
+    //     service::v1::validator::validator_history(self, address, page, page_size)
+    //         .await
+    //         .map_err(handle_fetch_one_err)
+    // }
 
     // #[oai(
     //     path = "/chain/claim/:address",
