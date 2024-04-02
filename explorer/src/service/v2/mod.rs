@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 pub mod asset;
 pub mod claim;
 pub mod delegation;
+pub mod evm_to_native;
 pub mod native_to_evm;
 pub mod other;
 pub mod transaction;
