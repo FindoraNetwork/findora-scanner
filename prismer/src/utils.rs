@@ -1,3 +1,4 @@
+use base64::{engine, Engine};
 use {
     bech32::{self, FromBase32, ToBase32},
     ruc::*,
@@ -7,13 +8,14 @@ use {
 #[allow(unused)]
 #[inline(always)]
 pub fn public_key_to_base64(key: &XfrPublicKey) -> String {
-    base64::encode_config(ZeiFromToBytes::zei_to_bytes(key), base64::URL_SAFE)
+    engine::general_purpose::URL_SAFE.encode(ZeiFromToBytes::zei_to_bytes(key))
 }
 
 #[allow(unused)]
 #[inline(always)]
 pub fn public_key_from_base64(pk: &str) -> Result<XfrPublicKey> {
-    base64::decode_config(pk, base64::URL_SAFE)
+    engine::general_purpose::URL_SAFE
+        .decode(pk)
         .c(d!())
         .and_then(|bytes| XfrPublicKey::zei_from_bytes(&bytes).c(d!()))
 }

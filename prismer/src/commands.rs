@@ -34,9 +34,6 @@ pub struct Load {
     ///Times to retry to pull a block.
     #[clap(long)]
     retries: Option<usize>,
-    ///whether to load staking.
-    #[clap(long, parse(from_flag))]
-    staking: bool,
 }
 
 impl Load {
@@ -135,9 +132,6 @@ pub struct Subscribe {
     ///How many concurrency would be used when scanning, default is 8.
     #[clap(long)]
     concurrency: Option<usize>,
-    ///Load staking while subscribing.
-    #[clap(long, parse(from_flag))]
-    staking: bool,
 }
 
 impl Subscribe {
