@@ -1,6 +1,5 @@
 use bech32::ToBase32;
-use ethereum::LegacyTransaction;
-use ethereum::LegacyTransactionMessage;
+use ethereum::{LegacyTransaction, LegacyTransactionMessage};
 use ethereum_types::{H160, H256};
 use ruc::eg;
 use sha3::{Digest, Keccak256};

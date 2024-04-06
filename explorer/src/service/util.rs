@@ -10,7 +10,7 @@ use {
 #[allow(unused)]
 #[inline(always)]
 pub fn public_key_to_base64(key: &XfrPublicKey) -> String {
-    engine::general_purpose::URL_SAFE.encode(&ZeiFromToBytes::zei_to_bytes(key))
+    engine::general_purpose::URL_SAFE.encode(ZeiFromToBytes::zei_to_bytes(key))
 }
 
 #[allow(unused)]
