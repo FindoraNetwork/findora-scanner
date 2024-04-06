@@ -74,7 +74,7 @@ pub async fn get_address(
         or (value @? '$.body.operations[*].TransferAsset.body.transfer.inputs[*].public_key ? (@ == \"{}\")') \
         ORDER BY timestamp DESC LIMIT {} OFFSET {}", pk_b64, pk_b64, page_size, (page - 1) * page_size);
 
-    let rows = sqlx::query(sql_str.as_str()).fetch_all(&mut conn).await?;
+    let rows = sqlx::query(sql_str.as_str()).fetch_all(&mut *conn).await?;
     let mut txs: Vec<Transaction> = vec![];
     for row in rows {
         let tx_hash: String = row.try_get("tx_hash")?;
@@ -108,7 +108,7 @@ pub async fn get_address(
         "SELECT count(*) as total FROM transaction WHERE \
         (value @? '$.body.operations[*].TransferAsset.body.transfer.outputs[*].public_key ? (@ == \"{pk_b64}\")') \
         or (value @? '$.body.operations[*].TransferAsset.body.transfer.inputs[*].public_key ? (@ == \"{pk_b64}\")')");
-    let res = sqlx::query(sql_total.as_str()).fetch_one(&mut conn).await;
+    let res = sqlx::query(sql_total.as_str()).fetch_one(&mut *conn).await;
     let total: i64 = res.unwrap().try_get("total")?;
 
     Ok(AddressResponse::Ok(Json(AddressResult {

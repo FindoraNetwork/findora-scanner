@@ -42,7 +42,9 @@ pub async fn v2_get_claim(api: &Api, tx_hash: Path<String>) -> Result<V2ClaimRes
         tx_hash.0.to_lowercase()
     );
 
-    let row = sqlx::query(sql_query.as_str()).fetch_one(&mut conn).await?;
+    let row = sqlx::query(sql_query.as_str())
+        .fetch_one(&mut *conn)
+        .await?;
 
     let tx: String = row.try_get("tx")?;
     let block: String = row.try_get("block")?;
@@ -120,10 +122,14 @@ pub async fn v2_get_claims(
          ))
     };
 
-    let row_cnt = sqlx::query(sql_count.as_str()).fetch_one(&mut conn).await?;
+    let row_cnt = sqlx::query(sql_count.as_str())
+        .fetch_one(&mut *conn)
+        .await?;
     let total: i64 = row_cnt.try_get("cnt")?;
     let mut res: Vec<V2Claim> = vec![];
-    let rows = sqlx::query(sql_query.as_str()).fetch_all(&mut conn).await?;
+    let rows = sqlx::query(sql_query.as_str())
+        .fetch_all(&mut *conn)
+        .await?;
     for row in rows {
         let tx: String = row.try_get("tx")?;
         let block: String = row.try_get("block")?;

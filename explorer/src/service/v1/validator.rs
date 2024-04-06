@@ -202,7 +202,7 @@ pub async fn validator_list(api: &Api) -> Result<ValidatorListResponse> {
 
     let mut wrap_validator_data = validator_data.wrap();
 
-    let rows = sqlx::query(sql.as_str()).fetch_all(&mut conn).await?;
+    let rows = sqlx::query(sql.as_str()).fetch_all(&mut *conn).await?;
     let mut signers: Vec<String> = vec![];
     for r in rows {
         let addr: String = r.try_get("address")?;
@@ -350,7 +350,7 @@ pub async fn validator_history(
     let mut tmp_items: Vec<ValidatorHistoryItem> = vec![];
 
     let delegation_rows = sqlx::query(sql_delegation.as_str())
-        .fetch_all(&mut conn)
+        .fetch_all(&mut *conn)
         .await?;
     for row in delegation_rows {
         let timestamp: i64 = row.try_get("timestamp")?;
@@ -368,7 +368,7 @@ pub async fn validator_history(
         })
     }
 
-    let undelegation_rows = sqlx::query(sql_undelegation).fetch_all(&mut conn).await?;
+    let undelegation_rows = sqlx::query(sql_undelegation).fetch_all(&mut *conn).await?;
     for row in undelegation_rows {
         let timestamp: i64 = row.try_get("timestamp")?;
         let tx_hash: String = row.try_get("tx_hash")?;
@@ -486,13 +486,13 @@ pub async fn validator_signed_count(
             "SELECT count(*) as cnt FROM block WHERE time>='{start_time}' AND time<'{end_time}'"
         );
         let row_blk_cnt = sqlx::query(sql_block_cnt.as_str())
-            .fetch_one(&mut conn)
+            .fetch_one(&mut *conn)
             .await?;
         let blk_cnt: i64 = row_blk_cnt.try_get("cnt")?;
 
         let sql_signed_cnt = format!("SELECT count(*) as cnt FROM block_generation WHERE address='{}' AND time>='{}' AND time<'{}' AND signature is not null", address.0.to_uppercase(), start_time, end_time);
         let row_signed_cnt = sqlx::query(sql_signed_cnt.as_str())
-            .fetch_one(&mut conn)
+            .fetch_one(&mut *conn)
             .await?;
         let signed_cnt: i64 = row_signed_cnt.try_get("cnt")?;
 

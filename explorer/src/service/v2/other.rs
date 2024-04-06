@@ -49,7 +49,7 @@ pub async fn v2_statistics(api: &Api, ty: Query<Option<i32>>) -> Result<V2ChainS
             tx_type
         );
         let row_txs_count = sqlx::query(sql_txs_count.as_str())
-            .fetch_one(&mut conn)
+            .fetch_one(&mut *conn)
             .await?;
         let txs_count = row_txs_count.try_get("cnt")?;
 
@@ -75,12 +75,12 @@ pub async fn v2_statistics(api: &Api, ty: Query<Option<i32>>) -> Result<V2ChainS
         }
 
         let row_addr_count = sqlx::query(sql_addrs_count.as_str())
-            .fetch_one(&mut conn)
+            .fetch_one(&mut *conn)
             .await?;
         let addr_count: i64 = row_addr_count.try_get("cnt")?;
 
         let row_daily = sqlx::query(sql_daily_txs.as_str())
-            .fetch_one(&mut conn)
+            .fetch_one(&mut *conn)
             .await?;
         let daily_txs = row_daily.try_get("cnt")?;
 
@@ -90,21 +90,21 @@ pub async fn v2_statistics(api: &Api, ty: Query<Option<i32>>) -> Result<V2ChainS
     } else {
         let sql_txs_count = "select count(*) as cnt from transaction".to_string();
         let row_txs_count = sqlx::query(sql_txs_count.as_str())
-            .fetch_one(&mut conn)
+            .fetch_one(&mut *conn)
             .await?;
         let txs_count = row_txs_count.try_get("cnt")?;
 
         let sql_evm_addrs_count =
             "select count(distinct address) as cnt from evm_addrs".to_string();
         let row_evm_addr = sqlx::query(sql_evm_addrs_count.as_str())
-            .fetch_one(&mut conn)
+            .fetch_one(&mut *conn)
             .await?;
         let evm_addrs: i64 = row_evm_addr.try_get("cnt")?;
 
         let sql_native_addrs_count =
             "select count(distinct address) as cnt from native_addrs".to_string();
         let row_native_addr = sqlx::query(sql_native_addrs_count.as_str())
-            .fetch_one(&mut conn)
+            .fetch_one(&mut *conn)
             .await?;
         let native_addrs: i64 = row_native_addr.try_get("cnt")?;
 
@@ -113,7 +113,7 @@ pub async fn v2_statistics(api: &Api, ty: Query<Option<i32>>) -> Result<V2ChainS
             start_time.and_utc().timestamp()
         );
         let row_daily = sqlx::query(sql_daily_txs.as_str())
-            .fetch_one(&mut conn)
+            .fetch_one(&mut *conn)
             .await?;
         let daily_txs = row_daily.try_get("cnt")?;
 
@@ -158,24 +158,24 @@ pub async fn v2_distribute(api: &Api) -> Result<V2DistributeResponse> {
     let mut conn = api.storage.lock().await.acquire().await?;
 
     let sql_native = "select count(*) as cnt from transaction where ty=0";
-    let row_native = sqlx::query(sql_native).fetch_one(&mut conn).await?;
+    let row_native = sqlx::query(sql_native).fetch_one(&mut *conn).await?;
     let native_count: i64 = row_native.try_get("cnt")?;
 
     let sql_privacy =
         "select count(*) as cnt from transaction where ty_sub=2 or ty_sub=3 or ty_sub=4";
-    let row_privacy = sqlx::query(sql_privacy).fetch_one(&mut conn).await?;
+    let row_privacy = sqlx::query(sql_privacy).fetch_one(&mut *conn).await?;
     let privacy: i64 = row_privacy.try_get("cnt")?;
 
     let sql_evm = "SELECT count(*) as cnt FROM transaction where ty=1";
-    let row_evm = sqlx::query(sql_evm).fetch_one(&mut conn).await?;
+    let row_evm = sqlx::query(sql_evm).fetch_one(&mut *conn).await?;
     let evm_count: i64 = row_evm.try_get("cnt")?;
 
     let sql_prism_n2e = "select count(*) as cnt from n2e";
-    let row_n2e = sqlx::query(sql_prism_n2e).fetch_one(&mut conn).await?;
+    let row_n2e = sqlx::query(sql_prism_n2e).fetch_one(&mut *conn).await?;
     let n2e_count: i64 = row_n2e.try_get("cnt")?;
 
     let sql_prism_e2n = "select count(*) as cnt from e2n";
-    let row_e2n = sqlx::query(sql_prism_e2n).fetch_one(&mut conn).await?;
+    let row_e2n = sqlx::query(sql_prism_e2n).fetch_one(&mut *conn).await?;
     let e2n_count: i64 = row_e2n.try_get("cnt")?;
 
     Ok(V2DistributeResponse::Ok(Json(V2DistributeResult {
@@ -213,11 +213,11 @@ pub async fn v2_address_count(
     }
 
     let row_native = sqlx::query(sql_native.as_str())
-        .fetch_one(&mut conn)
+        .fetch_one(&mut *conn)
         .await?;
     let native_count: i64 = row_native.try_get("cnt")?;
 
-    let row_evm = sqlx::query(sql_evm.as_str()).fetch_one(&mut conn).await?;
+    let row_evm = sqlx::query(sql_evm.as_str()).fetch_one(&mut *conn).await?;
     let evm_count: i64 = row_evm.try_get("cnt")?;
 
     Ok(AddressCountResponse::Ok(Json(AddressCountResult {
