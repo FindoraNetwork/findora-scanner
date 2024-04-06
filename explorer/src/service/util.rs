@@ -1,8 +1,8 @@
 use anyhow::Error;
 use poem::http::StatusCode;
+use ruc::{d, Result, RucResult};
 use {
     bech32::{self, FromBase32, ToBase32},
-    ruc::*,
     zei::{serialization::ZeiFromToBytes, xfr::sig::XfrPublicKey},
 };
 

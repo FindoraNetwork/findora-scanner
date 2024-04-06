@@ -72,9 +72,13 @@ pub async fn get_tx_delegation(
     let sql_query = format!("SELECT tx_hash,timestamp,jsonb_path_query(value,'$.body.operations[*].Delegation') AS d FROM transaction WHERE value @? '$.body.operations[*].Delegation.pubkey ? (@==\"{}\")' ORDER BY timestamp DESC LIMIT {} OFFSET {}", base64_address, page_size, (page-1)*page_size);
 
     let mut items: Vec<DelegationItem> = vec![];
-    let row_cnt = sqlx::query(sql_count.as_str()).fetch_one(&mut conn).await?;
+    let row_cnt = sqlx::query(sql_count.as_str())
+        .fetch_one(&mut *conn)
+        .await?;
     let total: i64 = row_cnt.try_get("cnt")?;
-    let rows = sqlx::query(sql_query.as_str()).fetch_all(&mut conn).await?;
+    let rows = sqlx::query(sql_query.as_str())
+        .fetch_all(&mut *conn)
+        .await?;
     for row in rows {
         let timestamp: i64 = row.try_get("timestamp")?;
         let tx_hash: String = row.try_get("tx_hash")?;
@@ -181,9 +185,13 @@ pub async fn get_tx_undelegation(
     let sql_query = format!("SELECT tx_hash,timestamp,jsonb_path_query(value,'$.body.operations[*].UnDelegation') AS ud FROM transaction WHERE value @? '$.body.operations[*].UnDelegation.pubkey ? (@==\"{}\")' ORDER BY timestamp DESC LIMIT {} OFFSET {}", base64_address, page_size, (page-1)*page_size);
 
     let mut items: Vec<UnDelegationItem> = vec![];
-    let row_cnt = sqlx::query(sql_count.as_str()).fetch_one(&mut conn).await?;
+    let row_cnt = sqlx::query(sql_count.as_str())
+        .fetch_one(&mut *conn)
+        .await?;
     let total: i64 = row_cnt.try_get("cnt")?;
-    let rows = sqlx::query(sql_query.as_str()).fetch_all(&mut conn).await?;
+    let rows = sqlx::query(sql_query.as_str())
+        .fetch_all(&mut *conn)
+        .await?;
     for row in rows {
         let timestamp: i64 = row.try_get("timestamp")?;
         let tx_hash: String = row.try_get("tx_hash")?;
@@ -296,9 +304,13 @@ pub async fn get_claim(
     let sql_query =format!("SELECT tx_hash,timestamp,jsonb_path_query(value,'$.body.operations[*].Claim') AS claim FROM transaction WHERE value @? '$.body.operations[*].Claim.pubkey ? (@==\"{}\")' ORDER BY timestamp DESC LIMIT {} OFFSET {}", base64_address, page_size, (page-1)*page_size);
 
     let mut items: Vec<ClaimItem> = vec![];
-    let row_cnt = sqlx::query(sql_count.as_str()).fetch_one(&mut conn).await?;
+    let row_cnt = sqlx::query(sql_count.as_str())
+        .fetch_one(&mut *conn)
+        .await?;
     let total: i64 = row_cnt.try_get("cnt")?;
-    let rows = sqlx::query(sql_query.as_str()).fetch_all(&mut conn).await?;
+    let rows = sqlx::query(sql_query.as_str())
+        .fetch_all(&mut *conn)
+        .await?;
     for row in rows {
         let timestamp: i64 = row.try_get("timestamp")?;
         let tx_hash: String = row.try_get("tx_hash")?;
@@ -441,10 +453,14 @@ pub async fn get_undelegation_info(
     query_sql =
         query_sql.add(format!(" LIMIT {} OFFSET {}", page_size, (page - 1) * page_size).as_str());
 
-    let rows_count = sqlx::query(count_sql.as_str()).fetch_one(&mut conn).await?;
+    let rows_count = sqlx::query(count_sql.as_str())
+        .fetch_one(&mut *conn)
+        .await?;
     let total: i64 = rows_count.try_get("cnt")?;
 
-    let rows = sqlx::query(query_sql.as_str()).fetch_all(&mut conn).await?;
+    let rows = sqlx::query(query_sql.as_str())
+        .fetch_all(&mut *conn)
+        .await?;
     let mut undelegations: Vec<UndelegationInfo> = vec![];
     for r in rows {
         let tx_hash: String = r.try_get("tx_hash")?;
@@ -556,10 +572,14 @@ pub async fn get_delegation_info(
     query_sql =
         query_sql.add(format!(" LIMIT {} OFFSET {}", page_size, (page - 1) * page_size).as_str());
 
-    let rows_count = sqlx::query(count_sql.as_str()).fetch_one(&mut conn).await?;
+    let rows_count = sqlx::query(count_sql.as_str())
+        .fetch_one(&mut *conn)
+        .await?;
     let total: i64 = rows_count.try_get("cnt")?;
 
-    let rows = sqlx::query(query_sql.as_str()).fetch_all(&mut conn).await?;
+    let rows = sqlx::query(query_sql.as_str())
+        .fetch_all(&mut *conn)
+        .await?;
     let mut delegations: Vec<DelegationInfo> = vec![];
     for r in rows {
         let tx_hash: String = r.try_get("tx_hash")?;
@@ -636,7 +656,9 @@ pub async fn get_delegation_amount(
         query_sql = query_sql.add(" WHERE ").add(params.join(" AND ").as_str());
     }
 
-    let rows = sqlx::query(query_sql.as_str()).fetch_all(&mut conn).await?;
+    let rows = sqlx::query(query_sql.as_str())
+        .fetch_all(&mut *conn)
+        .await?;
     let mut amount: u64 = 0;
     for r in rows {
         let val: Value = r.try_get("d")?;
@@ -697,7 +719,9 @@ pub async fn get_undelegation_amount(
         query_sql = query_sql.add(" WHERE ").add(params.join(" AND ").as_str());
     }
 
-    let rows = sqlx::query(query_sql.as_str()).fetch_all(&mut conn).await?;
+    let rows = sqlx::query(query_sql.as_str())
+        .fetch_all(&mut *conn)
+        .await?;
     let mut amount: u64 = 0;
     for r in rows {
         let val: Value = r.try_get("ud")?;

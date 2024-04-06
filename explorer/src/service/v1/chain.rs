@@ -68,36 +68,36 @@ pub async fn distribute(api: &Api) -> Result<DistributeResponse> {
     // xhub
     let xhub: i64 =
         sqlx::query("SELECT count(*) as cnt FROM transaction WHERE value @? '$.function.XHub'")
-            .fetch_one(&mut conn)
+            .fetch_one(&mut *conn)
             .await?
             .try_get("cnt")?;
 
     // evm
     let evm: i64 = sqlx::query("SELECT count(*) as cnt FROM transaction WHERE ty=1")
-        .fetch_one(&mut conn)
+        .fetch_one(&mut *conn)
         .await?
         .try_get("cnt")?;
 
     // not evm
     let not_evm: i64 = sqlx::query("SELECT count(*) as cnt FROM transaction WHERE ty=0")
-        .fetch_one(&mut conn)
+        .fetch_one(&mut *conn)
         .await?
         .try_get("cnt")?;
 
     let convert_account: i64 = sqlx::query(convert_account_sql)
-        .fetch_one(&mut conn)
+        .fetch_one(&mut *conn)
         .await?
         .try_get("cnt")?;
     let bar: i64 = sqlx::query(bar_sql)
-        .fetch_one(&mut conn)
+        .fetch_one(&mut *conn)
         .await?
         .try_get("cnt")?;
     let hide_type_or_amount: i64 = sqlx::query(hide_amount_or_type_sql)
-        .fetch_one(&mut conn)
+        .fetch_one(&mut *conn)
         .await?
         .try_get("cnt")?;
     let hide_amount_and_type: i64 = sqlx::query(hide_amount_and_type_sql)
-        .fetch_one(&mut conn)
+        .fetch_one(&mut *conn)
         .await?
         .try_get("cnt")?;
     let hide = hide_type_or_amount - hide_amount_and_type;
@@ -144,7 +144,7 @@ pub async fn address_count(
         as addr FROM transaction WHERE timestamp >= {} AND timestamp <= {}", start_time.0, end_time.0);
 
     let rows = sqlx::query(address_count_sql.as_str())
-        .fetch_all(&mut conn)
+        .fetch_all(&mut *conn)
         .await?;
 
     let mut addrs: Vec<String> = vec![];
@@ -176,7 +176,7 @@ pub async fn statistics(api: &Api, ty: Query<Option<i32>>) -> Result<ChainStatis
     } else {
         "SELECT COUNT(*) as cnt FROM transaction".to_string()
     };
-    let row = sqlx::query(sql_str.as_str()).fetch_one(&mut conn).await?;
+    let row = sqlx::query(sql_str.as_str()).fetch_one(&mut *conn).await?;
     let total_txs = row.try_get("cnt")?;
 
     // total address
@@ -188,22 +188,22 @@ pub async fn statistics(api: &Api, ty: Query<Option<i32>>) -> Result<ChainStatis
     match ty.0 {
         Some(0) => {
             let native_counts_rows = sqlx::query(native_addr_cnt_sql.as_str())
-                .fetch_all(&mut conn)
+                .fetch_all(&mut *conn)
                 .await?;
             addr_counts = native_counts_rows.len() as i64;
         }
         Some(1) => {
             let evm_counts_row = sqlx::query(evm_addr_cnt_sql.as_str())
-                .fetch_one(&mut conn)
+                .fetch_one(&mut *conn)
                 .await?;
             addr_counts = evm_counts_row.try_get("cnt")?;
         }
         _ => {
             let evm_counts_row = sqlx::query(evm_addr_cnt_sql.as_str())
-                .fetch_one(&mut conn)
+                .fetch_one(&mut *conn)
                 .await?;
             let native_counts_rows = sqlx::query(native_addr_cnt_sql.as_str())
-                .fetch_all(&mut conn)
+                .fetch_all(&mut *conn)
                 .await?;
             let evm_counts: i64 = evm_counts_row.try_get("cnt")?;
             let native_counts = native_counts_rows.len();
@@ -225,7 +225,7 @@ pub async fn statistics(api: &Api, ty: Query<Option<i32>>) -> Result<ChainStatis
             start_time.and_utc().timestamp()
         )
     };
-    let row = sqlx::query(sql_str.as_str()).fetch_one(&mut conn).await?;
+    let row = sqlx::query(sql_str.as_str()).fetch_one(&mut *conn).await?;
     let daily_txs = row.try_get("cnt")?;
 
     res_data.active_addresses = addr_counts;
@@ -261,7 +261,9 @@ pub async fn prism_sync_info(api: &Api) -> Result<PrismSyncResponse> {
     let mut conn = api.storage.lock().await.acquire().await?;
 
     let sql_query = "SELECT height FROM e2n_last_height".to_string();
-    let row = sqlx::query(sql_query.as_str()).fetch_one(&mut conn).await?;
+    let row = sqlx::query(sql_query.as_str())
+        .fetch_one(&mut *conn)
+        .await?;
 
     let prism_info = PrismInfo {
         height: row.try_get("height")?,
@@ -297,7 +299,9 @@ pub async fn delegation_address_num(api: &Api) -> Result<DelegateAddressNumRespo
     let mut conn = api.storage.lock().await.acquire().await?;
 
     let sql_query = "select jsonb_path_query(value,'$.body.operations[*].Delegation.pubkey') as pk from transaction".to_string();
-    let row = sqlx::query(sql_query.as_str()).fetch_all(&mut conn).await?;
+    let row = sqlx::query(sql_query.as_str())
+        .fetch_all(&mut *conn)
+        .await?;
 
     let res = DelegateAddressNumResult {
         code: 200,

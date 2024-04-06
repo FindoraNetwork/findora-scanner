@@ -58,7 +58,7 @@ pub struct MarketChartResult {
 pub async fn get_fra_price(api: &Api) -> Result<FraPrice> {
     let mut conn = api.storage.lock().await.acquire().await?;
     let row = sqlx::query("SELECT price FROM prices")
-        .fetch_one(&mut conn)
+        .fetch_one(&mut *conn)
         .await?;
     let p: String = row.try_get("price")?;
     let fra_price = FraPrice { usd: p.parse()? };
@@ -70,7 +70,7 @@ pub async fn upsert_fra_price(api: &Api, price: &str) -> Result<()> {
     sqlx::query("INSERT INTO prices VALUES($1,$2) ON CONFLICT(name) DO UPDATE SET price=$2")
         .bind("fra")
         .bind(price)
-        .execute(&mut conn)
+        .execute(&mut *conn)
         .await?;
 
     Ok(())
@@ -79,7 +79,7 @@ pub async fn upsert_fra_price(api: &Api, price: &str) -> Result<()> {
 pub async fn get_fra_market(api: &Api) -> Result<FraMarketChart> {
     let mut conn = api.storage.lock().await.acquire().await?;
     let row = sqlx::query("SELECT val FROM market")
-        .fetch_one(&mut conn)
+        .fetch_one(&mut *conn)
         .await?;
     let val: Value = row.try_get("val")?;
     let fmc: FraMarketChart = serde_json::from_value(val).unwrap();
@@ -92,7 +92,7 @@ pub async fn upsert_fra_market(api: &Api, val: Value) -> Result<()> {
     sqlx::query("INSERT INTO market VALUES($1,$2) ON CONFLICT(name) DO UPDATE SET val=$2")
         .bind("fra")
         .bind(val)
-        .execute(&mut conn)
+        .execute(&mut *conn)
         .await?;
 
     Ok(())

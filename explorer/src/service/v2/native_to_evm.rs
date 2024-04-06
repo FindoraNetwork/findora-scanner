@@ -45,12 +45,14 @@ pub async fn v2_get_n2e_txs(
     let page_size = page_size.0.unwrap_or(10);
 
     let sql_total = "SELECT count(*) FROM n2e";
-    let row = sqlx::query(sql_total).fetch_one(&mut conn).await?;
+    let row = sqlx::query(sql_total).fetch_one(&mut *conn).await?;
     let total: i64 = row.try_get("count")?;
 
     let sql_query = format!("SELECT tx,block,sender,receiver,asset,amount,height,timestamp,content FROM n2e ORDER BY timestamp DESC LIMIT {} OFFSET {}", page_size, (page-1)*page_size);
     let mut res: Vec<V2NativeToEvmTx> = vec![];
-    let rows = sqlx::query(sql_query.as_str()).fetch_all(&mut conn).await?;
+    let rows = sqlx::query(sql_query.as_str())
+        .fetch_all(&mut *conn)
+        .await?;
     for row in rows {
         let tx: String = row.try_get("tx")?;
         let block: String = row.try_get("block")?;
@@ -120,7 +122,9 @@ pub async fn v2_get_n2e_tx(api: &Api, tx_hash: Path<String>) -> Result<V2NativeT
     let mut conn = api.storage.lock().await.acquire().await?;
     let sql_query = format!("SELECT tx,block,sender,receiver,asset,amount,height,timestamp,content FROM n2e WHERE tx='{}'", tx_hash.0.to_lowercase());
 
-    let row = sqlx::query(sql_query.as_str()).fetch_one(&mut conn).await?;
+    let row = sqlx::query(sql_query.as_str())
+        .fetch_one(&mut *conn)
+        .await?;
 
     let tx: String = row.try_get("tx")?;
     let block: String = row.try_get("block")?;
@@ -187,7 +191,9 @@ pub async fn v2_get_prism_records_send(
         "select count(*) as cnt from n2e where sender='{}'",
         address.0
     );
-    let row_total = sqlx::query(sql_total.as_str()).fetch_one(&mut conn).await?;
+    let row_total = sqlx::query(sql_total.as_str())
+        .fetch_one(&mut *conn)
+        .await?;
     let total: i64 = row_total.try_get("cnt")?;
 
     let sql_query = format!(
@@ -196,7 +202,9 @@ pub async fn v2_get_prism_records_send(
         page_size,
         (page - 1) * page_size
     );
-    let rows = sqlx::query(sql_query.as_str()).fetch_all(&mut conn).await?;
+    let rows = sqlx::query(sql_query.as_str())
+        .fetch_all(&mut *conn)
+        .await?;
 
     for row in rows {
         let tx_hash: String = row.try_get("tx")?;

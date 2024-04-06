@@ -55,12 +55,14 @@ pub async fn v2_get_e2n_txs(
     let page_size = page_size.0.unwrap_or(10);
 
     let sql_total = "SELECT count(*) FROM e2n";
-    let row = sqlx::query(sql_total).fetch_one(&mut conn).await?;
+    let row = sqlx::query(sql_total).fetch_one(&mut *conn).await?;
     let total: i64 = row.try_get("count")?;
 
     let sql_query = format!("SELECT tx_hash,block_hash,sender,receiver,asset,amount,decimal,height,timestamp,value FROM e2n ORDER BY timestamp DESC LIMIT {} OFFSET {}", page_size, (page-1)*page_size);
     let mut res: Vec<V2EvmToNativeTx> = vec![];
-    let rows = sqlx::query(sql_query.as_str()).fetch_all(&mut conn).await?;
+    let rows = sqlx::query(sql_query.as_str())
+        .fetch_all(&mut *conn)
+        .await?;
     for row in rows {
         let tx_hash: String = row.try_get("tx_hash")?;
         let block_hash: String = row.try_get("block_hash")?;

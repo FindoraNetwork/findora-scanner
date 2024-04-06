@@ -2,7 +2,6 @@ use crate::service::api::Api;
 use anyhow::Result;
 use module::utils::crypto::bech32enc;
 use poem_openapi::{param::Path, param::Query, payload::Json, ApiResponse, Object};
-use ruc::{d, RucResult};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sqlx::Row;
@@ -97,7 +96,9 @@ pub async fn get_asset(api: &Api, address: Path<String>) -> Result<AssetResponse
     };
 
     let sql_query = "SELECT jsonb_path_query(value,'$.body.operations[*].DefineAsset.body.asset') AS asset,tx_hash,block_hash,height FROM transaction ORDER BY height DESC".to_string();
-    let rows = sqlx::query(sql_query.as_str()).fetch_all(&mut conn).await?;
+    let rows = sqlx::query(sql_query.as_str())
+        .fetch_all(&mut *conn)
+        .await?;
 
     let mut assets: Vec<AssetDisplay> = vec![];
     for row in rows {
@@ -109,10 +110,8 @@ pub async fn get_asset(api: &Api, address: Path<String>) -> Result<AssetResponse
             let block: String = row.try_get("block_hash")?;
             let tx: String = row.try_get("tx_hash")?;
 
-            let pk = base64::decode_config(&a.issuer.key, base64::URL_SAFE)
-                .c(d!())
-                .and_then(|bytes| XfrPublicKey::zei_from_bytes(&bytes).c(d!()))
-                .unwrap();
+            let pk_vec = base64::decode_config(&a.issuer.key, base64::URL_SAFE)?;
+            let pk = XfrPublicKey::zei_from_bytes(&pk_vec).unwrap_or_default();
             let issuer_addr = bech32enc(&XfrPublicKey::zei_to_bytes(&pk));
             let asset_code = base64::encode_config(&a.code.val, base64::URL_SAFE);
 
@@ -145,10 +144,8 @@ pub async fn get_asset(api: &Api, address: Path<String>) -> Result<AssetResponse
             .json::<AssetRPCResult>()
             .await?;
 
-        let pk = base64::decode_config(&resp.properties.issuer.key, base64::URL_SAFE)
-            .c(d!())
-            .and_then(|bytes| XfrPublicKey::zei_from_bytes(&bytes).c(d!()))
-            .unwrap();
+        let pk_vec = base64::decode_config(&resp.properties.issuer.key, base64::URL_SAFE)?;
+        let pk = XfrPublicKey::zei_from_bytes(&pk_vec).unwrap_or_default();
         let issuer_addr = bech32enc(&XfrPublicKey::zei_to_bytes(&pk));
         let asset_code = base64::encode_config(&resp.properties.code.val, base64::URL_SAFE);
 
@@ -217,11 +214,13 @@ pub async fn get_asset_list(
 
     let sql_total =
         "SELECT count(*) as cnt FROM transaction WHERE value @? '$.body.operations[*].DefineAsset'";
-    let row = sqlx::query(sql_total).fetch_one(&mut conn).await?;
+    let row = sqlx::query(sql_total).fetch_one(&mut *conn).await?;
     let total: i64 = row.try_get("cnt")?;
 
     let sql_query = format!("SELECT jsonb_path_query(value,'$.body.operations[*].DefineAsset.body.asset') AS asset,tx_hash,block_hash,height FROM transaction ORDER BY height DESC LIMIT {} OFFSET {}", page_size, page_size*(page-1));
-    let rows = sqlx::query(sql_query.as_str()).fetch_all(&mut conn).await?;
+    let rows = sqlx::query(sql_query.as_str())
+        .fetch_all(&mut *conn)
+        .await?;
 
     let mut assets: Vec<AssetDisplay> = vec![];
     for row in rows {
@@ -231,10 +230,8 @@ pub async fn get_asset_list(
 
         let v: Value = row.try_get("asset").unwrap();
         let a: Asset = serde_json::from_value(v).unwrap();
-        let pk = base64::decode_config(&a.issuer.key, base64::URL_SAFE)
-            .c(d!())
-            .and_then(|bytes| XfrPublicKey::zei_from_bytes(&bytes).c(d!()))
-            .unwrap();
+        let pk_vec = base64::decode_config(&a.issuer.key, base64::URL_SAFE)?;
+        let pk = XfrPublicKey::zei_from_bytes(&pk_vec).unwrap_or_default();
         let issuer_addr = bech32enc(&XfrPublicKey::zei_to_bytes(&pk));
         let asset_code = base64::encode_config(&a.code.val, base64::URL_SAFE);
 
@@ -333,11 +330,13 @@ pub async fn get_issued_asset_list(
 
     let sql_total =
         "SELECT count(*) as cnt FROM transaction WHERE value @? '$.body.operations[*].IssueAsset'";
-    let row = sqlx::query(sql_total).fetch_one(&mut conn).await?;
+    let row = sqlx::query(sql_total).fetch_one(&mut *conn).await?;
     let total: i64 = row.try_get("cnt")?;
 
     let sql_query = format!("SELECT jsonb_path_query(value,'$.body.operations[*].IssueAsset') AS asset,block_hash,tx_hash,height FROM transaction ORDER BY height DESC LIMIT {} OFFSET {}", page_size, (page-1)*page_size);
-    let rows = sqlx::query(sql_query.as_str()).fetch_all(&mut conn).await?;
+    let rows = sqlx::query(sql_query.as_str())
+        .fetch_all(&mut *conn)
+        .await?;
     let mut assets: Vec<IssueAssetData> = vec![];
     for row in rows {
         let block: String = row.try_get("block_hash")?;
@@ -346,10 +345,8 @@ pub async fn get_issued_asset_list(
 
         let v: Value = row.try_get("asset").unwrap();
         let a: IssueAsset = serde_json::from_value(v).unwrap();
-        let pk = base64::decode_config(&a.pubkey.key, base64::URL_SAFE)
-            .c(d!())
-            .and_then(|bytes| XfrPublicKey::zei_from_bytes(&bytes).c(d!()))
-            .unwrap();
+        let pk_vec = base64::decode_config(&a.pubkey.key, base64::URL_SAFE)?;
+        let pk = XfrPublicKey::zei_from_bytes(&pk_vec).unwrap_or_default();
         let issuer = bech32enc(&XfrPublicKey::zei_to_bytes(&pk));
         let asset_code = base64::encode_config(&a.body.code.val, base64::URL_SAFE);
 
@@ -415,7 +412,9 @@ pub async fn get_issued_asset(
     };
 
     let sql_query = "SELECT jsonb_path_query(value,'$.body.operations[*].IssueAsset') AS asset,block_hash,tx_hash,height FROM transaction ORDER BY height DESC".to_string();
-    let rows = sqlx::query(sql_query.as_str()).fetch_all(&mut conn).await?;
+    let rows = sqlx::query(sql_query.as_str())
+        .fetch_all(&mut *conn)
+        .await?;
     for row in rows {
         let v: Value = row.try_get("asset").unwrap();
         let a: IssueAsset = serde_json::from_value(v).unwrap();
@@ -424,11 +423,8 @@ pub async fn get_issued_asset(
             let block: String = row.try_get("block_hash")?;
             let tx: String = row.try_get("tx_hash")?;
             let height: i64 = row.try_get("height")?;
-
-            let pk = base64::decode_config(&a.pubkey.key, base64::URL_SAFE)
-                .c(d!())
-                .and_then(|bytes| XfrPublicKey::zei_from_bytes(&bytes).c(d!()))
-                .unwrap();
+            let pk_vec = base64::decode_config(&a.pubkey.key, base64::URL_SAFE)?;
+            let pk = XfrPublicKey::zei_from_bytes(&pk_vec).unwrap_or_default();
             let issuer = bech32enc(&XfrPublicKey::zei_to_bytes(&pk));
             let asset_code = base64::encode_config(&a.body.code.val, base64::URL_SAFE);
 

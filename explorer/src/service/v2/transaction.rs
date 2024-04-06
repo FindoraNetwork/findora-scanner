@@ -67,7 +67,7 @@ pub async fn v2_get_txs(
         .as_str(),
     );
     debug!("{}", sql_str);
-    let rows = sqlx::query(sql_str.as_str()).fetch_all(&mut conn).await?;
+    let rows = sqlx::query(sql_str.as_str()).fetch_all(&mut *conn).await?;
     let mut txs: Vec<TransactionResponse> = vec![];
 
     for row in rows {
@@ -100,7 +100,9 @@ pub async fn v2_get_txs(
     }
 
     // total items
-    let row_cnt = sqlx::query(sql_total.as_str()).fetch_one(&mut conn).await?;
+    let row_cnt = sqlx::query(sql_total.as_str())
+        .fetch_one(&mut *conn)
+        .await?;
     let total: i64 = row_cnt.try_get("cnt")?;
 
     Ok(TxsResponse::Ok(Json(TxsRes {

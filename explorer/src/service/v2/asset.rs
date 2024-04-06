@@ -58,7 +58,9 @@ pub async fn v2_get_asset(
         "SELECT count(*) as cnt from assets WHERE asset='{}'",
         address.0
     );
-    let row_count = sqlx::query(sql_total.as_str()).fetch_one(&mut conn).await?;
+    let row_count = sqlx::query(sql_total.as_str())
+        .fetch_one(&mut *conn)
+        .await?;
     let total: i64 = row_count.try_get("cnt")?;
     let sql_query = format!(
         "SELECT asset,tx,block,issuer,height,timestamp,ty,content from assets WHERE asset='{}' order by height desc limit {} offset {}",
@@ -67,7 +69,9 @@ pub async fn v2_get_asset(
         (page - 1) * page_size
     );
 
-    let rows = sqlx::query(sql_query.as_str()).fetch_all(&mut conn).await?;
+    let rows = sqlx::query(sql_query.as_str())
+        .fetch_all(&mut *conn)
+        .await?;
     for row in rows {
         let asset: String = row.try_get("asset")?;
         let tx: String = row.try_get("tx")?;
@@ -112,7 +116,9 @@ pub async fn v2_get_asset_list(
     let page_size = page_size.0.unwrap_or(10);
 
     let sql_total = "SELECT count(*) AS cnt FROM assets".to_string();
-    let row_count = sqlx::query(sql_total.as_str()).fetch_one(&mut conn).await?;
+    let row_count = sqlx::query(sql_total.as_str())
+        .fetch_one(&mut *conn)
+        .await?;
     let total: i64 = row_count.try_get("cnt")?;
 
     let sql_query = format!(
@@ -120,7 +126,9 @@ pub async fn v2_get_asset_list(
         page_size,
         (page - 1) * page_size
     );
-    let rows = sqlx::query(sql_query.as_str()).fetch_all(&mut conn).await?;
+    let rows = sqlx::query(sql_query.as_str())
+        .fetch_all(&mut *conn)
+        .await?;
     for row in rows {
         let asset: String = row.try_get("asset")?;
         let tx: String = row.try_get("tx")?;

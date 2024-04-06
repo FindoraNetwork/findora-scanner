@@ -12,7 +12,7 @@ use poem_openapi::{param::Path, payload::Json, ApiResponse, Object};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sha3::{Digest, Keccak256};
-use sqlx::{Error, Row};
+use sqlx::Row;
 use std::ops::Add;
 
 pub const FRA_ASSET: &str = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
@@ -210,12 +210,14 @@ pub async fn get_prism_received(
         address.0
     );
     let row_counts = sqlx::query(sql_counts.as_str())
-        .fetch_one(&mut conn)
+        .fetch_one(&mut *conn)
         .await?;
     let total: i64 = row_counts.try_get("cnt")?;
 
     let sql_query = format!("SELECT tx_hash,block_hash,sender,receiver,asset,amount,decimal,height,timestamp,value FROM e2n WHERE receiver='{}' ORDER BY timestamp DESC LIMIT {} OFFSET {}", address.0, page_size, (page-1)*page_size);
-    let rows = sqlx::query(sql_query.as_str()).fetch_all(&mut conn).await?;
+    let rows = sqlx::query(sql_query.as_str())
+        .fetch_all(&mut *conn)
+        .await?;
     for row in rows {
         let tx_hash: String = row.try_get("tx_hash")?;
         let block_hash: String = row.try_get("block_hash")?;
@@ -317,13 +319,15 @@ pub async fn get_prism_records_send(
     let sql_counts = format!(
         "SELECT count(*) AS cnt FROM transaction WHERE value @? '$.body.operations[*].ConvertAccount.signer ? (@==\"{}\")'", base64_addr);
     let row_counts = sqlx::query(sql_counts.as_str())
-        .fetch_one(&mut conn)
+        .fetch_one(&mut *conn)
         .await?;
     let total: i64 = row_counts.try_get("cnt")?;
 
     let sql_query = format!("SELECT tx_hash,block_hash,height,timestamp,jsonb_path_query(value,'$.body.operations[*].ConvertAccount') AS ca FROM transaction WHERE value @? '$.body.operations[*].ConvertAccount.signer ? (@==\"{}\")' ORDER BY timestamp DESC LIMIT {} OFFSET {}", base64_addr, page_size, (page-1)*page_size);
 
-    let rows = sqlx::query(sql_query.as_str()).fetch_all(&mut conn).await?;
+    let rows = sqlx::query(sql_query.as_str())
+        .fetch_all(&mut *conn)
+        .await?;
     for row in rows {
         let tx_hash: String = row.try_get("tx_hash")?;
         let block_hash: String = row.try_get("block_hash")?;
@@ -374,7 +378,7 @@ pub async fn get_evm_tx(api: &Api, tx_hash: Path<String>) -> Result<TxResponse> 
     let mut conn = api.storage.lock().await.acquire().await?;
     let sql_query = "SELECT * FROM transaction WHERE value @? '$.function.Ethereum'";
 
-    let rows = sqlx::query(sql_query).fetch_all(&mut conn).await?;
+    let rows = sqlx::query(sql_query).fetch_all(&mut *conn).await?;
     for row in rows {
         let value: Value = row.try_get("value")?;
         let evm_tx: EvmTx = serde_json::from_value(value.clone()).unwrap();
@@ -428,24 +432,7 @@ pub async fn get_tx(api: &Api, tx_hash: Path<String>) -> Result<TxResponse> {
         tx_hash.0.to_lowercase()
     );
 
-    let row_result = sqlx::query(str.as_str()).fetch_one(&mut conn).await;
-    let row = match row_result {
-        Err(e) => {
-            return match e {
-                Error::RowNotFound => Ok(TxResponse::NotFound(Json(TxRes {
-                    code: 404,
-                    message: "tx not found".to_string(),
-                    data: None,
-                }))),
-                _ => Ok(TxResponse::InternalError(Json(TxRes {
-                    code: 500,
-                    message: "internal error".to_string(),
-                    data: None,
-                }))),
-            }
-        }
-        Ok(row) => row,
-    };
+    let row = sqlx::query(str.as_str()).fetch_one(&mut *conn).await?;
 
     let tx_hash: String = row.try_get("tx_hash")?;
     let block_hash: String = row.try_get("block_hash")?;
@@ -503,11 +490,15 @@ pub async fn get_txs_receive_from(
     let pk = public_key_to_base64(&pk_res.unwrap());
 
     let sql_total = format!("SELECT count(*) AS cnt FROM transaction WHERE value @? '$.body.operations[*].TransferAsset.body.transfer.inputs[*].public_key ? (@==\"{pk}\")'");
-    let row = sqlx::query(sql_total.as_str()).fetch_one(&mut conn).await?;
+    let row = sqlx::query(sql_total.as_str())
+        .fetch_one(&mut *conn)
+        .await?;
     let total = row.try_get("cnt")?;
 
     let sql_query = format!("SELECT * FROM transaction WHERE value @? '$.body.operations[*].TransferAsset.body.transfer.inputs[*].public_key ? (@==\"{}\")' ORDER BY timestamp DESC LIMIT {} OFFSET {}", pk, page_size, page_size*(page-1));
-    let rows = sqlx::query(sql_query.as_str()).fetch_all(&mut conn).await?;
+    let rows = sqlx::query(sql_query.as_str())
+        .fetch_all(&mut *conn)
+        .await?;
     let mut txs: Vec<TransactionResponse> = vec![];
     for row in rows {
         let tx_hash: String = row.try_get("tx_hash")?;
@@ -571,11 +562,15 @@ pub async fn get_txs_send_to(
     let pk = public_key_to_base64(&pk_res.unwrap());
 
     let sql_total = format!("SELECT count(*) AS cnt FROM transaction WHERE value @? '$.body.operations[*].TransferAsset.body.transfer.outputs[*].public_key ? (@==\"{pk}\")'");
-    let row = sqlx::query(sql_total.as_str()).fetch_one(&mut conn).await?;
+    let row = sqlx::query(sql_total.as_str())
+        .fetch_one(&mut *conn)
+        .await?;
     let total = row.try_get("cnt")?;
 
     let sql_query = format!("SELECT * FROM transaction WHERE value @? '$.body.operations[*].TransferAsset.body.transfer.outputs[*].public_key ? (@==\"{}\")' ORDER BY timestamp DESC LIMIT {} OFFSET {}", pk, page_size, page_size*(page-1));
-    let rows = sqlx::query(sql_query.as_str()).fetch_all(&mut conn).await?;
+    let rows = sqlx::query(sql_query.as_str())
+        .fetch_all(&mut *conn)
+        .await?;
 
     let mut txs: Vec<TransactionResponse> = vec![];
     for row in rows {
@@ -698,7 +693,7 @@ pub async fn get_txs(
         .as_str(),
     );
 
-    let rows = sqlx::query(sql_str.as_str()).fetch_all(&mut conn).await?;
+    let rows = sqlx::query(sql_str.as_str()).fetch_all(&mut *conn).await?;
     let mut txs: Vec<TransactionResponse> = vec![];
 
     for row in rows {
@@ -731,7 +726,9 @@ pub async fn get_txs(
     }
 
     // total items
-    let row = sqlx::query(sql_total.as_str()).fetch_one(&mut conn).await?;
+    let row = sqlx::query(sql_total.as_str())
+        .fetch_one(&mut *conn)
+        .await?;
     let total: i64 = row.try_get("total")?;
 
     Ok(TxsResponse::Ok(Json(TxsRes {
@@ -841,7 +838,7 @@ pub async fn get_txs_raw(
         .as_str(),
     );
 
-    let res = sqlx::query(sql_str.as_str()).fetch_all(&mut conn).await;
+    let res = sqlx::query(sql_str.as_str()).fetch_all(&mut *conn).await;
     let mut txs: Vec<TransactionResponse> = vec![];
     let rows = match res {
         Ok(rows) => rows,
@@ -883,7 +880,9 @@ pub async fn get_txs_raw(
     }
 
     // total items
-    let row = sqlx::query(sql_total.as_str()).fetch_one(&mut conn).await?;
+    let row = sqlx::query(sql_total.as_str())
+        .fetch_one(&mut *conn)
+        .await?;
     let total: i64 = row.try_get("total")?;
 
     Ok(TxsResponse::Ok(Json(TxsRes {
@@ -961,7 +960,7 @@ pub async fn get_triple_masking_txs(
         )
         .as_str(),
     );
-    let rows = sqlx::query(sql_str.as_str()).fetch_all(&mut conn).await?;
+    let rows = sqlx::query(sql_str.as_str()).fetch_all(&mut *conn).await?;
     let mut txs: Vec<TransactionResponse> = vec![];
 
     for row in rows {
@@ -994,7 +993,9 @@ pub async fn get_triple_masking_txs(
     }
 
     // total items
-    let row = sqlx::query(sql_total.as_str()).fetch_one(&mut conn).await?;
+    let row = sqlx::query(sql_total.as_str())
+        .fetch_one(&mut *conn)
+        .await?;
     let total: i64 = row.try_get("total")?;
 
     Ok(TxsResponse::Ok(Json(TxsRes {
@@ -1054,7 +1055,7 @@ pub async fn get_claim_txs(
         )
         .as_str(),
     );
-    let rows = sqlx::query(sql_str.as_str()).fetch_all(&mut conn).await?;
+    let rows = sqlx::query(sql_str.as_str()).fetch_all(&mut *conn).await?;
     let mut txs: Vec<TransactionResponse> = vec![];
 
     for row in rows {
@@ -1087,7 +1088,7 @@ pub async fn get_claim_txs(
     }
 
     // total items
-    let res = sqlx::query(sql_total.as_str()).fetch_all(&mut conn).await;
+    let res = sqlx::query(sql_total.as_str()).fetch_all(&mut *conn).await;
     let total: i64 = res.unwrap()[0].try_get("total")?;
 
     Ok(TxsResponse::Ok(Json(TxsRes {
@@ -1136,7 +1137,9 @@ pub async fn get_claims_amount(api: &Api, address: Path<String>) -> Result<Claim
 
     let base64_address = public_key_to_base64(&pubkey_res.unwrap());
     let sql_query = format!("SELECT jsonb_path_query(value, '$.body.operations[*].Claim.body.amount') AS amount FROM transaction WHERE value @? '$.body.operations[*].Claim.pubkey ? (@==\"{base64_address}\")'");
-    let rows = sqlx::query(sql_query.as_str()).fetch_all(&mut conn).await?;
+    let rows = sqlx::query(sql_query.as_str())
+        .fetch_all(&mut *conn)
+        .await?;
     let mut total: u64 = 0;
     for r in rows {
         let amount: Value = r.try_get("amount")?;
@@ -1188,7 +1191,7 @@ pub async fn get_prism_tx(
     );
     sql += ") AS t";
 
-    let rows = sqlx::query(sql.as_str()).fetch_all(&mut conn).await?;
+    let rows = sqlx::query(sql.as_str()).fetch_all(&mut *conn).await?;
 
     let mut txs: Vec<PrismTransaction> = vec![];
     for row in rows {
@@ -1216,7 +1219,9 @@ pub async fn get_prism_tx(
     }
 
     // total items
-    let row = sqlx::query(sql_total.as_str()).fetch_one(&mut conn).await?;
+    let row = sqlx::query(sql_total.as_str())
+        .fetch_one(&mut *conn)
+        .await?;
     let total: i64 = row.try_get("total")?;
 
     Ok(PmtxsResponse::Ok(Json(PmtxsRes {
