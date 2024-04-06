@@ -54,7 +54,7 @@ pub struct MarketChartResult {
     pub message: String,
     pub data: Option<FraMarketChart>,
 }
-
+#[allow(dead_code)]
 pub async fn get_fra_price(api: &Api) -> Result<FraPrice> {
     let mut conn = api.storage.lock().await.acquire().await?;
     let row = sqlx::query("SELECT price FROM prices")
@@ -64,7 +64,7 @@ pub async fn get_fra_price(api: &Api) -> Result<FraPrice> {
     let fra_price = FraPrice { usd: p.parse()? };
     Ok(fra_price)
 }
-
+#[allow(dead_code)]
 pub async fn upsert_fra_price(api: &Api, price: &str) -> Result<()> {
     let mut conn = api.storage.lock().await.acquire().await?;
     sqlx::query("INSERT INTO prices VALUES($1,$2) ON CONFLICT(name) DO UPDATE SET price=$2")
@@ -75,7 +75,7 @@ pub async fn upsert_fra_price(api: &Api, price: &str) -> Result<()> {
 
     Ok(())
 }
-
+#[allow(dead_code)]
 pub async fn get_fra_market(api: &Api) -> Result<FraMarketChart> {
     let mut conn = api.storage.lock().await.acquire().await?;
     let row = sqlx::query("SELECT val FROM market")
@@ -86,7 +86,7 @@ pub async fn get_fra_market(api: &Api) -> Result<FraMarketChart> {
 
     Ok(fmc)
 }
-
+#[allow(dead_code)]
 pub async fn upsert_fra_market(api: &Api, val: Value) -> Result<()> {
     let mut conn = api.storage.lock().await.acquire().await?;
     sqlx::query("INSERT INTO market VALUES($1,$2) ON CONFLICT(name) DO UPDATE SET val=$2")
@@ -97,7 +97,7 @@ pub async fn upsert_fra_market(api: &Api, val: Value) -> Result<()> {
 
     Ok(())
 }
-
+#[allow(dead_code)]
 #[allow(clippy::let_unit_value)]
 pub async fn simple_price(
     api: &Api,
@@ -148,7 +148,7 @@ pub struct FraMarketChart {
     pub prices: Value,
     pub total_volumes: Value,
 }
-
+#[allow(dead_code)]
 #[allow(clippy::let_unit_value)]
 pub async fn market_chart(
     api: &Api,

@@ -31,7 +31,7 @@ pub struct V2StatisticsData {
     pub total_txs: i64,
     pub daily_txs: i64,
 }
-
+#[allow(dead_code)]
 pub async fn v2_statistics(api: &Api, ty: Query<Option<i32>>) -> Result<V2ChainStatisticsResponse> {
     let mut conn = api.storage.lock().await.acquire().await?;
 
@@ -153,7 +153,7 @@ pub struct V2TxsDistribute {
     pub prism: i64,
     pub evm_compatible: i64,
 }
-
+#[allow(dead_code)]
 pub async fn v2_distribute(api: &Api) -> Result<V2DistributeResponse> {
     let mut conn = api.storage.lock().await.acquire().await?;
 
@@ -189,7 +189,7 @@ pub async fn v2_distribute(api: &Api) -> Result<V2DistributeResponse> {
         }),
     })))
 }
-
+#[allow(dead_code)]
 pub async fn v2_address_count(
     api: &Api,
     start_time: Query<Option<i64>>,

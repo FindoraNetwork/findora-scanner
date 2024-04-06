@@ -47,7 +47,7 @@ pub struct AddressData {
     pub total: i64,
     pub txs: Vec<Transaction>,
 }
-
+#[allow(dead_code)]
 pub async fn get_address(
     api: &Api,
     address: Path<String>,

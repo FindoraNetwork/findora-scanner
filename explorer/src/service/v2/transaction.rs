@@ -8,7 +8,7 @@ use poem_openapi::payload::Json;
 use serde_json::Value;
 use sqlx::Row;
 use std::ops::Add;
-
+#[allow(dead_code)]
 #[allow(clippy::too_many_arguments)]
 pub async fn v2_get_txs(
     api: &Api,

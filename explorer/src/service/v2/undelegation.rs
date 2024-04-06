@@ -36,7 +36,7 @@ pub struct V2Undelegation {
     pub timestamp: i64,
     pub value: Value,
 }
-
+#[allow(dead_code)]
 pub async fn v2_get_undelegation(
     api: &Api,
     tx_hash: Path<String>,
@@ -104,7 +104,7 @@ pub struct V2UndelegationsData {
     pub total: i64,
     pub items: Option<Vec<V2Undelegation>>,
 }
-
+#[allow(dead_code)]
 pub async fn v2_get_undelegations(
     api: &Api,
     address: Query<Option<String>>,

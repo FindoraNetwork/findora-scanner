@@ -4,9 +4,9 @@
 
 [postgres]
     account  = "postgres"
-    password = "123456"
+    password = "csq2400306"
     addr = "localhost"
-    database = "test"
+    database = "postgres"
 
 [rpc]
     tendermint = "https://prod-mainnet.prod.findora.org:26657/"

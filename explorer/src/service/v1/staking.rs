@@ -46,7 +46,7 @@ pub struct DelegationItem {
     pub amount: i64,
     pub timestamp: i64,
 }
-
+#[allow(dead_code)]
 pub async fn get_tx_delegation(
     api: &Api,
     address: Query<String>,
@@ -159,7 +159,7 @@ pub struct UnDelegationItem {
     pub timestamp: i64,
     pub expected_arrival_time: i64,
 }
-
+#[allow(dead_code)]
 pub async fn get_tx_undelegation(
     api: &Api,
     address: Query<String>,
@@ -276,7 +276,7 @@ pub struct ClaimItem {
     pub amount: u64,
     pub timestamp: i64,
 }
-
+#[allow(dead_code)]
 pub async fn get_claim(
     api: &Api,
     address: Query<String>,
@@ -408,7 +408,7 @@ pub struct UndelegationInfo {
     pub amount: u64,
     pub validator: String,
 }
-
+#[allow(dead_code)]
 pub async fn get_undelegation_info(
     api: &Api,
     pubkey: Query<Option<String>>,
@@ -526,7 +526,7 @@ pub struct DelegationInfo {
     pub amount: u64,
     pub validator: String,
 }
-
+#[allow(dead_code)]
 pub async fn get_delegation_info(
     api: &Api,
     pubkey: Query<Option<String>>,

@@ -1,15 +1,19 @@
 mod service;
 use crate::service::api::Api;
+use crate::service::v2::block::{get_block_by_hash, get_block_by_num, get_blocks};
 use anyhow::Result;
+use axum::http::Method;
+use axum::routing::get;
+use axum::Router;
 use log::info;
-use poem::middleware::Cors;
-use poem::{listener::TcpListener, EndpointExt, Route, Server};
-use poem_openapi::OpenApiService;
-use scanner::rpc::TendermintRPC;
 use sqlx::pool::PoolOptions;
-use sqlx::{Pool, Postgres};
-use std::time::Duration;
-use tokio::sync::Mutex;
+use sqlx::{PgPool, Pool, Postgres};
+use std::sync::Arc;
+use tower_http::cors::{Any, CorsLayer};
+
+struct AppState {
+    pub pool: PgPool,
+}
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -25,48 +29,29 @@ async fn main() -> Result<()> {
     );
 
     let pool: Pool<Postgres> = PoolOptions::new()
-        .max_connections(10)
+        .max_connections(50)
         .connect(&postgres_config)
         .await
         .unwrap();
     info!("Connecting DB...ok");
-    // tendermint rpc
-    let tendermint_rpc_client = TendermintRPC::new(
-        Duration::from_secs(60),
-        config.rpc.tendermint.to_string().parse().unwrap(),
-    );
-    let platform_rpc_client = TendermintRPC::new(
-        Duration::from_secs(60),
-        config.rpc.platform.to_string().parse().unwrap(),
-    );
-    let platform_server_rpc_client = TendermintRPC::new(
-        Duration::from_secs(60),
-        config.rpc.platform_server.to_string().parse().unwrap(),
-    );
 
-    let api = Api {
-        platform: platform_rpc_client,
-        platform_server: platform_server_rpc_client,
-        tendermint: tendermint_rpc_client,
-        storage: Mutex::new(pool),
-    };
+    let app_state = Arc::new(AppState { pool });
+    let cors = CorsLayer::new()
+        .allow_methods([Method::GET, Method::POST, Method::OPTIONS])
+        .allow_origin(Any)
+        .allow_headers(Any);
+    let addr = format!("{}:{}", config.server.addr, config.server.port);
+    let app = Router::new()
+        .route("/api/v2/block/number", get(get_block_by_num))
+        .route("/api/v2/block/hash", get(get_block_by_hash))
+        .route("/api/v2/blocks", get(get_blocks))
+        .layer(cors)
+        .with_state(app_state);
+    let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
 
-    let server_config = format!("http://{}:{}/api", config.server.addr, config.server.port);
-
-    let api_service = OpenApiService::new(api, "explorer", "1.0").server(server_config);
-    let ui = api_service.swagger_ui();
-
-    let server_addr = format!("{}:{}", config.server.addr, config.server.port);
-    let cors = Cors::new();
+    info!("Listening at: {}", addr);
     info!("Starting server...ok");
-    Server::new(TcpListener::bind(server_addr))
-        .run(
-            Route::new()
-                .nest("/api", api_service)
-                .nest("/", ui)
-                .with(cors),
-        )
-        .await?;
+    axum::serve(listener, app).await.unwrap();
 
     Ok(())
 }

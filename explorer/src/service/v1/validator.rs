@@ -273,7 +273,7 @@ pub async fn delegator_list(api: &Api, address: Path<String>) -> Result<Delegato
         data: Some(res),
     })))
 }
-
+#[allow(dead_code)]
 pub async fn circulating_supply(api: &Api) -> Result<CirculatingSupplyResponse> {
     let circulating_supply_url = api.platform.rpc.join("circulating_supply").unwrap();
 

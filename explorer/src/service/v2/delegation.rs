@@ -36,7 +36,7 @@ pub struct V2Delegation {
     pub timestamp: i64,
     pub value: Value,
 }
-
+#[allow(dead_code)]
 pub async fn v2_get_delegation(api: &Api, tx_hash: Path<String>) -> Result<V2DelegationResponse> {
     let mut conn = api.storage.lock().await.acquire().await?;
     let sql_query = format!(
@@ -101,7 +101,7 @@ pub struct V2DelegationTxsData {
     pub total: i64,
     pub items: Vec<V2Delegation>,
 }
-
+#[allow(dead_code)]
 pub async fn v2_get_delegations(
     api: &Api,
     address: Query<Option<String>>,

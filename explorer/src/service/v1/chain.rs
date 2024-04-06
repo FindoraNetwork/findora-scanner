@@ -53,7 +53,7 @@ pub struct TxsDistribute {
     pub prism: i64,
     pub evm_compatible: i64,
 }
-
+#[allow(dead_code)]
 #[allow(clippy::let_unit_value)]
 pub async fn distribute(api: &Api) -> Result<DistributeResponse> {
     let mut conn = api.storage.lock().await.acquire().await?;
@@ -133,7 +133,7 @@ pub struct AddressCountResult {
 pub struct AddressCount {
     pub address_count: i64,
 }
-
+#[allow(dead_code)]
 pub async fn address_count(
     api: &Api,
     start_time: Query<i64>,
@@ -163,7 +163,7 @@ pub async fn address_count(
         }),
     })))
 }
-
+#[allow(dead_code)]
 #[allow(clippy::let_unit_value)]
 pub async fn statistics(api: &Api, ty: Query<Option<i32>>) -> Result<ChainStatisticsResponse> {
     let mut conn = api.storage.lock().await.acquire().await?;

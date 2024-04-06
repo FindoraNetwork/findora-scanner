@@ -43,7 +43,7 @@ pub struct V2AssetOp {
     pub ty: i32,
     pub value: Value,
 }
-
+#[allow(dead_code)]
 pub async fn v2_get_asset(
     api: &Api,
     address: Query<String>,
@@ -104,7 +104,7 @@ pub async fn v2_get_asset(
         }),
     })))
 }
-
+#[allow(dead_code)]
 pub async fn v2_get_asset_list(
     api: &Api,
     page: Query<Option<i32>>,

@@ -76,6 +76,7 @@ pub struct BlocksData {
 }
 
 /// return full block by given height.
+#[allow(dead_code)]
 pub async fn get_full_block_by_height(api: &Api, height: Path<i64>) -> Result<FullBlockResponse> {
     let mut conn = api.storage.lock().await.acquire().await?;
 
@@ -114,6 +115,7 @@ pub async fn get_full_block_by_height(api: &Api, height: Path<i64>) -> Result<Fu
 }
 
 /// return simple block by given height.
+#[allow(dead_code)]
 pub async fn get_simple_block_by_height(
     api: &Api,
     height: Path<i64>,
@@ -166,6 +168,7 @@ pub async fn get_simple_block_by_height(
 }
 
 /// return full block by given block hash.
+#[allow(dead_code)]
 pub async fn get_full_block_by_hash(api: &Api, hash: Path<String>) -> Result<FullBlockResponse> {
     let mut conn = api.storage.lock().await.acquire().await?;
 
@@ -188,7 +191,7 @@ pub async fn get_full_block_by_hash(api: &Api, hash: Path<String>) -> Result<Ful
         data: Some(full_block),
     })))
 }
-
+#[allow(dead_code)]
 /// return simple block by given block hash.
 pub async fn get_simple_block_by_hash(
     api: &Api,
@@ -228,6 +231,7 @@ pub async fn get_simple_block_by_hash(
 }
 
 /// return simple blocks.
+#[allow(dead_code)]
 pub async fn get_blocks(
     api: &Api,
     start_height: Query<Option<i64>>,
