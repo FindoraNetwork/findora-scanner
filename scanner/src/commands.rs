@@ -233,7 +233,7 @@ impl Migrate {
 
         let mut cursor =
             sqlx::query("SELECT tx_hash,block_hash,height,timestamp,ty,value FROM transaction")
-                .fetch(&mut conn);
+                .fetch(&mut *conn);
         while let Some(row) = cursor.try_next().await? {
             let tx: String = row.try_get("tx_hash")?;
             let block: String = row.try_get("block_hash")?;

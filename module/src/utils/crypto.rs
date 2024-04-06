@@ -14,7 +14,7 @@ pub fn recover_signer(transaction: &LegacyTransaction) -> Option<H160> {
 
     let pubkey = secp256k1_ecdsa_recover(&sig, &msg).ok()?;
     Some(H160::from(H256::from_slice(
-        Keccak256::digest(&pubkey).as_slice(),
+        Keccak256::digest(pubkey).as_slice(),
     )))
 }
 
@@ -47,6 +47,7 @@ pub fn bech32enc<T: AsRef<[u8]> + ToBase32>(input: &T) -> String {
 mod test {
     use super::*;
     use crate::schema::EvmTx;
+    use base64::{engine, Engine};
     use ruc::{d, RucResult};
     use zei::serialization::ZeiFromToBytes;
     use zei::xfr::sig::XfrPublicKey;
@@ -63,13 +64,11 @@ mod test {
 
     #[test]
     fn test_convert_base64_to_bech32() {
-        let pk = base64::decode_config(
-            "HZnxwPI5PD_xpQX1NqKTHXqPdHXVXtGe7yQ0JI3MVTs=",
-            base64::URL_SAFE,
-        )
-        .c(d!())
-        .and_then(|bytes| XfrPublicKey::zei_from_bytes(&bytes).c(d!()))
-        .unwrap();
+        let pk = engine::general_purpose::URL_SAFE
+            .decode("HZnxwPI5PD_xpQX1NqKTHXqPdHXVXtGe7yQ0JI3MVTs=")
+            .c(d!())
+            .and_then(|bytes| XfrPublicKey::zei_from_bytes(&bytes).c(d!()))
+            .unwrap();
         let addr = bech32enc(&XfrPublicKey::zei_to_bytes(&pk));
         assert_eq!(
             addr,
