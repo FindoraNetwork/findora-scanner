@@ -49,7 +49,7 @@ pub fn public_key_from_bech32(addr: &str) -> Result<XfrPublicKey> {
         .c(d!())
         .and_then(|bytes| XfrPublicKey::zei_from_bytes(&bytes).c(d!()))
 }
-
+#[allow(dead_code)]
 #[allow(non_snake_case)]
 #[allow(unreachable_patterns)]
 #[allow(unused_variables)]

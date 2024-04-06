@@ -35,7 +35,7 @@ pub struct V2NativeToEvmTxsData {
     pub page_size: i32,
     pub txs: Vec<V2NativeToEvmTx>,
 }
-
+#[allow(dead_code)]
 pub async fn v2_get_n2e_txs(
     api: &Api,
     page: Query<Option<i32>>,
@@ -118,7 +118,7 @@ pub struct V2NativeToEvmTx {
     pub timestamp: i64,
     pub value: Value,
 }
-
+#[allow(dead_code)]
 pub async fn v2_get_n2e_tx(api: &Api, tx_hash: Path<String>) -> Result<V2NativeToEvmTxResponse> {
     let mut conn = api.storage.lock().await.acquire().await?;
     let sql_query = format!("SELECT tx,block,sender,receiver,asset,amount,height,timestamp,content FROM n2e WHERE tx='{}'", tx_hash.0.to_lowercase());
@@ -176,7 +176,7 @@ pub struct ConvertAccountOperation {
     #[serde(rename = "ConvertAccount")]
     pub convert_account: ConvertAccount,
 }
-
+#[allow(dead_code)]
 pub async fn v2_get_prism_records_send(
     api: &Api,
     address: Query<String>,

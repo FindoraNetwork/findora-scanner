@@ -34,7 +34,7 @@ pub struct V2Claim {
     pub timestamp: i64,
     pub value: Value,
 }
-
+#[allow(dead_code)]
 pub async fn v2_get_claim(api: &Api, tx_hash: Path<String>) -> Result<V2ClaimResponse> {
     let mut conn = api.storage.lock().await.acquire().await?;
     let sql_query = format!(
@@ -95,7 +95,7 @@ pub struct V2ClaimsData {
     pub total: i64,
     pub data: Option<Vec<V2Claim>>,
 }
-
+#[allow(dead_code)]
 pub async fn v2_get_claims(
     api: &Api,
     address: Query<Option<String>>,

@@ -194,7 +194,7 @@ pub struct CallData {
     #[serde(rename = "Call")]
     pub call: Value,
 }
-
+#[allow(dead_code)]
 pub async fn get_prism_received(
     api: &Api,
     address: Query<String>,
@@ -297,7 +297,7 @@ pub struct NonConfidentialTransfer {
     pub input_value: u64,
     pub outputs: Vec<NonConfidentialTransferOutput>,
 }
-
+#[allow(dead_code)]
 pub async fn get_prism_records_send(
     api: &Api,
     address: Query<String>,
@@ -382,7 +382,7 @@ pub async fn get_prism_records_send(
         }),
     })))
 }
-
+#[allow(dead_code)]
 pub async fn get_evm_tx(api: &Api, tx_hash: Path<String>) -> Result<TxResponse> {
     let mut conn = api.storage.lock().await.acquire().await?;
     let sql_query = "SELECT * FROM transaction WHERE value @? '$.function.Ethereum'";
@@ -433,7 +433,7 @@ pub async fn get_evm_tx(api: &Api, tx_hash: Path<String>) -> Result<TxResponse> 
         data: None,
     })))
 }
-
+#[allow(dead_code)]
 pub async fn get_tx(api: &Api, tx_hash: Path<String>) -> Result<TxResponse> {
     let mut conn = api.storage.lock().await.acquire().await?;
     let str = format!(
@@ -628,7 +628,7 @@ pub async fn get_txs_send_to(
         }),
     })))
 }
-
+#[allow(dead_code)]
 #[allow(clippy::too_many_arguments)]
 pub async fn get_txs(
     api: &Api,
@@ -912,7 +912,7 @@ pub async fn get_txs_raw(
         }),
     })))
 }
-
+#[allow(dead_code)]
 #[allow(clippy::too_many_arguments)]
 pub async fn get_triple_masking_txs(
     api: &Api,
@@ -1026,7 +1026,7 @@ pub async fn get_triple_masking_txs(
         }),
     })))
 }
-
+#[allow(dead_code)]
 pub async fn get_claim_txs(
     api: &Api,
     block_hash: Query<Option<String>>,
@@ -1139,6 +1139,7 @@ pub struct ClaimAmountResult {
 pub struct ClaimAmount {
     pub amount: u64,
 }
+
 #[allow(dead_code)]
 pub async fn get_claims_amount(api: &Api, address: Path<String>) -> Result<ClaimAmountResponse> {
     let mut conn = api.storage.lock().await.acquire().await?;
@@ -1170,7 +1171,7 @@ pub async fn get_claims_amount(api: &Api, address: Path<String>) -> Result<Claim
         data: ClaimAmount { amount: total },
     })))
 }
-
+#[allow(dead_code)]
 pub async fn get_prism_tx(
     api: &Api,
     address: Path<String>,
@@ -1345,7 +1346,7 @@ struct Output {
     pub asset_type: Value,
     pub public_key: Value,
 }
-
+#[allow(dead_code)]
 fn wrap_evm_tx(tx: &mut TransactionResponse) -> Result<()> {
     let tx_str: String = serde_json::to_string(&tx.value).unwrap();
 

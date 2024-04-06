@@ -44,7 +44,7 @@ pub struct V2EvmToNativeTx {
     pub timestamp: i64,
     pub value: Value,
 }
-
+#[allow(dead_code)]
 pub async fn v2_get_e2n_txs(
     api: &Api,
     page: Query<Option<i32>>,

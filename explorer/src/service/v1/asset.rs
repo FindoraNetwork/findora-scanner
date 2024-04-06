@@ -81,7 +81,7 @@ pub struct AssetRPCResult {
     pub units: u32,
     pub confidential_units: [u8; 32],
 }
-
+#[allow(dead_code)]
 pub async fn get_asset(api: &Api, address: Path<String>) -> Result<AssetResponse> {
     let mut conn = api.storage.lock().await.acquire().await?;
     let code_res = engine::general_purpose::URL_SAFE.decode(&address.0);
@@ -197,7 +197,7 @@ pub struct AssetListData {
     pub total: i64,
     pub assets: Vec<AssetDisplay>,
 }
-
+#[allow(dead_code)]
 pub async fn get_asset_list(
     api: &Api,
     page: Query<Option<i64>>,
@@ -314,7 +314,7 @@ pub struct IssueAssetBody {
     pub seq_num: u64,
     pub records: Value,
 }
-
+#[allow(dead_code)]
 pub async fn get_issued_asset_list(
     api: &Api,
     page: Query<Option<i64>>,
@@ -395,7 +395,7 @@ pub struct SingleIssueAssetResult {
     pub message: String,
     pub data: Option<IssueAssetData>,
 }
-
+#[allow(dead_code)]
 pub async fn get_issued_asset(
     api: &Api,
     address: Path<String>,

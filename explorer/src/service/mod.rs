@@ -5,6 +5,7 @@ pub mod util;
 pub mod v1;
 pub mod v2;
 
+#[allow(dead_code)]
 #[derive(Tags)]
 enum ApiTags {
     /// Operations about Transaction

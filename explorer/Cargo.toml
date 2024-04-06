@@ -24,8 +24,12 @@ ethereum-types = "0.14.1"
 ethereum = { version = "0.15.0", default-features = false, features = ["with-serde"] }
 sha3 = { version = "0.10.4", default-features = false }
 hex = "0.4.3"
+axum = "0.7.5"
+tower-http = { version = "0.5.2", features = ["cors"] }
+rustc-hex = "2.1.0"
 
 zei = { git = "https://github.com/FindoraNetwork/zei", branch = "stable-main" }
 module = { path = "../module" }
 scanner = {path = "../scanner"}
+url = "2.5.0"
 
