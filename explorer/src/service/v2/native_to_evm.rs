@@ -3,6 +3,7 @@ use crate::service::v1::transaction::{
     ConvertAccount, V2PrismItem, V2PrismRecord, V2PrismRecordResponse, V2PrismRecordResult,
 };
 use anyhow::Result;
+use base64::{engine, Engine};
 use poem_openapi::param::Query;
 use poem_openapi::{param::Path, payload::Json, ApiResponse, Object};
 use reqwest::StatusCode;
@@ -228,7 +229,7 @@ pub async fn v2_get_prism_records_send(
             decimal: 6,
             height,
             timestamp,
-            data: base64::encode(&ca_bin),
+            data: engine::general_purpose::STANDARD.encode(&ca_bin),
         });
     }
 

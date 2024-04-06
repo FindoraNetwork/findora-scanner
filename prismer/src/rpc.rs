@@ -1,6 +1,7 @@
 use crate::utils::bech32_encode;
 use crate::{db, tx};
 use crate::{Error, Result};
+use base64::{engine, Engine};
 use chrono::NaiveDateTime;
 use ethabi::{Event as EthEvent, EventParam, Hash, ParamType, RawLog};
 use ethereum::LegacyTransaction;
@@ -187,13 +188,13 @@ impl RPCCaller {
         let mut res: Vec<PrismTxResult> = vec![];
 
         for tx in block.block.data.txs.unwrap_or_default() {
-            let bytes = base64::decode(&tx)?;
+            let bytes = engine::general_purpose::STANDARD.decode(&tx)?;
             let hasher = sha2::Sha256::digest(&bytes);
             let txid = hex::encode(hasher);
             let tx = self.rpc.load_transaction(&txid).await?;
             let result_data = tx.tx_result.data.clone();
             if let Value::String(s) = result_data {
-                let bin_data = base64::decode(s)?;
+                let bin_data = engine::general_purpose::STANDARD.decode(s)?;
                 let result_data: TxResultData = serde_json::from_slice(&bin_data)?;
                 let result: Value = serde_json::to_value(&result_data)?;
                 if let tx::TxCatalog::EvmTx = tx::try_tx_catalog(&bytes) {
@@ -250,7 +251,7 @@ impl RPCCaller {
                                     let asset_bytes =
                                         log_res.params[0].value.clone().into_fixed_bytes().unwrap();
                                     let asset =
-                                        base64::encode_config(&asset_bytes, base64::URL_SAFE);
+                                        engine::general_purpose::URL_SAFE.encode(&asset_bytes);
 
                                     // receiver address
                                     let receiver_bytes =

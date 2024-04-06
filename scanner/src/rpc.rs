@@ -8,7 +8,7 @@ use crate::types::{
 use crate::util::pubkey_to_fra_address;
 use crate::{db, tx};
 use crate::{Error, Result};
-use base64::URL_SAFE;
+use base64::{engine, Engine};
 use chrono::NaiveDateTime;
 use ethereum::TransactionAction;
 use module::rpc::block::BlockSizeRPC;
@@ -200,7 +200,7 @@ impl RPCCaller {
         let mut native_addrs: Vec<Address> = vec![];
 
         for tx_string in block.block.data.txs.unwrap_or_default() {
-            let bytes = base64::decode(&tx_string)?;
+            let bytes = engine::general_purpose::STANDARD.decode(&tx_string)?;
             let origin = tx_string;
             let hasher = sha2::Sha256::digest(&bytes);
             let tx_hash = hex::encode(hasher);
@@ -321,7 +321,7 @@ impl RPCCaller {
                             let opt: ConvertAccountOpt = serde_json::from_value(op).unwrap();
                             let asset: String;
                             if let Some(asset_bin) = &opt.convert_account.asset_type {
-                                asset = base64::encode_config(asset_bin, base64::URL_SAFE);
+                                asset = engine::general_purpose::URL_SAFE.encode(asset_bin);
                             } else {
                                 asset = FRA_ASSET.to_string();
                             }
@@ -420,10 +420,8 @@ impl RPCCaller {
                             let opt: DefineAssetOpt = serde_json::from_value(op).unwrap();
                             let issuer =
                                 pubkey_to_fra_address(&opt.define_asset.pubkey.key).unwrap();
-                            let asset = base64::encode_config(
-                                opt.define_asset.body.asset.code.val,
-                                URL_SAFE,
-                            );
+                            let asset = engine::general_purpose::URL_SAFE
+                                .encode(opt.define_asset.body.asset.code.val);
                             sender = issuer.clone();
                             ty_sub = FindoraTxType::DefineOrIssueAsset as i32;
                             v2_asset_txs.push(V2AssetTx {
@@ -442,8 +440,8 @@ impl RPCCaller {
                             let opt: IssueAssetOpt = serde_json::from_value(op).unwrap();
                             let issuer =
                                 pubkey_to_fra_address(&opt.issue_asset.pubkey.key).unwrap();
-                            let asset =
-                                base64::encode_config(opt.issue_asset.body.code.val, URL_SAFE);
+                            let asset = engine::general_purpose::URL_SAFE
+                                .encode(opt.issue_asset.body.code.val);
                             sender = issuer.clone();
                             ty_sub = FindoraTxType::DefineOrIssueAsset as i32;
                             v2_asset_txs.push(V2AssetTx {

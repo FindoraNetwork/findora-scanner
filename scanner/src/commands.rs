@@ -9,7 +9,7 @@ use crate::types::{
 use crate::util::pubkey_to_fra_address;
 use crate::{db, rpc::RPCCaller, scanner::RangeScanner};
 use crate::{Error, Result};
-use base64::URL_SAFE;
+use base64::{engine, Engine};
 use clap::Parser;
 use ethereum::TransactionAction;
 use ethereum_types::H256;
@@ -53,9 +53,6 @@ pub struct Load {
     ///Times to retry to pull a block.
     #[clap(long)]
     retries: Option<usize>,
-    ///whether to load staking.
-    #[clap(long, parse(from_flag))]
-    staking: bool,
 }
 
 impl Load {
@@ -154,9 +151,6 @@ pub struct Subscribe {
     ///How many concurrency would be used when scanning, default is 8.
     #[clap(long)]
     concurrency: Option<usize>,
-    ///Load staking while subscribing.
-    #[clap(long, parse(from_flag))]
-    staking: bool,
 }
 
 impl Subscribe {
@@ -287,7 +281,7 @@ impl Migrate {
                         let opt: ConvertAccountOpt = serde_json::from_value(op).unwrap();
                         let asset: String;
                         if let Some(asset_bin) = &opt.convert_account.asset_type {
-                            asset = base64::encode_config(asset_bin, base64::URL_SAFE);
+                            asset = engine::general_purpose::URL_SAFE.encode(asset_bin);
                         } else {
                             asset = FRA_ASSET.to_string();
                         }
@@ -382,8 +376,8 @@ impl Migrate {
                         let op_copy = op.clone();
                         let opt: DefineAssetOpt = serde_json::from_value(op).unwrap();
                         let issuer = pubkey_to_fra_address(&opt.define_asset.pubkey.key).unwrap();
-                        let asset =
-                            base64::encode_config(opt.define_asset.body.asset.code.val, URL_SAFE);
+                        let asset = engine::general_purpose::URL_SAFE
+                            .encode(opt.define_asset.body.asset.code.val);
                         save_asset_tx(
                             &asset,
                             &tx.to_lowercase(),
@@ -402,7 +396,8 @@ impl Migrate {
                         let op_copy = op.clone();
                         let opt: IssueAssetOpt = serde_json::from_value(op).unwrap();
                         let issuer = pubkey_to_fra_address(&opt.issue_asset.pubkey.key).unwrap();
-                        let asset = base64::encode_config(opt.issue_asset.body.code.val, URL_SAFE);
+                        let asset =
+                            engine::general_purpose::URL_SAFE.encode(opt.issue_asset.body.code.val);
                         save_asset_tx(
                             &asset,
                             &tx.to_lowercase(),

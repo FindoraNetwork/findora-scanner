@@ -1,4 +1,5 @@
 use anyhow::Error;
+use base64::{engine, Engine};
 use poem::http::StatusCode;
 use ruc::{d, Result, RucResult};
 use {
@@ -9,13 +10,14 @@ use {
 #[allow(unused)]
 #[inline(always)]
 pub fn public_key_to_base64(key: &XfrPublicKey) -> String {
-    base64::encode_config(&ZeiFromToBytes::zei_to_bytes(key), base64::URL_SAFE)
+    engine::general_purpose::URL_SAFE.encode(&ZeiFromToBytes::zei_to_bytes(key))
 }
 
 #[allow(unused)]
 #[inline(always)]
 pub fn public_key_from_base64(pk: &str) -> Result<XfrPublicKey> {
-    base64::decode_config(pk, base64::URL_SAFE)
+    engine::general_purpose::URL_SAFE
+        .decode(pk)
         .c(d!())
         .and_then(|bytes| XfrPublicKey::zei_from_bytes(&bytes).c(d!()))
 }
@@ -65,7 +67,6 @@ pub fn handle_fetch_one_err(err: Error) -> poem::Error {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use base64::URL_SAFE;
 
     #[tokio::test]
     async fn test_public_key_to_bech32() -> Result<()> {
@@ -89,10 +90,12 @@ mod tests {
     async fn test_asset_code() -> Result<()> {
         let asset_addr = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
         let asset_raw: Vec<u8> = vec![0u8; 32];
-        let res_code = base64::decode_config(asset_addr, URL_SAFE).unwrap();
+        let res_code = engine::general_purpose::URL_SAFE
+            .decode(asset_addr)
+            .unwrap();
         assert_eq!(asset_raw, res_code);
 
-        let res_addr = base64::encode_config(&asset_raw, URL_SAFE);
+        let res_addr = engine::general_purpose::URL_SAFE.encode(&asset_raw);
         assert_eq!(asset_addr, res_addr);
         Ok(())
     }

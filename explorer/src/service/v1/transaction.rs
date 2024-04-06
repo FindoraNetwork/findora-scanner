@@ -1,6 +1,7 @@
 use crate::service::util::{public_key_from_bech32, public_key_to_base64};
 use crate::Api;
 use anyhow::Result;
+use base64::{engine, Engine};
 use ethereum_types::H256;
 use module::schema::{
     EvmTx, PrismTransaction, TransactionResponse, UnDelegationValue, ABAR_TO_ABAR, ABAR_TO_BAR,
@@ -214,7 +215,13 @@ pub async fn get_prism_received(
         .await?;
     let total: i64 = row_counts.try_get("cnt")?;
 
-    let sql_query = format!("SELECT tx_hash,block_hash,sender,receiver,asset,amount,decimal,height,timestamp,value FROM e2n WHERE receiver='{}' ORDER BY timestamp DESC LIMIT {} OFFSET {}", address.0, page_size, (page-1)*page_size);
+    let sql_query = format!(
+        "SELECT tx_hash,block_hash,sender,receiver,asset,amount,decimal,height,timestamp,value \
+        FROM e2n WHERE receiver='{}' ORDER BY timestamp DESC LIMIT {} OFFSET {}",
+        address.0,
+        page_size,
+        (page - 1) * page_size
+    );
     let rows = sqlx::query(sql_query.as_str())
         .fetch_all(&mut *conn)
         .await?;
@@ -247,7 +254,7 @@ pub async fn get_prism_received(
             decimal: decimal as i64,
             height,
             timestamp,
-            data: base64::encode(&result_bin),
+            data: engine::general_purpose::STANDARD.encode(&result_bin),
         });
     }
 
@@ -323,7 +330,9 @@ pub async fn get_prism_records_send(
         .await?;
     let total: i64 = row_counts.try_get("cnt")?;
 
-    let sql_query = format!("SELECT tx_hash,block_hash,height,timestamp,jsonb_path_query(value,'$.body.operations[*].ConvertAccount') AS ca FROM transaction WHERE value @? '$.body.operations[*].ConvertAccount.signer ? (@==\"{}\")' ORDER BY timestamp DESC LIMIT {} OFFSET {}", base64_addr, page_size, (page-1)*page_size);
+    let sql_query = format!("SELECT tx_hash,block_hash,height,timestamp,jsonb_path_query(value,'$.body.operations[*].ConvertAccount') \
+        AS ca FROM transaction WHERE value @? '$.body.operations[*].ConvertAccount.signer ? (@==\"{}\")' \
+        ORDER BY timestamp DESC LIMIT {} OFFSET {}", base64_addr, page_size, (page-1)*page_size);
 
     let rows = sqlx::query(sql_query.as_str())
         .fetch_all(&mut *conn)
@@ -338,7 +347,7 @@ pub async fn get_prism_records_send(
         let ca: ConvertAccount = serde_json::from_value(ca_val)?;
         let asset: String;
         if let Some(asset_bin) = &ca.asset_type {
-            asset = base64::encode_config(asset_bin, base64::URL_SAFE);
+            asset = engine::general_purpose::URL_SAFE.encode(asset_bin);
         } else {
             asset = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=".to_string();
         }
@@ -358,7 +367,7 @@ pub async fn get_prism_records_send(
             decimal: 6,
             height,
             timestamp,
-            data: base64::encode(&ca_bin),
+            data: engine::general_purpose::STANDARD.encode(&ca_bin),
         });
     }
 
@@ -489,13 +498,16 @@ pub async fn get_txs_receive_from(
     }
     let pk = public_key_to_base64(&pk_res.unwrap());
 
-    let sql_total = format!("SELECT count(*) AS cnt FROM transaction WHERE value @? '$.body.operations[*].TransferAsset.body.transfer.inputs[*].public_key ? (@==\"{pk}\")'");
+    let sql_total = format!("SELECT count(*) AS cnt FROM transaction \
+        WHERE value @? '$.body.operations[*].TransferAsset.body.transfer.inputs[*].public_key ? (@==\"{pk}\")'");
     let row = sqlx::query(sql_total.as_str())
         .fetch_one(&mut *conn)
         .await?;
     let total = row.try_get("cnt")?;
 
-    let sql_query = format!("SELECT * FROM transaction WHERE value @? '$.body.operations[*].TransferAsset.body.transfer.inputs[*].public_key ? (@==\"{}\")' ORDER BY timestamp DESC LIMIT {} OFFSET {}", pk, page_size, page_size*(page-1));
+    let sql_query = format!("SELECT * FROM transaction WHERE \
+        value @? '$.body.operations[*].TransferAsset.body.transfer.inputs[*].public_key ? (@==\"{}\")' \
+        ORDER BY timestamp DESC LIMIT {} OFFSET {}", pk, page_size, page_size*(page-1));
     let rows = sqlx::query(sql_query.as_str())
         .fetch_all(&mut *conn)
         .await?;
@@ -561,13 +573,16 @@ pub async fn get_txs_send_to(
     }
     let pk = public_key_to_base64(&pk_res.unwrap());
 
-    let sql_total = format!("SELECT count(*) AS cnt FROM transaction WHERE value @? '$.body.operations[*].TransferAsset.body.transfer.outputs[*].public_key ? (@==\"{pk}\")'");
+    let sql_total = format!("SELECT count(*) AS cnt FROM transaction \
+        WHERE value @? '$.body.operations[*].TransferAsset.body.transfer.outputs[*].public_key ? (@==\"{pk}\")'");
     let row = sqlx::query(sql_total.as_str())
         .fetch_one(&mut *conn)
         .await?;
     let total = row.try_get("cnt")?;
 
-    let sql_query = format!("SELECT * FROM transaction WHERE value @? '$.body.operations[*].TransferAsset.body.transfer.outputs[*].public_key ? (@==\"{}\")' ORDER BY timestamp DESC LIMIT {} OFFSET {}", pk, page_size, page_size*(page-1));
+    let sql_query = format!("SELECT * FROM transaction \
+        WHERE value @? '$.body.operations[*].TransferAsset.body.transfer.outputs[*].public_key ? (@==\"{}\")' \
+        ORDER BY timestamp DESC LIMIT {} OFFSET {}", pk, page_size, page_size*(page-1));
     let rows = sqlx::query(sql_query.as_str())
         .fetch_all(&mut *conn)
         .await?;
@@ -780,7 +795,8 @@ pub async fn get_txs_raw(
         let pk = pk.unwrap();
         let native_addr = public_key_to_base64(&pk);
         params.push(format!(
-            "((value @? '$.body.operations[*].TransferAsset.body.transfer.inputs[*].public_key ? (@==\"{native_addr}\")') OR (value @? '$.body.operations[*].TransferAsset.body.transfer.outputs[*].public_key ? (@==\"{native_addr}\")')) "
+            "((value @? '$.body.operations[*].TransferAsset.body.transfer.inputs[*].public_key ? (@==\"{native_addr}\")') \
+                OR (value @? '$.body.operations[*].TransferAsset.body.transfer.outputs[*].public_key ? (@==\"{native_addr}\")')) "
             ));
     }
 
@@ -930,7 +946,8 @@ pub async fn get_triple_masking_txs(
             }
         }
     } else if let Some(pk) = pub_key.0 {
-        params.push(format!("(value @? '$.body.operations[*].AbarToBar.note.body.output.public_key ? (@==\"{pk}\")') OR (value @? '$.body.operations[*].BarToAbar.note.body.output.commitment ? (@==\"{pk}\")') "));
+        params.push(format!("(value @? '$.body.operations[*].AbarToBar.note.body.output.public_key ? (@==\"{pk}\")') \
+            OR (value @? '$.body.operations[*].BarToAbar.note.body.output.commitment ? (@==\"{pk}\")') "));
     }
 
     if let Some(start_time) = start_time.0 {
@@ -1136,7 +1153,8 @@ pub async fn get_claims_amount(api: &Api, address: Path<String>) -> Result<Claim
     }
 
     let base64_address = public_key_to_base64(&pubkey_res.unwrap());
-    let sql_query = format!("SELECT jsonb_path_query(value, '$.body.operations[*].Claim.body.amount') AS amount FROM transaction WHERE value @? '$.body.operations[*].Claim.pubkey ? (@==\"{base64_address}\")'");
+    let sql_query = format!("SELECT jsonb_path_query(value, '$.body.operations[*].Claim.body.amount') \
+        AS amount FROM transaction WHERE value @? '$.body.operations[*].Claim.pubkey ? (@==\"{base64_address}\")'");
     let rows = sqlx::query(sql_query.as_str())
         .fetch_all(&mut *conn)
         .await?;
@@ -1162,7 +1180,16 @@ pub async fn get_prism_tx(
     page_size: Query<Option<i64>>,
 ) -> Result<PmtxsResponse> {
     let mut conn = api.storage.lock().await.acquire().await?;
-    let mut sql = String::from("SELECT tx_hash,block_hash,ty,timestamp,CASE WHEN fnuc_code = '248,251,204,194' THEN '_consumeMint' WHEN fnuc_code = '242,38,15,112' THEN '_withdrawFRA' WHEN fnuc_code = '116,64,166,22' THEN '_withdrawFRC20' WHEN fnuc_code = '250,190,177,88' THEN 'adminSetAsset' WHEN fnuc_code = '185,50,44,225' THEN 'adminSetLedger' WHEN fnuc_code = '5,5,220,224' THEN 'asset_contract' WHEN fnuc_code = '82,79,49,152' THEN 'consumeMint' WHEN fnuc_code = '222,147,129,28' THEN 'depositFRA' WHEN fnuc_code = '230,242,112,109' THEN 'depositFRC20' WHEN fnuc_code = '4,78,219,111' THEN 'ledger_contract' WHEN fnuc_code = '253,253,93,76' THEN 'ops' WHEN fnuc_code = '141,165,203,91' THEN 'owner' WHEN fnuc_code = '216,78,128,56' THEN 'proxy_contract' WHEN fnuc_code = '113,80,24,166' THEN 'renounceOwnership' WHEN fnuc_code = '242,253,227,139' THEN 'transferOwnership' WHEN fnuc_code = '24,188,157,230' THEN 'withdrawFRA' WHEN fnuc_code = '82,119,153,176' THEN 'withdrawFRC20' ELSE 'unknown' END AS fnuc_name,value,code,log FROM(SELECT tx_hash,block_hash,ty,timestamp,concat(value -> 'function' -> 'Ethereum' -> 'Transact' -> 'input'->0, NULL, ',', value -> 'function' -> 'Ethereum' -> 'Transact' -> 'input'->1, NULL, ',', value -> 'function' -> 'Ethereum' -> 'Transact' -> 'input'->2, NULL, ',', value -> 'function' -> 'Ethereum' -> 'Transact' -> 'input'->3) AS fnuc_code,value,code,log FROM transaction WHERE ty = 1");
+    let mut sql = String::from("SELECT tx_hash,block_hash,ty,timestamp,CASE WHEN fnuc_code = '248,251,204,194' \
+        THEN '_consumeMint' WHEN fnuc_code = '242,38,15,112' THEN '_withdrawFRA' WHEN fnuc_code = '116,64,166,22' THEN '_withdrawFRC20' \
+        WHEN fnuc_code = '250,190,177,88' THEN 'adminSetAsset' WHEN fnuc_code = '185,50,44,225' THEN 'adminSetLedger' \
+        WHEN fnuc_code = '5,5,220,224' THEN 'asset_contract' WHEN fnuc_code = '82,79,49,152' THEN 'consumeMint' \
+        WHEN fnuc_code = '222,147,129,28' THEN 'depositFRA' WHEN fnuc_code = '230,242,112,109' THEN 'depositFRC20' \
+        WHEN fnuc_code = '4,78,219,111' THEN 'ledger_contract' WHEN fnuc_code = '253,253,93,76' THEN 'ops' \
+        WHEN fnuc_code = '141,165,203,91' THEN 'owner' WHEN fnuc_code = '216,78,128,56' THEN 'proxy_contract' \
+        WHEN fnuc_code = '113,80,24,166' THEN 'renounceOwnership' WHEN fnuc_code = '242,253,227,139' \
+        THEN 'transferOwnership' WHEN fnuc_code = '24,188,157,230' THEN 'withdrawFRA' \
+        WHEN fnuc_code = '82,119,153,176' THEN 'withdrawFRC20' ELSE 'unknown' END AS fnuc_name,value,code,log FROM(SELECT tx_hash,block_hash,ty,timestamp,concat(value -> 'function' -> 'Ethereum' -> 'Transact' -> 'input'->0, NULL, ',', value -> 'function' -> 'Ethereum' -> 'Transact' -> 'input'->1, NULL, ',', value -> 'function' -> 'Ethereum' -> 'Transact' -> 'input'->2, NULL, ',', value -> 'function' -> 'Ethereum' -> 'Transact' -> 'input'->3) AS fnuc_code,value,code,log FROM transaction WHERE ty = 1");
     let mut sql_total = String::from("SELECT count(*) as total FROM transaction WHERE ty = 1");
     let mut params: Vec<String> = vec![];
     params.push(format!(
