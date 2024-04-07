@@ -25,7 +25,7 @@ pub struct ClaimResponse {
 }
 
 #[allow(dead_code)]
-pub async fn get_claim_by_hash(
+pub async fn get_claim_by_tx_hash(
     State(state): State<Arc<AppState>>,
     Query(params): Query<GetClaimByTxHash>,
 ) -> Result<Json<ClaimResponse>> {
@@ -34,7 +34,7 @@ pub async fn get_claim_by_hash(
     let sql_query =
         r#"SELECT tx,block,sender,amount,height,timestamp,content FROM claims WHERE tx=$1"#;
 
-    let row = sqlx::query(&sql_query)
+    let row = sqlx::query(sql_query)
         .bind(params.hash)
         .fetch_one(&mut *conn)
         .await

@@ -1,31 +1,20 @@
-use crate::service::api::Api;
-use anyhow::Result;
-use poem_openapi::param::Query;
-use poem_openapi::{param::Path, payload::Json, ApiResponse, Object};
-use reqwest::StatusCode;
+use crate::service::v2::error::{internal_error, Result};
+use crate::service::v2::QueryResult;
+use crate::AppState;
+use axum::extract::{Query, State};
+use axum::Json;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sqlx::Row;
+use std::sync::Arc;
 
-#[derive(ApiResponse)]
-pub enum V2DelegationResponse {
-    #[oai(status = 200)]
-    Ok(Json<V2DelegationResult>),
-    #[oai(status = 404)]
-    NotFound,
-    #[oai(status = 500)]
-    InternalError,
+#[derive(Serialize, Deserialize)]
+pub struct GetDelegationByHashParams {
+    pub hash: String,
 }
 
-#[derive(Serialize, Deserialize, Debug, Object)]
-pub struct V2DelegationResult {
-    pub code: u16,
-    pub message: String,
-    pub data: Option<V2Delegation>,
-}
-
-#[derive(Serialize, Deserialize, Debug, Object)]
-pub struct V2Delegation {
+#[derive(Serialize, Deserialize)]
+pub struct DelegationResponse {
     pub tx_hash: String,
     pub block_hash: String,
     pub amount: i64,
@@ -36,32 +25,35 @@ pub struct V2Delegation {
     pub timestamp: i64,
     pub value: Value,
 }
-#[allow(dead_code)]
-pub async fn v2_get_delegation(api: &Api, tx_hash: Path<String>) -> Result<V2DelegationResponse> {
-    let mut conn = api.storage.lock().await.acquire().await?;
-    let sql_query = format!(
-        "SELECT tx,block,amount,sender,validator,new_validator,height,timestamp,content FROM delegations WHERE tx='{}'",
-        tx_hash.0.to_lowercase()
-    );
 
-    let row = sqlx::query(sql_query.as_str())
+pub async fn get_delegation_by_tx_hash(
+    State(state): State<Arc<AppState>>,
+    Query(params): Query<GetDelegationByHashParams>,
+) -> Result<Json<DelegationResponse>> {
+    let mut conn = state.pool.acquire().await.map_err(internal_error)?;
+    let sql_query = r#"SELECT tx,block,amount,sender,validator,new_validator,height,timestamp,content
+        FROM delegations WHERE tx=$1"#;
+
+    let row = sqlx::query(sql_query)
+        .bind(params.hash)
         .fetch_one(&mut *conn)
-        .await?;
+        .await
+        .map_err(internal_error)?;
 
-    let tx: String = row.try_get("tx")?;
-    let block: String = row.try_get("block")?;
-    let amount: i64 = row.try_get("amount")?;
-    let sender: String = row.try_get("sender")?;
-    let validator: String = row.try_get("validator")?;
-    let new_validator: String = row.try_get("new_validator")?;
-    let height: i64 = row.try_get("height")?;
-    let timestamp: i64 = row.try_get("timestamp")?;
-    let value: Value = row.try_get("content")?;
+    let tx_hash: String = row.try_get("tx").map_err(internal_error)?;
+    let block_hash: String = row.try_get("block").map_err(internal_error)?;
+    let amount: i64 = row.try_get("amount").map_err(internal_error)?;
+    let from: String = row.try_get("sender").map_err(internal_error)?;
+    let validator: String = row.try_get("validator").map_err(internal_error)?;
+    let new_validator: String = row.try_get("new_validator").map_err(internal_error)?;
+    let height: i64 = row.try_get("height").map_err(internal_error)?;
+    let timestamp: i64 = row.try_get("timestamp").map_err(internal_error)?;
+    let value: Value = row.try_get("content").map_err(internal_error)?;
 
-    let res = V2Delegation {
-        tx_hash: tx,
-        block_hash: block,
-        from: sender,
+    let delegation = DelegationResponse {
+        tx_hash,
+        block_hash,
+        from,
         amount,
         validator,
         new_validator,
@@ -70,95 +62,78 @@ pub async fn v2_get_delegation(api: &Api, tx_hash: Path<String>) -> Result<V2Del
         value,
     };
 
-    Ok(V2DelegationResponse::Ok(Json(V2DelegationResult {
-        code: StatusCode::OK.as_u16(),
-        message: "".to_string(),
-        data: Some(res),
-    })))
+    Ok(Json(delegation))
 }
 
-#[derive(ApiResponse)]
-pub enum V2DelegationsResponse {
-    #[oai(status = 200)]
-    Ok(Json<V2DelegationsResult>),
-    #[oai(status = 404)]
-    NotFound,
-    #[oai(status = 500)]
-    InternalError,
+#[derive(Serialize, Deserialize)]
+pub struct GetDelegationsParams {
+    pub from: Option<String>,
+    pub page: Option<i32>,
+    pub page_size: Option<i32>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Object)]
-pub struct V2DelegationsResult {
-    pub code: u16,
-    pub message: String,
-    pub data: Option<V2DelegationTxsData>,
-}
-
-#[derive(Serialize, Deserialize, Debug, Object)]
-pub struct V2DelegationTxsData {
-    pub page: i64,
-    pub page_size: i64,
-    pub total: i64,
-    pub items: Vec<V2Delegation>,
-}
 #[allow(dead_code)]
-pub async fn v2_get_delegations(
-    api: &Api,
-    address: Query<Option<String>>,
-    page: Query<Option<i64>>,
-    page_size: Query<Option<i64>>,
-) -> Result<V2DelegationsResponse> {
-    let page = page.0.unwrap_or(1);
-    let page_size = page_size.0.unwrap_or(10);
-    let mut conn = api.storage.lock().await.acquire().await?;
+pub async fn get_delegations(
+    State(state): State<Arc<AppState>>,
+    Query(params): Query<GetDelegationsParams>,
+) -> Result<Json<QueryResult<Vec<DelegationResponse>>>> {
+    let mut conn = state.pool.acquire().await.map_err(internal_error)?;
+    let page = params.page.unwrap_or(1);
+    let page_size = params.page_size.unwrap_or(10);
 
-    let (sql_count, sql_query) = if let Some(addr) = address.0 {
+    let (sql_count, sql_query) = if let Some(addr) = params.from {
         (
             format!(
-                "SELECT count(*) AS cnt FROM delegations WHERE sender='{}'",
+                "SELECT count(*) FROM delegations WHERE sender='{}'",
                 addr.to_lowercase()
             ),
             format!(
-            "SELECT tx,block,sender,amount,validator,new_validator,timestamp,height,content FROM delegations WHERE sender='{}' ORDER BY timestamp DESC LIMIT {} OFFSET {}",
-            addr.to_lowercase(),
-            page_size,
-            (page - 1) * page_size
-        ),
+                "SELECT tx,block,sender,amount,validator,new_validator,timestamp,height,content \
+                FROM delegations WHERE sender='{}' ORDER BY timestamp DESC LIMIT {} OFFSET {}",
+                addr.to_lowercase(),
+                page_size,
+                (page - 1) * page_size
+            ),
         )
     } else {
         (
-            "SELECT count(*) AS cnt FROM delegations".to_string(),
+            "SELECT count(*) FROM delegations".to_string(),
             format!(
-            "SELECT tx,block,sender,amount,validator,new_validator,timestamp,height,content FROM delegations ORDER BY timestamp DESC LIMIT {} OFFSET {}",
-            page_size,
-            (page - 1) * page_size
-        ),
+                "SELECT tx,block,sender,amount,validator,new_validator,timestamp,height,content \
+                FROM delegations ORDER BY timestamp DESC LIMIT {} OFFSET {}",
+                page_size,
+                (page - 1) * page_size
+            ),
         )
     };
 
-    let row_cnt = sqlx::query(sql_count.as_str())
+    let row_cnt = sqlx::query(&sql_count)
         .fetch_one(&mut *conn)
-        .await?;
-    let total: i64 = row_cnt.try_get("cnt")?;
+        .await
+        .map_err(internal_error)?;
+    let total: i64 = row_cnt.try_get("count").map_err(internal_error)?;
 
-    let mut res: Vec<V2Delegation> = vec![];
-    let rows = sqlx::query(sql_query.as_str())
+    let mut delegations: Vec<DelegationResponse> = vec![];
+    let rows = sqlx::query(&sql_query)
         .fetch_all(&mut *conn)
-        .await?;
+        .await
+        .map_err(internal_error)?;
+
     for row in rows {
-        let tx: String = row.try_get("tx")?;
-        let block: String = row.try_get("block")?;
-        let amount: i64 = row.try_get("amount")?;
-        let sender: String = row.try_get("sender")?;
-        let validator: String = row.try_get("validator")?;
-        let new_validator: String = row.try_get("new_validator")?;
-        let height: i64 = row.try_get("height")?;
-        let timestamp: i64 = row.try_get("timestamp")?;
-        let value: Value = row.try_get("content")?;
-        res.push(V2Delegation {
-            tx_hash: tx,
-            block_hash: block,
-            from: sender,
+        let tx_hash: String = row.try_get("tx").map_err(internal_error)?;
+        let block_hash: String = row.try_get("block").map_err(internal_error)?;
+        let amount: i64 = row.try_get("amount").map_err(internal_error)?;
+        let from: String = row.try_get("sender").map_err(internal_error)?;
+        let validator: String = row.try_get("validator").map_err(internal_error)?;
+        let new_validator: String = row.try_get("new_validator").map_err(internal_error)?;
+        let height: i64 = row.try_get("height").map_err(internal_error)?;
+        let timestamp: i64 = row.try_get("timestamp").map_err(internal_error)?;
+        let value: Value = row.try_get("content").map_err(internal_error)?;
+
+        delegations.push(DelegationResponse {
+            tx_hash,
+            block_hash,
+            from,
             amount,
             validator,
             new_validator,
@@ -168,14 +143,10 @@ pub async fn v2_get_delegations(
         });
     }
 
-    Ok(V2DelegationsResponse::Ok(Json(V2DelegationsResult {
-        code: 200,
-        message: "".to_string(),
-        data: Some(V2DelegationTxsData {
-            page,
-            page_size,
-            total,
-            items: res,
-        }),
-    })))
+    Ok(Json(QueryResult {
+        total,
+        page,
+        page_size,
+        data: delegations,
+    }))
 }
