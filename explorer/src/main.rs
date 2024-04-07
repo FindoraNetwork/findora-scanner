@@ -2,6 +2,7 @@ mod service;
 use crate::service::api::Api;
 use crate::service::v2::asset::get_assets;
 use crate::service::v2::block::{get_block_by_hash, get_block_by_num, get_blocks};
+use crate::service::v2::claim::{get_claim_by_hash, get_claims};
 use crate::service::v2::transaction::{get_tx_by_hash, get_txs};
 use anyhow::Result;
 use axum::http::Method;
@@ -53,6 +54,8 @@ async fn main() -> Result<()> {
         .route("/api/v2/hash/tx", get(get_tx_by_hash))
         .route("/api/v2/txs", get(get_txs))
         .route("/api/v2/assets", get(get_assets))
+        .route("/api/v2/hash/claim", get(get_claim_by_hash))
+        .route("/api/v2/claims", get(get_claims))
         .layer(cors)
         .with_state(app_state);
     let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
