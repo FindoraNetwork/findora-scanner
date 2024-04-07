@@ -1,31 +1,20 @@
-use crate::service::api::Api;
-use anyhow::Result;
-use poem_openapi::param::Query;
-use poem_openapi::{param::Path, payload::Json, ApiResponse, Object};
-use reqwest::StatusCode;
+use crate::service::v2::error::{internal_error, Result};
+use crate::service::v2::QueryResult;
+use crate::AppState;
+use axum::extract::{Query, State};
+use axum::Json;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sqlx::Row;
+use std::sync::Arc;
 
-#[derive(ApiResponse)]
-pub enum V2ClaimResponse {
-    #[oai(status = 200)]
-    Ok(Json<V2ClaimResult>),
-    #[oai(status = 404)]
-    NotFound,
-    #[oai(status = 500)]
-    InternalError,
+#[derive(Serialize, Deserialize)]
+pub struct GetClaimByTxHash {
+    pub hash: String,
 }
 
-#[derive(Serialize, Deserialize, Debug, Object)]
-pub struct V2ClaimResult {
-    pub code: u16,
-    pub message: String,
-    pub data: Option<V2Claim>,
-}
-
-#[derive(Serialize, Deserialize, Debug, Object)]
-pub struct V2Claim {
+#[derive(Serialize, Deserialize)]
+pub struct ClaimResponse {
     pub tx_hash: String,
     pub block_hash: String,
     pub from: String,
@@ -34,114 +23,99 @@ pub struct V2Claim {
     pub timestamp: i64,
     pub value: Value,
 }
+
 #[allow(dead_code)]
-pub async fn v2_get_claim(api: &Api, tx_hash: Path<String>) -> Result<V2ClaimResponse> {
-    let mut conn = api.storage.lock().await.acquire().await?;
-    let sql_query = format!(
-        "SELECT tx,block,sender,amount,height,timestamp,content FROM claims WHERE tx='{}'",
-        tx_hash.0.to_lowercase()
-    );
+pub async fn get_claim_by_hash(
+    State(state): State<Arc<AppState>>,
+    Query(params): Query<GetClaimByTxHash>,
+) -> Result<Json<ClaimResponse>> {
+    let mut conn = state.pool.acquire().await.map_err(internal_error)?;
 
-    let row = sqlx::query(sql_query.as_str())
+    let sql_query =
+        r#"SELECT tx,block,sender,amount,height,timestamp,content FROM claims WHERE tx=$1"#;
+
+    let row = sqlx::query(&sql_query)
+        .bind(params.hash)
         .fetch_one(&mut *conn)
-        .await?;
+        .await
+        .map_err(internal_error)?;
 
-    let tx: String = row.try_get("tx")?;
-    let block: String = row.try_get("block")?;
-    let sender: String = row.try_get("sender")?;
-    let amount: i64 = row.try_get("amount")?;
-    let height: i64 = row.try_get("height")?;
-    let timestamp: i64 = row.try_get("timestamp")?;
-    let value: Value = row.try_get("content")?;
+    let tx_hash: String = row.try_get("tx").map_err(internal_error)?;
+    let block_hash: String = row.try_get("block").map_err(internal_error)?;
+    let from: String = row.try_get("sender").map_err(internal_error)?;
+    let amount: i64 = row.try_get("amount").map_err(internal_error)?;
+    let height: i64 = row.try_get("height").map_err(internal_error)?;
+    let timestamp: i64 = row.try_get("timestamp").map_err(internal_error)?;
+    let value: Value = row.try_get("content").map_err(internal_error)?;
 
-    let res = V2Claim {
-        tx_hash: tx,
-        block_hash: block,
-        from: sender,
+    let claim = ClaimResponse {
+        tx_hash,
+        block_hash,
+        from,
         amount: amount as u64,
         height,
         timestamp,
         value,
     };
 
-    Ok(V2ClaimResponse::Ok(Json(V2ClaimResult {
-        code: StatusCode::OK.as_u16(),
-        message: "".to_string(),
-        data: Some(res),
-    })))
+    Ok(Json(claim))
 }
 
-#[derive(ApiResponse)]
-pub enum V2ClaimsResponse {
-    #[oai(status = 200)]
-    Ok(Json<V2ClaimsResult>),
-    #[oai(status = 404)]
-    NotFound,
-    #[oai(status = 500)]
-    InternalError,
+#[derive(Serialize, Deserialize)]
+pub struct GetClaimsParams {
+    pub from: Option<String>,
+    pub page: Option<i32>,
+    pub page_size: Option<i32>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Object)]
-pub struct V2ClaimsResult {
-    pub code: u16,
-    pub message: String,
-    pub data: Option<V2ClaimsData>,
-}
-
-#[derive(Serialize, Deserialize, Debug, Object)]
-pub struct V2ClaimsData {
-    pub page: i64,
-    pub page_size: i64,
-    pub total: i64,
-    pub data: Option<Vec<V2Claim>>,
-}
 #[allow(dead_code)]
-pub async fn v2_get_claims(
-    api: &Api,
-    address: Query<Option<String>>,
-    page: Query<Option<i64>>,
-    page_size: Query<Option<i64>>,
-) -> Result<V2ClaimsResponse> {
-    let page = page.0.unwrap_or(1);
-    let page_size = page_size.0.unwrap_or(10);
-    let mut conn = api.storage.lock().await.acquire().await?;
+pub async fn get_claims(
+    State(state): State<Arc<AppState>>,
+    Query(params): Query<GetClaimsParams>,
+) -> Result<Json<QueryResult<Vec<ClaimResponse>>>> {
+    let mut conn = state.pool.acquire().await.map_err(internal_error)?;
+    let page = params.page.unwrap_or(1);
+    let page_size = params.page_size.unwrap_or(10);
 
-    let (sql_count, sql_query) = if let Some(addr) = address.0 {
+    let (sql_count, sql_query) = if let Some(from) = params.from {
         (format!(
-            "SELECT count(*) AS cnt FROM claims WHERE sender='{}'",
-            addr.to_lowercase()
+            "SELECT count(*) FROM claims WHERE sender='{}'",
+            from.to_lowercase()
         ),format!(
             "SELECT tx,block,sender,amount,height,timestamp,content FROM claims WHERE sender='{}' ORDER BY timestamp DESC LIMIT {} OFFSET {}",
-            addr.to_lowercase(), page_size, (page-1)*page_size
+            from.to_lowercase(), page_size, (page-1)*page_size
         ))
     } else {
-        ("SELECT count(*) AS cnt FROM claims".to_string(),
+        ("SELECT count(*) FROM claims".to_string(),
          format!(
              "SELECT tx,block,sender,amount,height,timestamp,content FROM claims ORDER BY timestamp DESC LIMIT {} OFFSET {}",
              page_size, (page-1)*page_size
          ))
     };
 
-    let row_cnt = sqlx::query(sql_count.as_str())
+    let row_cnt = sqlx::query(&sql_count)
         .fetch_one(&mut *conn)
-        .await?;
-    let total: i64 = row_cnt.try_get("cnt")?;
-    let mut res: Vec<V2Claim> = vec![];
+        .await
+        .map_err(internal_error)?;
+    let total: i64 = row_cnt.try_get("count").map_err(internal_error)?;
+
+    let mut claims: Vec<ClaimResponse> = vec![];
     let rows = sqlx::query(sql_query.as_str())
         .fetch_all(&mut *conn)
-        .await?;
+        .await
+        .map_err(internal_error)?;
     for row in rows {
-        let tx: String = row.try_get("tx")?;
-        let block: String = row.try_get("block")?;
-        let sender: String = row.try_get("sender")?;
-        let amount: i64 = row.try_get("amount")?;
-        let height: i64 = row.try_get("height")?;
-        let timestamp: i64 = row.try_get("timestamp")?;
-        let value: Value = row.try_get("content")?;
-        res.push(V2Claim {
-            tx_hash: tx,
-            block_hash: block,
-            from: sender,
+        let tx_hash: String = row.try_get("tx").map_err(internal_error)?;
+        let block_hash: String = row.try_get("block").map_err(internal_error)?;
+        let from: String = row.try_get("sender").map_err(internal_error)?;
+        let amount: i64 = row.try_get("amount").map_err(internal_error)?;
+        let height: i64 = row.try_get("height").map_err(internal_error)?;
+        let timestamp: i64 = row.try_get("timestamp").map_err(internal_error)?;
+        let value: Value = row.try_get("content").map_err(internal_error)?;
+        claims.push(ClaimResponse {
+            tx_hash,
+            block_hash,
+            from,
             amount: amount as u64,
             height,
             timestamp,
@@ -149,14 +123,10 @@ pub async fn v2_get_claims(
         });
     }
 
-    Ok(V2ClaimsResponse::Ok(Json(V2ClaimsResult {
-        code: 200,
-        message: "".to_string(),
-        data: Some(V2ClaimsData {
-            page,
-            page_size,
-            total,
-            data: Some(res),
-        }),
-    })))
+    Ok(Json(QueryResult {
+        total,
+        page,
+        page_size,
+        data: claims,
+    }))
 }
