@@ -1,31 +1,20 @@
-use crate::service::api::Api;
-use anyhow::Result;
-use poem_openapi::param::Query;
-use poem_openapi::{param::Path, payload::Json, ApiResponse, Object};
-use reqwest::StatusCode;
+use crate::service::v2::error::{internal_error, Result};
+use crate::service::v2::QueryResult;
+use crate::AppState;
+use axum::extract::{Query, State};
+use axum::Json;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sqlx::Row;
+use std::sync::Arc;
 
-#[derive(ApiResponse)]
-pub enum V2UndelegationResponse {
-    #[oai(status = 200)]
-    Ok(Json<V2UndelegationResult>),
-    #[oai(status = 404)]
-    NotFound,
-    #[oai(status = 500)]
-    InternalError,
+#[derive(Serialize, Deserialize)]
+pub struct GetUndelegationByTxHashParams {
+    pub hash: String,
 }
 
-#[derive(Serialize, Deserialize, Debug, Object)]
-pub struct V2UndelegationResult {
-    pub code: u16,
-    pub message: String,
-    pub data: Option<V2Undelegation>,
-}
-
-#[derive(Serialize, Deserialize, Debug, Object)]
-pub struct V2Undelegation {
+#[derive(Serialize, Deserialize)]
+pub struct UndelegationResponse {
     pub tx_hash: String,
     pub block_hash: String,
     pub from: String,
@@ -36,35 +25,36 @@ pub struct V2Undelegation {
     pub timestamp: i64,
     pub value: Value,
 }
+
 #[allow(dead_code)]
-pub async fn v2_get_undelegation(
-    api: &Api,
-    tx_hash: Path<String>,
-) -> Result<V2UndelegationResponse> {
-    let mut conn = api.storage.lock().await.acquire().await?;
-    let sql_query = format!(
-        "SELECT tx,block,sender,amount,target_validator,new_delegator,height,timestamp,content FROM undelegations WHERE tx='{}'",
-        tx_hash.0.to_lowercase()
-    );
+pub async fn get_undelegation_by_tx_hash(
+    State(state): State<Arc<AppState>>,
+    Query(params): Query<GetUndelegationByTxHashParams>,
+) -> Result<Json<UndelegationResponse>> {
+    let mut conn = state.pool.acquire().await.map_err(internal_error)?;
+    let sql_query = r#"SELECT tx,block,sender,amount,target_validator,new_delegator,height,timestamp,content
+        FROM undelegations WHERE tx=$1"#;
 
-    let row = sqlx::query(sql_query.as_str())
+    let row = sqlx::query(sql_query)
+        .bind(params.hash)
         .fetch_one(&mut *conn)
-        .await?;
+        .await
+        .map_err(internal_error)?;
 
-    let tx: String = row.try_get("tx")?;
-    let block: String = row.try_get("block")?;
-    let sender: String = row.try_get("sender")?;
-    let amount: i64 = row.try_get("amount")?;
-    let target_validator: String = row.try_get("target_validator")?;
-    let new_delegator: String = row.try_get("new_delegator")?;
-    let height: i64 = row.try_get("height")?;
-    let timestamp: i64 = row.try_get("timestamp")?;
-    let value: Value = row.try_get("content")?;
+    let tx_hash: String = row.try_get("tx").map_err(internal_error)?;
+    let block_hash: String = row.try_get("block").map_err(internal_error)?;
+    let from: String = row.try_get("sender").map_err(internal_error)?;
+    let amount: i64 = row.try_get("amount").map_err(internal_error)?;
+    let target_validator: String = row.try_get("target_validator").map_err(internal_error)?;
+    let new_delegator: String = row.try_get("new_delegator").map_err(internal_error)?;
+    let height: i64 = row.try_get("height").map_err(internal_error)?;
+    let timestamp: i64 = row.try_get("timestamp").map_err(internal_error)?;
+    let value: Value = row.try_get("content").map_err(internal_error)?;
 
-    let res = V2Undelegation {
-        tx_hash: tx,
-        block_hash: block,
-        from: sender,
+    let undelegation = UndelegationResponse {
+        tx_hash,
+        block_hash,
+        from,
         new_delegator,
         target_validator,
         amount: amount as u64,
@@ -73,62 +63,39 @@ pub async fn v2_get_undelegation(
         value,
     };
 
-    Ok(V2UndelegationResponse::Ok(Json(V2UndelegationResult {
-        code: StatusCode::OK.as_u16(),
-        message: "".to_string(),
-        data: Some(res),
-    })))
+    Ok(Json(undelegation))
 }
 
-#[derive(ApiResponse)]
-pub enum V2UndelegationsResponse {
-    #[oai(status = 200)]
-    Ok(Json<V2UndelegationsResult>),
-    #[oai(status = 404)]
-    NotFound,
-    #[oai(status = 500)]
-    InternalError,
+#[derive(Serialize, Deserialize)]
+pub struct GetUndelegationsParams {
+    pub from: Option<String>,
+    pub page: Option<i32>,
+    pub page_size: Option<i32>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Object)]
-pub struct V2UndelegationsResult {
-    pub code: u16,
-    pub message: String,
-    pub data: V2UndelegationsData,
-}
-
-#[derive(Serialize, Deserialize, Debug, Object)]
-pub struct V2UndelegationsData {
-    pub page: i64,
-    pub page_size: i64,
-    pub total: i64,
-    pub items: Option<Vec<V2Undelegation>>,
-}
 #[allow(dead_code)]
-pub async fn v2_get_undelegations(
-    api: &Api,
-    address: Query<Option<String>>,
-    page: Query<Option<i64>>,
-    page_size: Query<Option<i64>>,
-) -> Result<V2UndelegationsResponse> {
-    let mut conn = api.storage.lock().await.acquire().await?;
-    let page = page.0.unwrap_or(1);
-    let page_size = page_size.0.unwrap_or(10);
+pub async fn get_undelegations(
+    State(state): State<Arc<AppState>>,
+    Query(params): Query<GetUndelegationsParams>,
+) -> Result<Json<QueryResult<Vec<UndelegationResponse>>>> {
+    let mut conn = state.pool.acquire().await.map_err(internal_error)?;
+    let page = params.page.unwrap_or(1);
+    let page_size = params.page_size.unwrap_or(10);
 
-    let (sql_count, sql_query) = if let Some(addr) = address.0 {
+    let (sql_count, sql_query) = if let Some(from) = params.from {
         (
             format!(
-                "SELECT count(*) AS cnt FROM undelegations WHERE sender='{}'",
-                addr.to_lowercase()
+                "SELECT count(*) FROM undelegations WHERE sender='{}'",
+                from.to_lowercase()
             ),
             format!(
             "SELECT tx,block,sender,amount,target_validator,new_delegator,height,timestamp,content \
             FROM undelegations WHERE sender='{}' ORDER BY timestamp DESC LIMIT {} OFFSET {}",
-            addr.to_lowercase(), page_size, (page-1)*page_size),
+            from.to_lowercase(), page_size, (page-1)*page_size),
         )
     } else {
         (
-            "SELECT count(*) AS cnt FROM undelegations".to_string(),
+            "SELECT count(*) FROM undelegations".to_string(),
             format!("SELECT tx,block,sender,amount,target_validator,new_delegator,height,timestamp,content \
             FROM undelegations ORDER BY timestamp DESC LIMIT {} OFFSET {}", page_size, (page-1)*page_size)
         )
@@ -136,26 +103,29 @@ pub async fn v2_get_undelegations(
 
     let row_cnt = sqlx::query(sql_count.as_str())
         .fetch_one(&mut *conn)
-        .await?;
-    let total: i64 = row_cnt.try_get("cnt")?;
-    let mut res: Vec<V2Undelegation> = vec![];
+        .await
+        .map_err(internal_error)?;
+    let total: i64 = row_cnt.try_get("count").map_err(internal_error)?;
+
+    let mut undelegations: Vec<UndelegationResponse> = vec![];
     let rows = sqlx::query(sql_query.as_str())
         .fetch_all(&mut *conn)
-        .await?;
+        .await
+        .map_err(internal_error)?;
     for row in rows {
-        let tx: String = row.try_get("tx")?;
-        let block: String = row.try_get("block")?;
-        let sender: String = row.try_get("sender")?;
-        let amount: i64 = row.try_get("amount")?;
-        let target_validator: String = row.try_get("target_validator")?;
-        let new_delegator: String = row.try_get("new_delegator")?;
-        let height: i64 = row.try_get("height")?;
-        let timestamp: i64 = row.try_get("timestamp")?;
-        let value: Value = row.try_get("content")?;
-        res.push(V2Undelegation {
-            tx_hash: tx,
-            block_hash: block,
-            from: sender,
+        let tx_hash: String = row.try_get("tx").map_err(internal_error)?;
+        let block_hash: String = row.try_get("block").map_err(internal_error)?;
+        let from: String = row.try_get("sender").map_err(internal_error)?;
+        let amount: i64 = row.try_get("amount").map_err(internal_error)?;
+        let target_validator: String = row.try_get("target_validator").map_err(internal_error)?;
+        let new_delegator: String = row.try_get("new_delegator").map_err(internal_error)?;
+        let height: i64 = row.try_get("height").map_err(internal_error)?;
+        let timestamp: i64 = row.try_get("timestamp").map_err(internal_error)?;
+        let value: Value = row.try_get("content").map_err(internal_error)?;
+        undelegations.push(UndelegationResponse {
+            tx_hash,
+            block_hash,
+            from,
             new_delegator,
             target_validator,
             amount: amount as u64,
@@ -165,14 +135,10 @@ pub async fn v2_get_undelegations(
         });
     }
 
-    Ok(V2UndelegationsResponse::Ok(Json(V2UndelegationsResult {
-        code: 200,
-        message: "".to_string(),
-        data: V2UndelegationsData {
-            page,
-            page_size,
-            total,
-            items: Some(res),
-        },
-    })))
+    Ok(Json(QueryResult {
+        total,
+        page,
+        page_size,
+        data: undelegations,
+    }))
 }
