@@ -1,14 +1,26 @@
 use crate::service::v2::error::internal_error;
 use crate::service::v2::error::Result;
-use crate::service::v2::{BlockResponse, QueryResult};
+use crate::service::v2::QueryResult;
 use crate::AppState;
 use axum::extract::{Query, State};
 use axum::Json;
-use module::rpc::block::BlockRPC;
+use module::rpc::block::{BlockHeader, BlockId, BlockRPC};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sqlx::Row;
 use std::sync::Arc;
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct BlockResponse {
+    pub block_hash: String,
+    pub block_num: i64,
+    pub app_hash: String,
+    pub proposer: String,
+    pub num_txs: i64,
+    pub block_size: i64,
+    pub block_id: BlockId,
+    pub block_header: BlockHeader,
+}
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct GetBlockByHeightParams {

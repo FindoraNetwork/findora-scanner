@@ -44,31 +44,26 @@ pub async fn v2_statistics(api: &Api, ty: Query<Option<i32>>) -> Result<V2ChainS
     let start_time = Local::now().date_naive().and_hms_opt(0, 0, 0).unwrap();
 
     if let Some(tx_type) = ty.0 {
-        let sql_txs_count = format!(
-            "select count(*) as cnt from transaction where ty={}",
-            tx_type
-        );
+        let sql_txs_count = format!("SELECT count(*) FROM transaction WHERE ty={}", tx_type);
         let row_txs_count = sqlx::query(sql_txs_count.as_str())
             .fetch_one(&mut *conn)
             .await?;
-        let txs_count = row_txs_count.try_get("cnt")?;
+        let txs_count = row_txs_count.try_get("count")?;
 
         let sql_addrs_count: String;
         let sql_daily_txs: String;
         match tx_type {
             0 => {
-                sql_addrs_count =
-                    "select count(distinct address) as cnt from native_addrs".to_string();
+                sql_addrs_count = "SELECT count(distinct address) FROM native_addrs".to_string();
                 sql_daily_txs = format!(
-                    "select count(*) as cnt from transaction where ty=0 and timestamp>={}",
+                    "SELECT count(*) FROM transaction WHERE ty=0 AND timestamp>={}",
                     start_time.and_utc().timestamp()
                 );
             }
             _ => {
-                sql_addrs_count =
-                    "select count(distinct address) as cnt from evm_addrs".to_string();
+                sql_addrs_count = "SELECT count(distinct address) FROM evm_addrs".to_string();
                 sql_daily_txs = format!(
-                    "select count(*) as cnt from transaction where ty=1 and timestamp>={}",
+                    "SELECT count(*) FROM transaction WHERE ty=1 AND timestamp>={}",
                     start_time.and_utc().timestamp()
                 );
             }
@@ -77,45 +72,43 @@ pub async fn v2_statistics(api: &Api, ty: Query<Option<i32>>) -> Result<V2ChainS
         let row_addr_count = sqlx::query(sql_addrs_count.as_str())
             .fetch_one(&mut *conn)
             .await?;
-        let addr_count: i64 = row_addr_count.try_get("cnt")?;
+        let addr_count: i64 = row_addr_count.try_get("count")?;
 
         let row_daily = sqlx::query(sql_daily_txs.as_str())
             .fetch_one(&mut *conn)
             .await?;
-        let daily_txs = row_daily.try_get("cnt")?;
+        let daily_txs = row_daily.try_get("count")?;
 
         stat.active_addrs = addr_count;
         stat.total_txs = txs_count;
         stat.daily_txs = daily_txs
     } else {
-        let sql_txs_count = "select count(*) as cnt from transaction".to_string();
+        let sql_txs_count = "SELECT count(*) FROM transaction".to_string();
         let row_txs_count = sqlx::query(sql_txs_count.as_str())
             .fetch_one(&mut *conn)
             .await?;
-        let txs_count = row_txs_count.try_get("cnt")?;
+        let txs_count = row_txs_count.try_get("count")?;
 
-        let sql_evm_addrs_count =
-            "select count(distinct address) as cnt from evm_addrs".to_string();
+        let sql_evm_addrs_count = "SELECT count(distinct address) FROM evm_addrs".to_string();
         let row_evm_addr = sqlx::query(sql_evm_addrs_count.as_str())
             .fetch_one(&mut *conn)
             .await?;
-        let evm_addrs: i64 = row_evm_addr.try_get("cnt")?;
+        let evm_addrs: i64 = row_evm_addr.try_get("count")?;
 
-        let sql_native_addrs_count =
-            "select count(distinct address) as cnt from native_addrs".to_string();
+        let sql_native_addrs_count = "SELECT count(distinct address) FROM native_addrs".to_string();
         let row_native_addr = sqlx::query(sql_native_addrs_count.as_str())
             .fetch_one(&mut *conn)
             .await?;
-        let native_addrs: i64 = row_native_addr.try_get("cnt")?;
+        let native_addrs: i64 = row_native_addr.try_get("count")?;
 
         let sql_daily_txs = format!(
-            "select count(*) as cnt from transaction where timestamp>={}",
+            "SELECT count(*) FROM transaction WHERE timestamp>={}",
             start_time.and_utc().timestamp()
         );
         let row_daily = sqlx::query(sql_daily_txs.as_str())
             .fetch_one(&mut *conn)
             .await?;
-        let daily_txs = row_daily.try_get("cnt")?;
+        let daily_txs = row_daily.try_get("count")?;
 
         stat.active_addrs = native_addrs + evm_addrs;
         stat.total_txs = txs_count;

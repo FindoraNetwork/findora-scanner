@@ -1,4 +1,3 @@
-use module::rpc::block::{BlockHeader, BlockId};
 use serde::{Deserialize, Serialize};
 
 pub mod asset;
@@ -38,16 +37,4 @@ pub struct QueryResult<T> {
     pub page: i32,
     pub page_size: i32,
     pub data: T,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct BlockResponse {
-    pub block_hash: String,
-    pub block_num: i64,
-    pub app_hash: String,
-    pub proposer: String,
-    pub num_txs: i64,
-    pub block_size: i64,
-    pub block_id: BlockId,
-    pub block_header: BlockHeader,
 }
