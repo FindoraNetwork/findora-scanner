@@ -7,7 +7,7 @@ where
     E: std::error::Error,
 {
     let err_msg = err.to_string();
-    if err_msg.contains("now rows") {
+    if err_msg.contains("no rows") {
         return (StatusCode::NOT_FOUND, "not found".to_string());
     }
 
