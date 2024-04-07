@@ -1,6 +1,7 @@
 mod service;
 use crate::service::api::Api;
 use crate::service::v2::block::{get_block_by_hash, get_block_by_num, get_blocks};
+use crate::service::v2::transaction::get_tx_by_hash;
 use anyhow::Result;
 use axum::http::Method;
 use axum::routing::get;
@@ -9,6 +10,7 @@ use log::info;
 use sqlx::pool::PoolOptions;
 use sqlx::{PgPool, Pool, Postgres};
 use std::sync::Arc;
+use std::time::Duration;
 use tower_http::cors::{Any, CorsLayer};
 
 struct AppState {
@@ -29,10 +31,12 @@ async fn main() -> Result<()> {
     );
 
     let pool: Pool<Postgres> = PoolOptions::new()
-        .max_connections(50)
+        .max_connections(20)
+        .acquire_timeout(Duration::from_secs(5))
         .connect(&postgres_config)
         .await
-        .unwrap();
+        .expect("can't connect to database");
+
     info!("Connecting DB...ok");
 
     let app_state = Arc::new(AppState { pool });
@@ -42,9 +46,10 @@ async fn main() -> Result<()> {
         .allow_headers(Any);
     let addr = format!("{}:{}", config.server.addr, config.server.port);
     let app = Router::new()
-        .route("/api/v2/block/number", get(get_block_by_num))
-        .route("/api/v2/block/hash", get(get_block_by_hash))
+        .route("/api/v2/number/block", get(get_block_by_num))
+        .route("/api/v2/hash/block", get(get_block_by_hash))
         .route("/api/v2/blocks", get(get_blocks))
+        .route("/api/v2/hash/tx", get(get_tx_by_hash))
         .layer(cors)
         .with_state(app_state);
     let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();

@@ -4,7 +4,7 @@
 
 [postgres]
     account  = "postgres"
-    password = "csq2400306"
+    password = "12345678"
     addr = "localhost"
     database = "postgres"
 

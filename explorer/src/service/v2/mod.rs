@@ -39,6 +39,7 @@ pub struct QueryResult<T> {
     pub page_size: i32,
     pub data: T,
 }
+
 #[derive(Serialize, Deserialize, Debug)]
 pub struct BlockResponse {
     pub block_hash: String,
