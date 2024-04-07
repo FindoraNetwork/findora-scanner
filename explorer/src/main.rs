@@ -5,6 +5,7 @@ use crate::service::v2::block::{get_block_by_hash, get_block_by_num, get_blocks}
 use crate::service::v2::claim::{get_claim_by_tx_hash, get_claims};
 use crate::service::v2::delegation::{get_delegation_by_tx_hash, get_delegations};
 use crate::service::v2::transaction::{get_tx_by_hash, get_txs};
+use crate::service::v2::undelegation::{get_undelegation_by_tx_hash, get_undelegations};
 use anyhow::Result;
 use axum::http::Method;
 use axum::routing::get;
@@ -59,6 +60,11 @@ async fn main() -> Result<()> {
         .route("/api/v2/claims", get(get_claims))
         .route("/api/v2/hash/delegation", get(get_delegation_by_tx_hash))
         .route("/api/v2/delegations", get(get_delegations))
+        .route(
+            "/api/v2/hash/undelegation",
+            get(get_undelegation_by_tx_hash),
+        )
+        .route("/api/v2/undelegations", get(get_undelegations))
         .layer(cors)
         .with_state(app_state);
     let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
