@@ -12,7 +12,7 @@
 
 <h3 id="1.1">1.1 根据区块号获取区块</h3>
 
-* `GET /api/v2/block/number`
+* `GET /api/v2/number/block`
 
 * 参数
 
@@ -20,7 +20,7 @@
 |-----------|----------|--------------|-----|
 | num       | number   | Y            | 区块号 |
 
-* Request: `http://localhost/api/v2/block/number?num=100`
+* Request: `http://localhost/api/v2/number/block?num=100`
 * Response:
 ```json
 {
@@ -67,7 +67,7 @@
 
 <h3 id="1.2">1.2 根据区块哈希获取区块</h3>
 
-* `GET /api/v2/block/hash`
+* `GET /api/v2/hash/block`
 
 * 参数
 
@@ -75,7 +75,7 @@
 |-----------|----------|--------------|------|
 | hash      | string   | Y            | 区块哈希 |
 
-* Request: `http://localhost/api/v2/block/hash?hash=E8A4A1F0A6AE1EBAC0D8CA84106985DEFA47240A2AD4E045717CD304B8EDD985`
+* Request: `http://localhost/api/v2/hash/block?hash=E8A4A1F0A6AE1EBAC0D8CA84106985DEFA47240A2AD4E045717CD304B8EDD985`
 * Response:
 ```json
 {
