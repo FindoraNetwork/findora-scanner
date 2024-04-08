@@ -113,7 +113,7 @@ pub struct GetN2ETxByTxHashParams {
 }
 
 #[allow(dead_code)]
-pub async fn get_n2e_tx_by_tx_hash(
+pub async fn get_n2e_by_tx_hash(
     State(state): State<Arc<AppState>>,
     Query(params): Query<GetN2ETxByTxHashParams>,
 ) -> Result<Json<NativeToEvmTxResponse>> {
