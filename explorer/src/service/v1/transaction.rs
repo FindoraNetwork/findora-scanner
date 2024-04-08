@@ -1346,8 +1346,9 @@ struct Output {
     pub asset_type: Value,
     pub public_key: Value,
 }
+
 #[allow(dead_code)]
-fn wrap_evm_tx(tx: &mut TransactionResponse) -> Result<()> {
+pub fn wrap_evm_tx(tx: &mut TransactionResponse) -> Result<()> {
     let tx_str: String = serde_json::to_string(&tx.value).unwrap();
 
     if tx.ty == EVM_TRANSFER {
