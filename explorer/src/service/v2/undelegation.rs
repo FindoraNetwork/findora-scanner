@@ -26,7 +26,6 @@ pub struct UndelegationResponse {
     pub value: Value,
 }
 
-#[allow(dead_code)]
 pub async fn get_undelegation_by_tx_hash(
     State(state): State<Arc<AppState>>,
     Query(params): Query<GetUndelegationByTxHashParams>,
@@ -73,7 +72,6 @@ pub struct GetUndelegationsParams {
     pub page_size: Option<i32>,
 }
 
-#[allow(dead_code)]
 pub async fn get_undelegations(
     State(state): State<Arc<AppState>>,
     Query(params): Query<GetUndelegationsParams>,
