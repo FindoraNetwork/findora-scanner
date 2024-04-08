@@ -114,7 +114,7 @@ pub async fn get_tx_by_hash(
 ) -> Result<Json<TransactionResponse>> {
     let mut conn = state.pool.acquire().await.map_err(internal_error)?;
 
-    let sql_query = r#"SELECT tx_hash,block_hash,height,timestamp,ty_sub,code,log,origin,result,value
+    let sql_query = r#"SELECT tx_hash,block_hash,height,timestamp,ty,code,log,origin,result,value
         FROM transaction WHERE tx_hash=$1"#;
 
     let row = sqlx::query(sql_query)
