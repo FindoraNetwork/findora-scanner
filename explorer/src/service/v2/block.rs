@@ -1,9 +1,9 @@
 use crate::service::error::{internal_error, Result};
-use crate::service::v2::QueryResult;
+use crate::service::QueryResult;
 use crate::AppState;
-use axum::extract::{Query, State};
+use axum::extract::{Path, Query, State};
 use axum::Json;
-use module::rpc::block::{BlockHeader, BlockId, BlockRPC};
+use module::rpc::block::{Block, BlockHeader, BlockId, BlockRPC};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sqlx::Row;
@@ -19,6 +19,127 @@ pub struct BlockResponse {
     pub block_size: i64,
     pub block_id: BlockId,
     pub block_header: BlockHeader,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct FullBlockResponse {
+    pub block_id: BlockId,
+    pub block: Block,
+}
+
+pub async fn get_full_block_by_height(
+    State(state): State<Arc<AppState>>,
+    Path(num): Path<i64>,
+) -> Result<Json<FullBlockResponse>> {
+    let mut conn = state.pool.acquire().await.map_err(internal_error)?;
+
+    let sql_query = r#"SELECT block_data FROM block WHERE height=$1"#;
+    let row = sqlx::query(sql_query)
+        .bind(num)
+        .fetch_one(&mut *conn)
+        .await
+        .map_err(internal_error)?;
+    let block_data = row.try_get("block_data").map_err(internal_error)?;
+    let block_rpc: BlockRPC = serde_json::from_value(block_data).map_err(internal_error)?;
+    let full_block = FullBlockResponse {
+        block_id: block_rpc.block_id,
+        block: block_rpc.block,
+    };
+
+    Ok(Json(full_block))
+}
+
+pub async fn get_simple_block_by_height(
+    State(state): State<Arc<AppState>>,
+    Path(num): Path<i64>,
+) -> Result<Json<BlockResponse>> {
+    let mut conn = state.pool.acquire().await.map_err(internal_error)?;
+
+    let sql_query =
+        "SELECT block_hash,height,size,tx_count,time,app_hash,proposer,block_data FROM block WHERE height=$1";
+    let row = sqlx::query(sql_query)
+        .bind(num)
+        .fetch_one(&mut *conn)
+        .await
+        .map_err(internal_error)?;
+
+    let block_hash: String = row.try_get("block_hash").map_err(internal_error)?;
+    let block_num: i64 = row.try_get("height").map_err(internal_error)?;
+    let app_hash: String = row.try_get("app_hash").map_err(internal_error)?;
+    let proposer: String = row.try_get("proposer").map_err(internal_error)?;
+    let block_size: i64 = row.try_get("size").map_err(internal_error)?;
+    let num_txs: i64 = row.try_get("tx_count").map_err(internal_error)?;
+    let block_data: Value = row.try_get("block_data").map_err(internal_error)?;
+    let block_rpc: BlockRPC = serde_json::from_value(block_data).map_err(internal_error)?;
+
+    let block = BlockResponse {
+        block_hash,
+        num_txs,
+        block_size,
+        app_hash,
+        proposer,
+        block_id: block_rpc.block_id,
+        block_header: block_rpc.block.header,
+        block_num,
+    };
+
+    Ok(Json(block))
+}
+
+pub async fn get_full_block_by_hash(
+    State(state): State<Arc<AppState>>,
+    Path(hash): Path<String>,
+) -> Result<Json<FullBlockResponse>> {
+    let mut conn = state.pool.acquire().await.map_err(internal_error)?;
+
+    let sql_query = "SELECT block_data FROM block WHERE block_hash=$1";
+    let row = sqlx::query(sql_query)
+        .bind(hash)
+        .fetch_one(&mut *conn)
+        .await
+        .map_err(internal_error)?;
+    let block_data = row.try_get("block_data").map_err(internal_error)?;
+    let block_rpc: BlockRPC = serde_json::from_value(block_data).map_err(internal_error)?;
+    let full_block = FullBlockResponse {
+        block_id: block_rpc.block_id,
+        block: block_rpc.block,
+    };
+
+    Ok(Json(full_block))
+}
+
+pub async fn get_simple_block_by_hash(
+    State(state): State<Arc<AppState>>,
+    Path(hash): Path<String>,
+) -> Result<Json<BlockResponse>> {
+    let mut conn = state.pool.acquire().await.map_err(internal_error)?;
+
+    let sql_query = r#"SELECT block_hash,height,size,tx_count,time,app_hash,proposer,block_data FROM block WHERE block_hash=$1"#;
+    let row = sqlx::query(sql_query)
+        .bind(hash)
+        .fetch_one(&mut *conn)
+        .await
+        .map_err(internal_error)?;
+    let block_hash: String = row.try_get("block_hash").map_err(internal_error)?;
+    let block_num: i64 = row.try_get("height").map_err(internal_error)?;
+    let app_hash: String = row.try_get("app_hash").map_err(internal_error)?;
+    let proposer: String = row.try_get("proposer").map_err(internal_error)?;
+    let block_size: i64 = row.try_get("size").map_err(internal_error)?;
+    let num_txs: i64 = row.try_get("tx_count").map_err(internal_error)?;
+    let block_data: Value = row.try_get("block_data").map_err(internal_error)?;
+    let block_rpc: BlockRPC = serde_json::from_value(block_data).map_err(internal_error)?;
+    let block = BlockResponse {
+        block_hash,
+        num_txs,
+        block_size,
+        app_hash,
+        proposer,
+        block_id: block_rpc.block_id,
+        block_header: block_rpc.block.header,
+        block_num,
+    };
+
+    Ok(Json(block))
 }
 
 #[derive(Serialize, Deserialize, Debug)]

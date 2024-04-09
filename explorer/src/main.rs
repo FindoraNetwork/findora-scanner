@@ -1,7 +1,10 @@
 mod service;
 use crate::service::api::Api;
 use crate::service::v2::asset::get_assets;
-use crate::service::v2::block::{get_block_by_hash, get_block_by_num, get_blocks};
+use crate::service::v2::block::{
+    get_block_by_hash, get_block_by_num, get_blocks, get_full_block_by_hash,
+    get_full_block_by_height, get_simple_block_by_hash, get_simple_block_by_height,
+};
 use crate::service::v2::claim::{get_claim_by_tx_hash, get_claims};
 use crate::service::v2::delegation::{get_delegation_by_tx_hash, get_delegations};
 use crate::service::v2::other::{get_address_count, get_statistics, get_tx_distribute};
@@ -53,6 +56,10 @@ async fn main() -> Result<()> {
         .allow_headers(Any);
     let addr = format!("{}:{}", config.server.addr, config.server.port);
     let app = Router::new()
+        .route("/api/block/hash/:hash", get(get_simple_block_by_hash))
+        .route("/api/block/full/hash/:hash", get(get_full_block_by_hash))
+        .route("/api/block/height/:num", get(get_simple_block_by_height))
+        .route("/api/block/full/height/:num", get(get_full_block_by_height))
         .route("/api/address/count", get(get_address_count))
         .route("/api/chain/statistics", get(get_statistics))
         .route("/api/txs/distribute", get(get_tx_distribute))
