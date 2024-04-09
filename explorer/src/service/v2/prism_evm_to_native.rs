@@ -1,4 +1,4 @@
-use crate::service::v2::error::{internal_error, Result};
+use crate::service::error::{internal_error, Result};
 use crate::service::v2::QueryResult;
 use crate::AppState;
 use axum::extract::{Query, State};
