@@ -1,6 +1,7 @@
 use poem_openapi::Tags;
 
 pub mod api;
+pub mod error;
 pub mod util;
 pub mod v1;
 pub mod v2;

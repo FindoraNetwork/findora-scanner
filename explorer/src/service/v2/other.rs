@@ -1,41 +1,34 @@
-use crate::service::api::Api;
-use crate::service::v1::chain::{AddressCount, AddressCountResponse, AddressCountResult};
-use anyhow::Result;
-use poem_openapi::param::Query;
-use poem_openapi::{payload::Json, ApiResponse, Object};
+use crate::service::error::internal_error;
+use crate::AppState;
+use axum::extract::{Query, State};
+use axum::Json;
 use serde::{Deserialize, Serialize};
 use sqlx::types::chrono::Local;
 use sqlx::Row;
 use std::ops::Add;
+use std::sync::Arc;
 
-#[derive(ApiResponse)]
-pub enum V2ChainStatisticsResponse {
-    #[oai(status = 200)]
-    Ok(Json<V2ChainStatisticsResult>),
-    #[oai(status = 404)]
-    NotFound(Json<V2ChainStatisticsResult>),
-    #[oai(status = 500)]
-    InternalError(Json<V2ChainStatisticsResult>),
-}
+use crate::service::error::Result;
 
-#[derive(Serialize, Deserialize, Object)]
-pub struct V2ChainStatisticsResult {
-    pub code: i32,
-    pub message: String,
-    pub data: Option<V2StatisticsData>,
-}
-
-#[derive(Serialize, Deserialize, Object)]
-pub struct V2StatisticsData {
+#[derive(Serialize, Deserialize)]
+pub struct StatisticsResponse {
     pub active_addrs: i64,
     pub total_txs: i64,
     pub daily_txs: i64,
 }
-#[allow(dead_code)]
-pub async fn v2_statistics(api: &Api, ty: Query<Option<i32>>) -> Result<V2ChainStatisticsResponse> {
-    let mut conn = api.storage.lock().await.acquire().await?;
+#[derive(Serialize, Deserialize)]
+pub struct StatisticsParams {
+    pub ty: Option<i32>,
+}
 
-    let mut stat = V2StatisticsData {
+#[allow(dead_code)]
+pub async fn get_statistics(
+    State(state): State<Arc<AppState>>,
+    Query(params): Query<StatisticsParams>,
+) -> Result<Json<StatisticsResponse>> {
+    let mut conn = state.pool.acquire().await.map_err(internal_error)?;
+
+    let mut stat = StatisticsResponse {
         active_addrs: 0,
         total_txs: 0,
         daily_txs: 0,
@@ -43,12 +36,13 @@ pub async fn v2_statistics(api: &Api, ty: Query<Option<i32>>) -> Result<V2ChainS
 
     let start_time = Local::now().date_naive().and_hms_opt(0, 0, 0).unwrap();
 
-    if let Some(tx_type) = ty.0 {
+    if let Some(tx_type) = params.ty {
         let sql_txs_count = format!("SELECT count(*) FROM transaction WHERE ty={}", tx_type);
         let row_txs_count = sqlx::query(sql_txs_count.as_str())
             .fetch_one(&mut *conn)
-            .await?;
-        let txs_count = row_txs_count.try_get("count")?;
+            .await
+            .map_err(internal_error)?;
+        let txs_count = row_txs_count.try_get("count").map_err(internal_error)?;
 
         let sql_addrs_count: String;
         let sql_daily_txs: String;
@@ -71,13 +65,15 @@ pub async fn v2_statistics(api: &Api, ty: Query<Option<i32>>) -> Result<V2ChainS
 
         let row_addr_count = sqlx::query(sql_addrs_count.as_str())
             .fetch_one(&mut *conn)
-            .await?;
-        let addr_count: i64 = row_addr_count.try_get("count")?;
+            .await
+            .map_err(internal_error)?;
+        let addr_count: i64 = row_addr_count.try_get("count").map_err(internal_error)?;
 
         let row_daily = sqlx::query(sql_daily_txs.as_str())
             .fetch_one(&mut *conn)
-            .await?;
-        let daily_txs = row_daily.try_get("count")?;
+            .await
+            .map_err(internal_error)?;
+        let daily_txs = row_daily.try_get("count").map_err(internal_error)?;
 
         stat.active_addrs = addr_count;
         stat.total_txs = txs_count;
@@ -86,20 +82,23 @@ pub async fn v2_statistics(api: &Api, ty: Query<Option<i32>>) -> Result<V2ChainS
         let sql_txs_count = "SELECT count(*) FROM transaction".to_string();
         let row_txs_count = sqlx::query(sql_txs_count.as_str())
             .fetch_one(&mut *conn)
-            .await?;
-        let txs_count = row_txs_count.try_get("count")?;
+            .await
+            .map_err(internal_error)?;
+        let txs_count = row_txs_count.try_get("count").map_err(internal_error)?;
 
         let sql_evm_addrs_count = "SELECT count(distinct address) FROM evm_addrs".to_string();
         let row_evm_addr = sqlx::query(sql_evm_addrs_count.as_str())
             .fetch_one(&mut *conn)
-            .await?;
-        let evm_addrs: i64 = row_evm_addr.try_get("count")?;
+            .await
+            .map_err(internal_error)?;
+        let evm_addrs: i64 = row_evm_addr.try_get("count").map_err(internal_error)?;
 
         let sql_native_addrs_count = "SELECT count(distinct address) FROM native_addrs".to_string();
         let row_native_addr = sqlx::query(sql_native_addrs_count.as_str())
             .fetch_one(&mut *conn)
-            .await?;
-        let native_addrs: i64 = row_native_addr.try_get("count")?;
+            .await
+            .map_err(internal_error)?;
+        let native_addrs: i64 = row_native_addr.try_get("count").map_err(internal_error)?;
 
         let sql_daily_txs = format!(
             "SELECT count(*) FROM transaction WHERE timestamp>={}",
@@ -107,117 +106,124 @@ pub async fn v2_statistics(api: &Api, ty: Query<Option<i32>>) -> Result<V2ChainS
         );
         let row_daily = sqlx::query(sql_daily_txs.as_str())
             .fetch_one(&mut *conn)
-            .await?;
-        let daily_txs = row_daily.try_get("count")?;
+            .await
+            .map_err(internal_error)?;
+        let daily_txs = row_daily.try_get("count").map_err(internal_error)?;
 
         stat.active_addrs = native_addrs + evm_addrs;
         stat.total_txs = txs_count;
         stat.daily_txs = daily_txs
     }
 
-    Ok(V2ChainStatisticsResponse::Ok(Json(
-        V2ChainStatisticsResult {
-            code: 200,
-            message: "".to_string(),
-            data: Some(stat),
-        },
-    )))
+    Ok(Json(stat))
 }
 
-#[derive(ApiResponse)]
-pub enum V2DistributeResponse {
-    #[oai(status = 200)]
-    Ok(Json<V2DistributeResult>),
-    #[oai(status = 500)]
-    InternalError(Json<V2DistributeResult>),
-}
-
-#[derive(Serialize, Deserialize, Default, Object)]
-pub struct V2DistributeResult {
-    pub code: i32,
-    pub message: String,
-    pub data: Option<V2TxsDistribute>,
-}
-
-#[derive(Serialize, Deserialize, Default, Object)]
-pub struct V2TxsDistribute {
+#[derive(Serialize, Deserialize)]
+pub struct TxsDistributeResponse {
     pub transparent: i64,
     pub privacy: i64,
     pub prism: i64,
     pub evm_compatible: i64,
 }
+
 #[allow(dead_code)]
-pub async fn v2_distribute(api: &Api) -> Result<V2DistributeResponse> {
-    let mut conn = api.storage.lock().await.acquire().await?;
+pub async fn get_tx_distribute(
+    State(state): State<Arc<AppState>>,
+) -> Result<Json<TxsDistributeResponse>> {
+    let mut conn = state.pool.acquire().await.map_err(internal_error)?;
 
-    let sql_native = "select count(*) as cnt from transaction where ty=0";
-    let row_native = sqlx::query(sql_native).fetch_one(&mut *conn).await?;
-    let native_count: i64 = row_native.try_get("cnt")?;
+    let sql_native = "SELECT count(*) FROM transaction WHERE ty=0";
+    let row_native = sqlx::query(sql_native)
+        .fetch_one(&mut *conn)
+        .await
+        .map_err(internal_error)?;
+    let native_count: i64 = row_native.try_get("count").map_err(internal_error)?;
 
-    let sql_privacy =
-        "select count(*) as cnt from transaction where ty_sub=2 or ty_sub=3 or ty_sub=4";
-    let row_privacy = sqlx::query(sql_privacy).fetch_one(&mut *conn).await?;
-    let privacy: i64 = row_privacy.try_get("cnt")?;
+    let sql_privacy = "SELECT count(*) FROM transaction WHERE ty_sub=2 or ty_sub=3 or ty_sub=4";
+    let row_privacy = sqlx::query(sql_privacy)
+        .fetch_one(&mut *conn)
+        .await
+        .map_err(internal_error)?;
+    let privacy: i64 = row_privacy.try_get("count").map_err(internal_error)?;
 
-    let sql_evm = "SELECT count(*) as cnt FROM transaction where ty=1";
-    let row_evm = sqlx::query(sql_evm).fetch_one(&mut *conn).await?;
-    let evm_count: i64 = row_evm.try_get("cnt")?;
+    let sql_evm = "SELECT count(*) FROM transaction WHERE ty=1";
+    let row_evm = sqlx::query(sql_evm)
+        .fetch_one(&mut *conn)
+        .await
+        .map_err(internal_error)?;
+    let evm_count: i64 = row_evm.try_get("count").map_err(internal_error)?;
 
-    let sql_prism_n2e = "select count(*) as cnt from n2e";
-    let row_n2e = sqlx::query(sql_prism_n2e).fetch_one(&mut *conn).await?;
-    let n2e_count: i64 = row_n2e.try_get("cnt")?;
+    let sql_prism_n2e = "SELECT count(*) FROM n2e";
+    let row_n2e = sqlx::query(sql_prism_n2e)
+        .fetch_one(&mut *conn)
+        .await
+        .map_err(internal_error)?;
+    let n2e_count: i64 = row_n2e.try_get("count").map_err(internal_error)?;
 
-    let sql_prism_e2n = "select count(*) as cnt from e2n";
-    let row_e2n = sqlx::query(sql_prism_e2n).fetch_one(&mut *conn).await?;
-    let e2n_count: i64 = row_e2n.try_get("cnt")?;
+    let sql_prism_e2n = "SELECT count(*) FROM e2n";
+    let row_e2n = sqlx::query(sql_prism_e2n)
+        .fetch_one(&mut *conn)
+        .await
+        .map_err(internal_error)?;
+    let e2n_count: i64 = row_e2n.try_get("count").map_err(internal_error)?;
 
-    Ok(V2DistributeResponse::Ok(Json(V2DistributeResult {
-        code: 200,
-        message: "".to_string(),
-        data: Some(V2TxsDistribute {
-            transparent: native_count - privacy,
-            privacy,
-            prism: n2e_count + e2n_count,
-            evm_compatible: evm_count,
-        }),
-    })))
+    Ok(Json(TxsDistributeResponse {
+        transparent: native_count - privacy,
+        privacy,
+        prism: n2e_count + e2n_count,
+        evm_compatible: evm_count,
+    }))
 }
-#[allow(dead_code)]
-pub async fn v2_address_count(
-    api: &Api,
-    start_time: Query<Option<i64>>,
-    end_time: Query<Option<i64>>,
-) -> Result<AddressCountResponse> {
-    let mut conn = api.storage.lock().await.acquire().await?;
-    let mut params: Vec<String> = vec![];
-    if let Some(start_time) = start_time.0 {
-        params.push(format!("timestamp > {start_time} "));
+
+#[derive(Serialize, Deserialize)]
+pub struct AddressCountParams {
+    pub start_time: Option<i64>,
+    pub end_time: Option<i64>,
+}
+#[derive(Serialize, Deserialize)]
+pub struct AddressCountResponse {
+    address_count: i64,
+}
+
+pub async fn get_address_count(
+    State(state): State<Arc<AppState>>,
+    Query(params): Query<AddressCountParams>,
+) -> Result<Json<AddressCountResponse>> {
+    let mut conn = state.pool.acquire().await.map_err(internal_error)?;
+
+    let mut query_params: Vec<String> = vec![];
+    if let Some(start_time) = params.start_time {
+        query_params.push(format!("timestamp > {start_time} "));
     }
-    if let Some(end_time) = end_time.0 {
-        params.push(format!("timestamp < {end_time} "));
+    if let Some(end_time) = params.end_time {
+        query_params.push(format!("timestamp < {end_time} "));
     }
 
-    let mut sql_native = "select count(distinct address) as cnt from native_addrs ".to_string();
-    let mut sql_evm = "select count(distinct address) as cnt from evm_addrs ".to_string();
+    let mut sql_native = "SELECT count(distinct address) FROM native_addrs ".to_string();
+    let mut sql_evm = "SELECT count(distinct address) FROM evm_addrs ".to_string();
 
-    if !params.is_empty() {
-        sql_native = sql_native.add("WHERE ").add(params.join(" AND ").as_str());
-        sql_evm = sql_evm.add("WHERE ").add(params.join(" AND ").as_str());
+    if !query_params.is_empty() {
+        sql_native = sql_native
+            .add("WHERE ")
+            .add(query_params.join(" AND ").as_str());
+        sql_evm = sql_evm
+            .add("WHERE ")
+            .add(query_params.join(" AND ").as_str());
     }
 
     let row_native = sqlx::query(sql_native.as_str())
         .fetch_one(&mut *conn)
-        .await?;
-    let native_count: i64 = row_native.try_get("cnt")?;
+        .await
+        .map_err(internal_error)?;
+    let native_count: i64 = row_native.try_get("count").map_err(internal_error)?;
 
-    let row_evm = sqlx::query(sql_evm.as_str()).fetch_one(&mut *conn).await?;
-    let evm_count: i64 = row_evm.try_get("cnt")?;
+    let row_evm = sqlx::query(sql_evm.as_str())
+        .fetch_one(&mut *conn)
+        .await
+        .map_err(internal_error)?;
+    let evm_count: i64 = row_evm.try_get("count").map_err(internal_error)?;
 
-    Ok(AddressCountResponse::Ok(Json(AddressCountResult {
-        code: 200,
-        message: "".to_string(),
-        data: Some(AddressCount {
-            address_count: native_count + evm_count,
-        }),
-    })))
+    Ok(Json(AddressCountResponse {
+        address_count: native_count + evm_count,
+    }))
 }
