@@ -4,7 +4,6 @@ pub mod asset;
 pub mod block;
 pub mod claim;
 pub mod delegation;
-pub mod error;
 pub mod other;
 pub mod prism_evm_to_native;
 pub mod prism_native_to_evm;
