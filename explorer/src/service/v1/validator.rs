@@ -108,21 +108,21 @@ pub struct ValidatorListData {
     pub validators: Vec<Validator>,
 }
 
-impl ValidatorListData {
-    fn wrap(self) -> WrapValidatorListData {
-        let mut wrap_validators: Vec<WrapValidator> = vec![];
-        for v in self.validators {
-            wrap_validators.push(v.wrap());
-        }
-
-        WrapValidatorListData {
-            threshold: self.threshold,
-            validator_cnt: self.validator_cnt,
-            cur_height: self.cur_height,
-            validators: wrap_validators,
-        }
-    }
-}
+// impl ValidatorListData {
+//     fn wrap(self) -> WrapValidatorListData {
+//         let mut wrap_validators: Vec<WrapValidator> = vec![];
+//         for v in self.validators {
+//             wrap_validators.push(v.wrap());
+//         }
+//
+//         WrapValidatorListData {
+//             threshold: self.threshold,
+//             validator_cnt: self.validator_cnt,
+//             cur_height: self.cur_height,
+//             validators: wrap_validators,
+//         }
+//     }
+// }
 
 #[derive(Serialize, Deserialize, Debug, Default, Object)]
 pub struct Validator {
@@ -134,19 +134,19 @@ pub struct Validator {
     pub extra: Memo,
 }
 
-impl Validator {
-    fn wrap(self) -> WrapValidator {
-        WrapValidator {
-            addr: self.addr,
-            power: self.power,
-            commission_rate: self.commission_rate,
-            accept_delegation: self.accept_delegation,
-            online: false,
-            rank: self.rank,
-            extra: self.extra,
-        }
-    }
-}
+// impl Validator {
+//     fn wrap(self) -> WrapValidator {
+//         WrapValidator {
+//             addr: self.addr,
+//             power: self.power,
+//             commission_rate: self.commission_rate,
+//             accept_delegation: self.accept_delegation,
+//             online: false,
+//             rank: self.rank,
+//             extra: self.extra,
+//         }
+//     }
+// }
 
 #[allow(dead_code)]
 pub async fn validator_delegation(
@@ -176,77 +176,77 @@ pub async fn validator_delegation(
     )))
 }
 
-#[allow(dead_code)]
-pub async fn validator_list(api: &Api) -> Result<ValidatorListResponse> {
-    let mut conn = api.storage.lock().await.acquire().await?;
-
-    let validator_list_url = api.platform.rpc.join("validator_list").unwrap();
-    debug!("validator_list_url: {}", validator_list_url);
-
-    let res = api
-        .platform
-        .client
-        .get(validator_list_url)
-        .send()
-        .await?
-        .json()
-        .await?;
-
-    let validator_data: ValidatorListData = serde_json::from_value(res).unwrap();
-
-    let cur_height: i64 = validator_data.cur_height - 15;
-    let sql = format!(
-        "SELECT address FROM block_generation WHERE height={} AND signature is not null",
-        cur_height
-    );
-
-    let mut wrap_validator_data = validator_data.wrap();
-
-    let rows = sqlx::query(sql.as_str()).fetch_all(&mut *conn).await?;
-    let mut signers: Vec<String> = vec![];
-    for r in rows {
-        let addr: String = r.try_get("address")?;
-        signers.push(addr);
-    }
-
-    for v in &mut wrap_validator_data.validators {
-        if signers.contains(&v.addr) {
-            v.online = true
-        }
-    }
-
-    Ok(ValidatorListResponse::Ok(Json(ValidatorListResult {
-        code: 200,
-        message: "".to_string(),
-        data: Some(wrap_validator_data),
-    })))
-}
-
-#[allow(dead_code)]
-pub async fn validator_detail(api: &Api, address: Path<String>) -> Result<ValidatorDetailResponse> {
-    let validator_detail_url = api
-        .platform
-        .rpc
-        .join(format!("validator_detail/{}", address.0).as_str())
-        .unwrap();
-
-    debug!("validator_detail_url: {}", validator_detail_url);
-
-    let res = api
-        .platform
-        .client
-        .get(validator_detail_url)
-        .send()
-        .await?
-        .json()
-        .await?;
-
-    Ok(ValidatorDetailResponse::Ok(Json(ValidatorDetailResult {
-        code: 200,
-        message: "".to_string(),
-        data: Some(res),
-    })))
-}
+// #[allow(dead_code)]
+// pub async fn validator_list(api: &Api) -> Result<ValidatorListResponse> {
+//     let mut conn = api.storage.lock().await.acquire().await?;
+//
+//     let validator_list_url = api.platform.rpc.join("validator_list").unwrap();
+//     debug!("validator_list_url: {}", validator_list_url);
+//
+//     let res = api
+//         .platform
+//         .client
+//         .get(validator_list_url)
+//         .send()
+//         .await?
+//         .json()
+//         .await?;
+//
+//     let validator_data: ValidatorListData = serde_json::from_value(res).unwrap();
+//
+//     let cur_height: i64 = validator_data.cur_height - 15;
+//     let sql = format!(
+//         "SELECT address FROM block_generation WHERE height={} AND signature is not null",
+//         cur_height
+//     );
+//
+//     let mut wrap_validator_data = validator_data.wrap();
+//
+//     let rows = sqlx::query(sql.as_str()).fetch_all(&mut *conn).await?;
+//     let mut signers: Vec<String> = vec![];
+//     for r in rows {
+//         let addr: String = r.try_get("address")?;
+//         signers.push(addr);
+//     }
+//
+//     for v in &mut wrap_validator_data.validators {
+//         if signers.contains(&v.addr) {
+//             v.online = true
+//         }
+//     }
+//
+//     Ok(ValidatorListResponse::Ok(Json(ValidatorListResult {
+//         code: 200,
+//         message: "".to_string(),
+//         data: Some(wrap_validator_data),
+//     })))
+// }
+//
+// #[allow(dead_code)]
+// pub async fn validator_detail(api: &Api, address: Path<String>) -> Result<ValidatorDetailResponse> {
+//     let validator_detail_url = api
+//         .platform
+//         .rpc
+//         .join(format!("validator_detail/{}", address.0).as_str())
+//         .unwrap();
+//
+//     debug!("validator_detail_url: {}", validator_detail_url);
+//
+//     let res = api
+//         .platform
+//         .client
+//         .get(validator_detail_url)
+//         .send()
+//         .await?
+//         .json()
+//         .await?;
+//
+//     Ok(ValidatorDetailResponse::Ok(Json(ValidatorDetailResult {
+//         code: 200,
+//         message: "".to_string(),
+//         data: Some(res),
+//     })))
+// }
 
 #[allow(dead_code)]
 pub async fn delegator_list(api: &Api, address: Path<String>) -> Result<DelegatorListResponse> {

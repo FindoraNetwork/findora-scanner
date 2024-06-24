@@ -1,9 +1,8 @@
 use crate::service::api::Api;
 use crate::service::util::{public_key_from_base64, public_key_from_bech32, public_key_to_base64};
 use anyhow::Result;
-use log::{debug, error};
-use module::schema::{ClaimOpt, DelegationOpt, TdValidator, UnDelegationOpt};
-use poem_openapi::param::{Path, Query};
+use module::schema::{ClaimOpt, DelegationOpt, UnDelegationOpt};
+use poem_openapi::param::Query;
 use poem_openapi::{payload::Json, ApiResponse, Object};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -85,26 +84,26 @@ pub async fn get_tx_delegation(
         let val: Value = row.try_get("d")?;
         let opt: DelegationOpt = serde_json::from_value(val).unwrap();
 
-        let validator_detail_url = api
-            .platform
-            .rpc
-            .join(format!("validator_detail/{}", opt.body.validator).as_str())
-            .unwrap();
-        let res = reqwest::get(validator_detail_url)
-            .await?
-            .json::<TdValidator>()
-            .await;
-        if res.is_err() {
-            error!("failed to parse validator: {}", opt.body.validator);
-            continue;
-        }
-        let validator = res.unwrap();
+        // let validator_detail_url = api
+        //     .platform
+        //     .rpc
+        //     .join(format!("validator_detail/{}", opt.body.validator).as_str())
+        //     .unwrap();
+        // let res = reqwest::get(validator_detail_url)
+        //     .await?
+        //     .json::<TdValidator>()
+        //     .await;
+        // if res.is_err() {
+        //     error!("failed to parse validator: {}", opt.body.validator);
+        //     continue;
+        // }
+        // let validator = res.unwrap();
 
         items.push(DelegationItem {
             tx_hash,
-            node_address: validator.addr,
-            node_name: validator.memo.name,
-            node_logo: validator.memo.logo,
+            node_address: "".into(),
+            node_name: "".into(),
+            node_logo: "".into(),
             amount: opt.body.amount,
             timestamp,
         });
@@ -200,28 +199,28 @@ pub async fn get_tx_undelegation(
         if opt.body.pu.is_none() {
             continue;
         }
-        let validator_address =
-            hex::encode(opt.body.pu.as_ref().unwrap().target_validator).to_uppercase();
-        let validator_detail_url = api
-            .platform
-            .rpc
-            .join(format!("validator_detail/{validator_address}").as_str())
-            .unwrap();
-        let res = reqwest::get(validator_detail_url)
-            .await?
-            .json::<TdValidator>()
-            .await;
-        if res.is_err() {
-            error!("failed to parse validator: {}", validator_address);
-            continue;
-        }
-        let validator = res.unwrap();
+        // let validator_address =
+        //     hex::encode(opt.body.pu.as_ref().unwrap().target_validator).to_uppercase();
+        // let validator_detail_url = api
+        //     .platform
+        //     .rpc
+        //     .join(format!("validator_detail/{validator_address}").as_str())
+        //     .unwrap();
+        // let res = reqwest::get(validator_detail_url)
+        //     .await?
+        //     .json::<TdValidator>()
+        //     .await;
+        // if res.is_err() {
+        //     error!("failed to parse validator: {}", validator_address);
+        //     continue;
+        // }
+        // let validator = res.unwrap();
 
         items.push(UnDelegationItem {
             tx_hash,
-            node_address: validator.addr,
-            node_name: validator.memo.name,
-            node_logo: validator.memo.logo,
+            node_address: "".into(),
+            node_name: "".into(),
+            node_logo: "".into(),
             amount: opt.body.pu.unwrap().am,
             timestamp,
             expected_arrival_time: timestamp + 21 * 24 * 60 * 60,
@@ -351,31 +350,31 @@ pub struct DelegationInfoResult {
     pub message: String,
     pub data: Option<Value>,
 }
-#[allow(dead_code)]
-pub async fn delegation(api: &Api, pubkey: Path<String>) -> Result<DelegationInfoResponse> {
-    let delegation_info_url = api
-        .platform
-        .rpc
-        .join(format!("delegation_info/{}", pubkey.0).as_str())
-        .unwrap();
-
-    debug!("delegation_info_url: {}", delegation_info_url);
-
-    let res = api
-        .platform
-        .client
-        .get(delegation_info_url)
-        .send()
-        .await?
-        .json()
-        .await?;
-
-    Ok(DelegationInfoResponse::Ok(Json(DelegationInfoResult {
-        code: 200,
-        message: "".to_string(),
-        data: Some(res),
-    })))
-}
+// #[allow(dead_code)]
+// pub async fn delegation(api: &Api, pubkey: Path<String>) -> Result<DelegationInfoResponse> {
+//     let delegation_info_url = api
+//         .platform
+//         .rpc
+//         .join(format!("delegation_info/{}", pubkey.0).as_str())
+//         .unwrap();
+//
+//     debug!("delegation_info_url: {}", delegation_info_url);
+//
+//     let res = api
+//         .platform
+//         .client
+//         .get(delegation_info_url)
+//         .send()
+//         .await?
+//         .json()
+//         .await?;
+//
+//     Ok(DelegationInfoResponse::Ok(Json(DelegationInfoResult {
+//         code: 200,
+//         message: "".to_string(),
+//         data: Some(res),
+//     })))
+// }
 
 #[derive(ApiResponse)]
 pub enum UndelegationResponse {
