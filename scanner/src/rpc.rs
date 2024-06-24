@@ -333,7 +333,7 @@ impl RPCCaller {
                                 address: receiver.clone(),
                                 timestamp: timestamp.and_utc().timestamp(),
                             });
-                            sender = signer.clone();
+                            sender.clone_from(&signer);
                             ty_sub = FindoraTxType::NativeToEVM as i32;
                             v2_convert_account_txs.push(V2ConvertAccountTx {
                                 tx_hash: tx_hash.clone(),
@@ -365,7 +365,7 @@ impl RPCCaller {
                                     _ => (0, "".to_string(), "".to_string()),
                                 };
 
-                            sender = signer.clone();
+                            sender.clone_from(&signer);
                             ty_sub = FindoraTxType::Undelegation as i32;
                             v2_undelegation_txs.push(V2UndelegationTx {
                                 tx_hash: tx_hash.clone(),
@@ -385,7 +385,7 @@ impl RPCCaller {
                             let signer = pubkey_to_fra_address(&opt.delegation.pubkey).unwrap();
                             let new_validator =
                                 opt.delegation.body.new_validator.unwrap_or("".to_string());
-                            sender = signer.clone();
+                            sender.clone_from(&signer);
                             ty_sub = FindoraTxType::Delegation as i32;
                             v2_delegation_txs.push(V2DelegationTx {
                                 tx_hash: tx_hash.clone(),
@@ -403,7 +403,7 @@ impl RPCCaller {
                             let op_copy = op.clone();
                             let opt: ClaimOpt = serde_json::from_value(op).unwrap();
                             let signer = pubkey_to_fra_address(&opt.claim.pubkey).unwrap();
-                            sender = signer.clone();
+                            sender.clone_from(&signer);
                             ty_sub = FindoraTxType::Claim as i32;
                             v2_claim_txs.push(V2ClaimTx {
                                 tx_hash: tx_hash.clone(),
@@ -422,7 +422,7 @@ impl RPCCaller {
                                 pubkey_to_fra_address(&opt.define_asset.pubkey.key).unwrap();
                             let asset = engine::general_purpose::URL_SAFE
                                 .encode(opt.define_asset.body.asset.code.val);
-                            sender = issuer.clone();
+                            sender.clone_from(&issuer);
                             ty_sub = FindoraTxType::DefineOrIssueAsset as i32;
                             v2_asset_txs.push(V2AssetTx {
                                 asset,
@@ -442,7 +442,7 @@ impl RPCCaller {
                                 pubkey_to_fra_address(&opt.issue_asset.pubkey.key).unwrap();
                             let asset = engine::general_purpose::URL_SAFE
                                 .encode(opt.issue_asset.body.code.val);
-                            sender = issuer.clone();
+                            sender.clone_from(&issuer);
                             ty_sub = FindoraTxType::DefineOrIssueAsset as i32;
                             v2_asset_txs.push(V2AssetTx {
                                 asset,
