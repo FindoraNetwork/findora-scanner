@@ -76,10 +76,7 @@ async fn main() -> Result<()> {
         .route("/api/claims", get(get_claims))
         .route("/api/hash/delegation", get(get_delegation_by_tx_hash))
         .route("/api/delegations", get(get_delegations))
-        .route(
-            "/api/hash/undelegation",
-            get(get_undelegation_by_tx_hash),
-        )
+        .route("/api/hash/undelegation", get(get_undelegation_by_tx_hash))
         .route("/api/undelegations", get(get_undelegations))
         .route("/api/hash/n2e", get(get_n2e_by_tx_hash))
         .route("/api/n2es", get(get_n2e_txs))
