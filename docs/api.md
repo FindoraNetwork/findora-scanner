@@ -417,7 +417,7 @@
 
 <h3 id="4.1">4.1 获取资产信息</h3>
 
-* `GET /api/blocks`
+* `GET /api/assets`
 
 
 | 参数        | 类型     | 必传 | 说明         |
