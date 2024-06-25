@@ -63,8 +63,6 @@ async fn main() -> Result<()> {
         .route("/api/address/count", get(get_address_count))
         .route("/api/chain/statistics", get(get_statistics))
         .route("/api/txs/distribute", get(get_tx_distribute))
-        .route("/api/txs/distribute", get(get_tx_distribute))
-        .route("/api/address/count", get(get_address_count))
         .route("/api/chain/statistic", get(get_statistics))
         .route("/api/number/block", get(get_block_by_num))
         .route("/api/hash/block", get(get_block_by_hash))
