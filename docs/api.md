@@ -24,7 +24,7 @@
 | hash | string | Y  | 交易哈希 |
 
 
-* Request: `/api/hash/tx?hash=07a6d26221d92156180b46b9aa7bd31b00e943b01e180cdd80797c9f4f8e997d`
+* Request: `/api/tx?hash=07a6d26221d92156180b46b9aa7bd31b00e943b01e180cdd80797c9f4f8e997d`
 * Response:
 ```json
 {
