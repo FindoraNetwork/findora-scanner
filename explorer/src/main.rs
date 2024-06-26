@@ -7,7 +7,7 @@ use crate::service::v2::block::{
 };
 use crate::service::v2::claim::{get_claim_by_tx_hash, get_claims};
 use crate::service::v2::delegation::{get_delegation_by_tx_hash, get_delegations};
-use crate::service::v2::other::{get_address_count, get_statistics, get_tx_distribute};
+use crate::service::v2::other::{get_address_count, get_market, get_statistics, get_tx_distribute};
 use crate::service::v2::prism_evm_to_native::{get_e2n_by_tx_hash, get_e2n_txs};
 use crate::service::v2::prism_native_to_evm::{get_n2e_by_tx_hash, get_n2e_txs};
 use crate::service::v2::transaction::{get_tx_by_hash, get_txs};
@@ -83,6 +83,7 @@ async fn main() -> Result<()> {
         .route("/api/e2ns", get(get_e2n_txs))
         // asset
         .route("/api/assets", get(get_assets))
+        .route("/api/coins/:id/market_chart", get(get_market))
         .layer(cors)
         .with_state(app_state);
     let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();

@@ -1,10 +1,13 @@
-use crate::service::error::{internal_error, Result};
+use crate::service::error::Result;
+use crate::service::v1::price::{FraMarketChart, MarketChartResult};
 use crate::AppState;
-use axum::extract::{Query, State};
+use axum::extract::{Path, Query, State};
 use axum::Json;
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
+use sqlx::pool::PoolConnection;
 use sqlx::types::chrono::Local;
-use sqlx::Row;
+use sqlx::{Postgres, Row};
 use std::ops::Add;
 use std::sync::Arc;
 
@@ -25,7 +28,7 @@ pub async fn get_statistics(
     State(state): State<Arc<AppState>>,
     Query(params): Query<StatisticsParams>,
 ) -> Result<Json<StatisticsResponse>> {
-    let mut conn = state.pool.acquire().await.map_err(internal_error)?;
+    let mut conn = state.pool.acquire().await?;
 
     let mut stat = StatisticsResponse {
         active_addrs: 0,
@@ -39,9 +42,8 @@ pub async fn get_statistics(
         let sql_txs_count = format!("SELECT count(*) FROM transaction WHERE ty={}", tx_type);
         let row_txs_count = sqlx::query(sql_txs_count.as_str())
             .fetch_one(&mut *conn)
-            .await
-            .map_err(internal_error)?;
-        let txs_count = row_txs_count.try_get("count").map_err(internal_error)?;
+            .await?;
+        let txs_count = row_txs_count.try_get("count")?;
 
         let sql_addrs_count: String;
         let sql_daily_txs: String;
@@ -64,15 +66,13 @@ pub async fn get_statistics(
 
         let row_addr_count = sqlx::query(sql_addrs_count.as_str())
             .fetch_one(&mut *conn)
-            .await
-            .map_err(internal_error)?;
-        let addr_count: i64 = row_addr_count.try_get("count").map_err(internal_error)?;
+            .await?;
+        let addr_count: i64 = row_addr_count.try_get("count")?;
 
         let row_daily = sqlx::query(sql_daily_txs.as_str())
             .fetch_one(&mut *conn)
-            .await
-            .map_err(internal_error)?;
-        let daily_txs = row_daily.try_get("count").map_err(internal_error)?;
+            .await?;
+        let daily_txs = row_daily.try_get("count")?;
 
         stat.active_addrs = addr_count;
         stat.total_txs = txs_count;
@@ -81,23 +81,20 @@ pub async fn get_statistics(
         let sql_txs_count = "SELECT count(*) FROM transaction".to_string();
         let row_txs_count = sqlx::query(sql_txs_count.as_str())
             .fetch_one(&mut *conn)
-            .await
-            .map_err(internal_error)?;
-        let txs_count = row_txs_count.try_get("count").map_err(internal_error)?;
+            .await?;
+        let txs_count = row_txs_count.try_get("count")?;
 
         let sql_evm_addrs_count = "SELECT count(distinct address) FROM evm_addrs".to_string();
         let row_evm_addr = sqlx::query(sql_evm_addrs_count.as_str())
             .fetch_one(&mut *conn)
-            .await
-            .map_err(internal_error)?;
-        let evm_addrs: i64 = row_evm_addr.try_get("count").map_err(internal_error)?;
+            .await?;
+        let evm_addrs: i64 = row_evm_addr.try_get("count")?;
 
         let sql_native_addrs_count = "SELECT count(distinct address) FROM native_addrs".to_string();
         let row_native_addr = sqlx::query(sql_native_addrs_count.as_str())
             .fetch_one(&mut *conn)
-            .await
-            .map_err(internal_error)?;
-        let native_addrs: i64 = row_native_addr.try_get("count").map_err(internal_error)?;
+            .await?;
+        let native_addrs: i64 = row_native_addr.try_get("count")?;
 
         let sql_daily_txs = format!(
             "SELECT count(*) FROM transaction WHERE timestamp>={}",
@@ -105,9 +102,8 @@ pub async fn get_statistics(
         );
         let row_daily = sqlx::query(sql_daily_txs.as_str())
             .fetch_one(&mut *conn)
-            .await
-            .map_err(internal_error)?;
-        let daily_txs = row_daily.try_get("count").map_err(internal_error)?;
+            .await?;
+        let daily_txs = row_daily.try_get("count")?;
 
         stat.active_addrs = native_addrs + evm_addrs;
         stat.total_txs = txs_count;
@@ -129,42 +125,27 @@ pub struct TxsDistributeResponse {
 pub async fn get_tx_distribute(
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<TxsDistributeResponse>> {
-    let mut conn = state.pool.acquire().await.map_err(internal_error)?;
+    let mut conn = state.pool.acquire().await?;
 
     let sql_native = "SELECT count(*) FROM transaction WHERE ty=0";
-    let row_native = sqlx::query(sql_native)
-        .fetch_one(&mut *conn)
-        .await
-        .map_err(internal_error)?;
-    let native_count: i64 = row_native.try_get("count").map_err(internal_error)?;
+    let row_native = sqlx::query(sql_native).fetch_one(&mut *conn).await?;
+    let native_count: i64 = row_native.try_get("count")?;
 
     let sql_privacy = "SELECT count(*) FROM transaction WHERE ty_sub=2 or ty_sub=3 or ty_sub=4";
-    let row_privacy = sqlx::query(sql_privacy)
-        .fetch_one(&mut *conn)
-        .await
-        .map_err(internal_error)?;
-    let privacy: i64 = row_privacy.try_get("count").map_err(internal_error)?;
+    let row_privacy = sqlx::query(sql_privacy).fetch_one(&mut *conn).await?;
+    let privacy: i64 = row_privacy.try_get("count")?;
 
     let sql_evm = "SELECT count(*) FROM transaction WHERE ty=1";
-    let row_evm = sqlx::query(sql_evm)
-        .fetch_one(&mut *conn)
-        .await
-        .map_err(internal_error)?;
-    let evm_count: i64 = row_evm.try_get("count").map_err(internal_error)?;
+    let row_evm = sqlx::query(sql_evm).fetch_one(&mut *conn).await?;
+    let evm_count: i64 = row_evm.try_get("count")?;
 
     let sql_prism_n2e = "SELECT count(*) FROM n2e";
-    let row_n2e = sqlx::query(sql_prism_n2e)
-        .fetch_one(&mut *conn)
-        .await
-        .map_err(internal_error)?;
-    let n2e_count: i64 = row_n2e.try_get("count").map_err(internal_error)?;
+    let row_n2e = sqlx::query(sql_prism_n2e).fetch_one(&mut *conn).await?;
+    let n2e_count: i64 = row_n2e.try_get("count")?;
 
     let sql_prism_e2n = "SELECT count(*) FROM e2n";
-    let row_e2n = sqlx::query(sql_prism_e2n)
-        .fetch_one(&mut *conn)
-        .await
-        .map_err(internal_error)?;
-    let e2n_count: i64 = row_e2n.try_get("count").map_err(internal_error)?;
+    let row_e2n = sqlx::query(sql_prism_e2n).fetch_one(&mut *conn).await?;
+    let e2n_count: i64 = row_e2n.try_get("count")?;
 
     Ok(Json(TxsDistributeResponse {
         transparent: native_count - privacy,
@@ -189,7 +170,7 @@ pub async fn get_address_count(
     State(state): State<Arc<AppState>>,
     Query(params): Query<AddressCountParams>,
 ) -> Result<Json<AddressCountResponse>> {
-    let mut conn = state.pool.acquire().await.map_err(internal_error)?;
+    let mut conn = state.pool.acquire().await?;
 
     let mut query_params: Vec<String> = vec![];
     if let Some(start_time) = params.start_time {
@@ -213,17 +194,86 @@ pub async fn get_address_count(
 
     let row_native = sqlx::query(sql_native.as_str())
         .fetch_one(&mut *conn)
-        .await
-        .map_err(internal_error)?;
-    let native_count: i64 = row_native.try_get("count").map_err(internal_error)?;
+        .await?;
+    let native_count: i64 = row_native.try_get("count")?;
 
-    let row_evm = sqlx::query(sql_evm.as_str())
-        .fetch_one(&mut *conn)
-        .await
-        .map_err(internal_error)?;
-    let evm_count: i64 = row_evm.try_get("count").map_err(internal_error)?;
+    let row_evm = sqlx::query(sql_evm.as_str()).fetch_one(&mut *conn).await?;
+    let evm_count: i64 = row_evm.try_get("count")?;
 
     Ok(Json(AddressCountResponse {
         count: native_count + evm_count,
+    }))
+}
+
+//https://mainnet.backend.findorascan.io/api/coins/findora/market_chart?vs_currency=usd&days=7&interval=daily
+
+#[derive(Serialize, Deserialize)]
+pub struct MarketParams {
+    pub vs_currency: Option<String>,
+    pub days: Option<i32>,
+    pub interval: Option<String>,
+}
+
+async fn get_market_data(mut conn: PoolConnection<Postgres>) -> Result<FraMarketChart> {
+    let row = sqlx::query("SELECT val FROM market")
+        .fetch_one(&mut *conn)
+        .await?;
+    let val: Value = row.try_get("val")?;
+    let fmc: FraMarketChart = serde_json::from_value(val).unwrap();
+    Ok(fmc)
+}
+
+async fn upsert_market_data(mut conn: PoolConnection<Postgres>, val: Value) -> Result<()> {
+    sqlx::query("INSERT INTO market VALUES($1,$2) ON CONFLICT(name) DO UPDATE SET val=$2")
+        .bind("fra")
+        .bind(val)
+        .execute(&mut *conn)
+        .await?;
+    Ok(())
+}
+
+pub async fn get_market(
+    State(state): State<Arc<AppState>>,
+    Path(id): Path<String>,
+    Query(params): Query<MarketParams>,
+) -> Result<Json<MarketChartResult>> {
+    let conn = state.pool.acquire().await?;
+
+    let vs_currency = params.vs_currency.unwrap_or("usd".to_string());
+    let days = params.days.unwrap_or(7);
+    let interval = params.interval.unwrap_or("daily".to_string());
+
+    let url = format!(
+        "https://api.coingecko.com/api/v3/coins/{}/market_chart?vs_currency={}&days={}&interval={}",
+        id, vs_currency, days, interval
+    );
+
+    let resp1 = reqwest::get(url).await;
+    if resp1.is_err() {
+        let fmc = get_market_data(conn).await?;
+        return Ok(Json(MarketChartResult {
+            code: 200,
+            message: "".to_string(),
+            data: Some(fmc),
+        }));
+    }
+    let resp2 = resp1?.json::<FraMarketChart>().await;
+    if resp2.is_err() {
+        let fmc = get_market_data(conn).await?;
+        return Ok(Json(MarketChartResult {
+            code: 200,
+            message: "".to_string(),
+            data: Some(fmc),
+        }));
+    }
+
+    let fmc = resp2?;
+    let v = serde_json::to_value(&fmc)?;
+    upsert_market_data(conn, v).await?;
+
+    Ok(Json(MarketChartResult {
+        code: 200,
+        message: "".to_string(),
+        data: Some(fmc),
     }))
 }

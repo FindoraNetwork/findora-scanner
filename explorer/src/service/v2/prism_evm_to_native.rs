@@ -1,4 +1,4 @@
-use crate::service::error::{internal_error, Result};
+use crate::service::error::Result;
 use crate::service::QueryResult;
 use crate::AppState;
 use axum::extract::{Query, State};
@@ -32,24 +32,23 @@ pub async fn get_e2n_by_tx_hash(
     State(state): State<Arc<AppState>>,
     Query(params): Query<GetE2NByTxHashParams>,
 ) -> Result<Json<E2NTxResponse>> {
-    let mut conn = state.pool.acquire().await.map_err(internal_error)?;
+    let mut conn = state.pool.acquire().await?;
     let sql_query = r#"SELECT tx_hash,block_hash,sender,receiver,asset,amount,decimal,height,timestamp,value FROM e2n WHERE tx_hash=$1"#;
     let row = sqlx::query(sql_query)
         .bind(params.hash)
         .fetch_one(&mut *conn)
-        .await
-        .map_err(internal_error)?;
+        .await?;
 
-    let tx_hash: String = row.try_get("tx_hash").map_err(internal_error)?;
-    let block_hash: String = row.try_get("block_hash").map_err(internal_error)?;
-    let from: String = row.try_get("sender").map_err(internal_error)?;
-    let to: String = row.try_get("receiver").map_err(internal_error)?;
-    let asset: String = row.try_get("asset").map_err(internal_error)?;
-    let decimal: i32 = row.try_get("decimal").map_err(internal_error)?;
-    let amount: String = row.try_get("amount").map_err(internal_error)?;
-    let height: i64 = row.try_get("height").map_err(internal_error)?;
-    let timestamp: i64 = row.try_get("timestamp").map_err(internal_error)?;
-    let value: Value = row.try_get("value").map_err(internal_error)?;
+    let tx_hash: String = row.try_get("tx_hash")?;
+    let block_hash: String = row.try_get("block_hash")?;
+    let from: String = row.try_get("sender")?;
+    let to: String = row.try_get("receiver")?;
+    let asset: String = row.try_get("asset")?;
+    let decimal: i32 = row.try_get("decimal")?;
+    let amount: String = row.try_get("amount")?;
+    let height: i64 = row.try_get("height")?;
+    let timestamp: i64 = row.try_get("timestamp")?;
+    let value: Value = row.try_get("value")?;
     let tx = E2NTxResponse {
         tx_hash,
         block_hash,
@@ -78,7 +77,7 @@ pub async fn get_e2n_txs(
     State(state): State<Arc<AppState>>,
     Query(params): Query<GetE2NTxsParams>,
 ) -> Result<Json<QueryResult<Vec<E2NTxResponse>>>> {
-    let mut conn = state.pool.acquire().await.map_err(internal_error)?;
+    let mut conn = state.pool.acquire().await?;
     let page = params.page.unwrap_or(1);
     let page_size = params.page_size.unwrap_or(10);
 
@@ -109,28 +108,22 @@ pub async fn get_e2n_txs(
         .as_str(),
     );
 
-    let row = sqlx::query(&sql_total)
-        .fetch_one(&mut *conn)
-        .await
-        .map_err(internal_error)?;
-    let total: i64 = row.try_get("count").map_err(internal_error)?;
+    let row = sqlx::query(&sql_total).fetch_one(&mut *conn).await?;
+    let total: i64 = row.try_get("count")?;
 
     let mut txs: Vec<E2NTxResponse> = vec![];
-    let rows = sqlx::query(&sql_query)
-        .fetch_all(&mut *conn)
-        .await
-        .map_err(internal_error)?;
+    let rows = sqlx::query(&sql_query).fetch_all(&mut *conn).await?;
     for row in rows {
-        let tx_hash: String = row.try_get("tx_hash").map_err(internal_error)?;
-        let block_hash: String = row.try_get("block_hash").map_err(internal_error)?;
-        let from: String = row.try_get("sender").map_err(internal_error)?;
-        let to: String = row.try_get("receiver").map_err(internal_error)?;
-        let asset: String = row.try_get("asset").map_err(internal_error)?;
-        let decimal: i32 = row.try_get("decimal").map_err(internal_error)?;
-        let amount: String = row.try_get("amount").map_err(internal_error)?;
-        let height: i64 = row.try_get("height").map_err(internal_error)?;
-        let timestamp: i64 = row.try_get("timestamp").map_err(internal_error)?;
-        let value: Value = row.try_get("value").map_err(internal_error)?;
+        let tx_hash: String = row.try_get("tx_hash")?;
+        let block_hash: String = row.try_get("block_hash")?;
+        let from: String = row.try_get("sender")?;
+        let to: String = row.try_get("receiver")?;
+        let asset: String = row.try_get("asset")?;
+        let decimal: i32 = row.try_get("decimal")?;
+        let amount: String = row.try_get("amount")?;
+        let height: i64 = row.try_get("height")?;
+        let timestamp: i64 = row.try_get("timestamp")?;
+        let value: Value = row.try_get("value")?;
         txs.push(E2NTxResponse {
             tx_hash,
             block_hash,

@@ -1,4 +1,4 @@
-use crate::service::error::{internal_error, Result};
+use crate::service::error::Result;
 use crate::service::QueryResult;
 use crate::AppState;
 use axum::extract::{Query, State};
@@ -24,7 +24,7 @@ pub async fn get_txs(
     State(state): State<Arc<AppState>>,
     Query(params): Query<GetTxsParams>,
 ) -> Result<Json<QueryResult<Vec<TransactionResponse>>>> {
-    let mut conn = state.pool.acquire().await.map_err(internal_error)?;
+    let mut conn = state.pool.acquire().await?;
     let page = params.page.unwrap_or(1);
     let page_size = params.page_size.unwrap_or(10);
 
@@ -58,28 +58,22 @@ pub async fn get_txs(
         .as_str(),
     );
 
-    let row = sqlx::query(&sql_total)
-        .fetch_one(&mut *conn)
-        .await
-        .map_err(internal_error)?;
-    let total: i64 = row.try_get("count").map_err(internal_error)?;
+    let row = sqlx::query(&sql_total).fetch_one(&mut *conn).await?;
+    let total: i64 = row.try_get("count")?;
 
-    let rows = sqlx::query(&sql_query)
-        .fetch_all(&mut *conn)
-        .await
-        .map_err(internal_error)?;
+    let rows = sqlx::query(&sql_query).fetch_all(&mut *conn).await?;
     let mut txs: Vec<TransactionResponse> = vec![];
     for row in rows {
-        let tx_hash: String = row.try_get("tx_hash").map_err(internal_error)?;
-        let block_hash: String = row.try_get("block_hash").map_err(internal_error)?;
-        let ty: i32 = row.try_get("ty").map_err(internal_error)?;
-        let timestamp: i64 = row.try_get("timestamp").map_err(internal_error)?;
-        let height: i64 = row.try_get("height").map_err(internal_error)?;
-        let code: i64 = row.try_get("code").map_err(internal_error)?;
-        let log: String = row.try_get("log").map_err(internal_error)?;
-        let origin: String = row.try_get("origin").map_err(internal_error)?;
-        let result: Value = row.try_get("result").map_err(internal_error)?;
-        let value: Value = row.try_get("value").map_err(internal_error)?;
+        let tx_hash: String = row.try_get("tx_hash")?;
+        let block_hash: String = row.try_get("block_hash")?;
+        let ty: i32 = row.try_get("ty")?;
+        let timestamp: i64 = row.try_get("timestamp")?;
+        let height: i64 = row.try_get("height")?;
+        let code: i64 = row.try_get("code")?;
+        let log: String = row.try_get("log")?;
+        let origin: String = row.try_get("origin")?;
+        let result: Value = row.try_get("result")?;
+        let value: Value = row.try_get("value")?;
 
         let evm_tx_hash = if ty == 1 {
             let evm_tx: FindoraEVMTxWrap = serde_json::from_value(value.clone()).unwrap();
@@ -121,7 +115,7 @@ pub async fn get_tx_by_hash(
     State(state): State<Arc<AppState>>,
     Query(params): Query<GetTxByHashParams>,
 ) -> Result<Json<TransactionResponse>> {
-    let mut conn = state.pool.acquire().await.map_err(internal_error)?;
+    let mut conn = state.pool.acquire().await?;
 
     let sql_query = r#"SELECT tx_hash,block_hash,height,timestamp,ty,code,log,origin,result,value
         FROM transaction WHERE tx_hash=$1"#;
@@ -129,19 +123,18 @@ pub async fn get_tx_by_hash(
     let row = sqlx::query(sql_query)
         .bind(params.hash)
         .fetch_one(&mut *conn)
-        .await
-        .map_err(internal_error)?;
+        .await?;
 
-    let tx_hash: String = row.try_get("tx_hash").map_err(internal_error)?;
-    let block_hash: String = row.try_get("block_hash").map_err(internal_error)?;
-    let ty: i32 = row.try_get("ty").map_err(internal_error)?;
-    let timestamp: i64 = row.try_get("timestamp").map_err(internal_error)?;
-    let height: i64 = row.try_get("height").map_err(internal_error)?;
-    let code: i64 = row.try_get("code").map_err(internal_error)?;
-    let log: String = row.try_get("log").map_err(internal_error)?;
-    let origin: String = row.try_get("origin").map_err(internal_error)?;
-    let result: Value = row.try_get("result").map_err(internal_error)?;
-    let value: Value = row.try_get("value").map_err(internal_error)?;
+    let tx_hash: String = row.try_get("tx_hash")?;
+    let block_hash: String = row.try_get("block_hash")?;
+    let ty: i32 = row.try_get("ty")?;
+    let timestamp: i64 = row.try_get("timestamp")?;
+    let height: i64 = row.try_get("height")?;
+    let code: i64 = row.try_get("code")?;
+    let log: String = row.try_get("log")?;
+    let origin: String = row.try_get("origin")?;
+    let result: Value = row.try_get("result")?;
+    let value: Value = row.try_get("value")?;
 
     let evm_tx_hash = if ty == 1 {
         let evm_tx: FindoraEVMTxWrap = serde_json::from_value(value.clone()).unwrap();
