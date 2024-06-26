@@ -181,7 +181,7 @@ pub struct AddressCountParams {
 }
 #[derive(Serialize, Deserialize)]
 pub struct AddressCountResponse {
-    address_count: i64,
+    count: i64,
 }
 
 pub async fn get_address_count(
@@ -223,6 +223,6 @@ pub async fn get_address_count(
     let evm_count: i64 = row_evm.try_get("count").map_err(internal_error)?;
 
     Ok(Json(AddressCountResponse {
-        address_count: native_count + evm_count,
+        count: native_count + evm_count,
     }))
 }

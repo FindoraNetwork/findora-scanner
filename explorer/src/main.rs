@@ -2,8 +2,8 @@ mod service;
 use crate::service::api::Api;
 use crate::service::v2::asset::get_assets;
 use crate::service::v2::block::{
-    get_block_by_hash, get_block_by_num, get_blocks, get_full_block_by_hash,
-    get_full_block_by_height, get_simple_block_by_hash, get_simple_block_by_height,
+    get_block_by_hash, get_blocks, get_full_block_by_hash, get_full_block_by_height,
+    get_simple_block_by_hash, get_simple_block_by_height,
 };
 use crate::service::v2::claim::{get_claim_by_tx_hash, get_claims};
 use crate::service::v2::delegation::{get_delegation_by_tx_hash, get_delegations};
@@ -56,20 +56,21 @@ async fn main() -> Result<()> {
         .allow_headers(Any);
     let addr = format!("{}:{}", config.server.addr, config.server.port);
     let app = Router::new()
+        // chain
+        .route("/api/chain/address/count", get(get_address_count))
+        .route("/api/chain/statistics", get(get_statistics))
+        // block
         .route("/api/block/hash/:hash", get(get_simple_block_by_hash))
         .route("/api/block/full/hash/:hash", get(get_full_block_by_hash))
         .route("/api/block/height/:num", get(get_simple_block_by_height))
         .route("/api/block/full/height/:num", get(get_full_block_by_height))
-        .route("/api/address/count", get(get_address_count))
-        .route("/api/chain/statistics", get(get_statistics))
-        .route("/api/txs/distribute", get(get_tx_distribute))
-        .route("/api/chain/statistic", get(get_statistics))
-        .route("/api/number/block", get(get_block_by_num))
         .route("/api/block", get(get_block_by_hash))
         .route("/api/blocks", get(get_blocks))
+        // tx
         .route("/api/tx", get(get_tx_by_hash))
         .route("/api/txs", get(get_txs))
-        .route("/api/assets", get(get_assets))
+        .route("/api/txs/distribute", get(get_tx_distribute))
+        // staking
         .route("/api/claim", get(get_claim_by_tx_hash))
         .route("/api/claims", get(get_claims))
         .route("/api/delegation", get(get_delegation_by_tx_hash))
@@ -80,6 +81,8 @@ async fn main() -> Result<()> {
         .route("/api/n2es", get(get_n2e_txs))
         .route("/api/e2n", get(get_e2n_by_tx_hash))
         .route("/api/e2ns", get(get_e2n_txs))
+        // asset
+        .route("/api/assets", get(get_assets))
         .layer(cors)
         .with_state(app_state);
     let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();

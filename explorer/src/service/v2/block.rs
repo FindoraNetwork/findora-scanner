@@ -147,6 +147,7 @@ pub struct GetBlockByHeightParams {
     pub num: i64,
 }
 
+#[allow(dead_code)]
 pub async fn get_block_by_num(
     State(state): State<Arc<AppState>>,
     Query(params): Query<GetBlockByHeightParams>,
