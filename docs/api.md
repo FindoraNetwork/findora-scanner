@@ -11,7 +11,7 @@
 
 ## Chain
 * [3.1 统计交易量](#3.1)
-
+* [3.2 地址总量](#3.2)
 ## Asset
 * [4.1 获取资产信息](#4.1)
 
@@ -412,6 +412,18 @@
   "active_addrs": 124934,
   "total_txs": 2652844,
   "daily_txs": 798
+}
+```
+
+<h3 id="3.2">3.2 地址总量</h3>
+
+* `GET /api/chain/address/count`
+* 无参数
+* Request: `/api/chain/address/count`
+* Response:
+```json
+{
+    "count": 125003
 }
 ```
 
