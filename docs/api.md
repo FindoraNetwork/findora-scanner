@@ -256,7 +256,7 @@
 |------|--------|----|------|
 | hash | string | Y  | 区块哈希 |
 
-* Request: `/api/hash/block?hash=BFB5378DAB2973940EF1AB455B02EF43FC4825784DC9217E1A0C5D51E698A28F`
+* Request: `/api/block?hash=BFB5378DAB2973940EF1AB455B02EF43FC4825784DC9217E1A0C5D51E698A28F`
 * Response:
 ```json
 {
