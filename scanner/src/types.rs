@@ -1,8 +1,9 @@
 use ethereum::{LegacyTransaction, TransactionAction, TransactionSignature};
-use ethereum_types::U256;
+use ethereum_types::{H256, U256};
 use rlp::{Encodable, RlpStream};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use sha3::{Digest, Keccak256};
 
 #[allow(dead_code)]
 pub enum FindoraTxType {
@@ -64,6 +65,29 @@ pub struct FindoraEVMTx {
 pub struct FindoraEVMTxWrap {
     pub function: EthereumWrap,
 }
+
+impl FindoraEVMTxWrap {
+    pub fn hash(&self) -> H256 {
+        let tx = FindoraEVMTx {
+            function: Ethereum {
+                ethereum: Transact {
+                    transact: LegacyTransaction {
+                        nonce: self.function.ethereum.transact.nonce,
+                        gas_price: self.function.ethereum.transact.gas_price,
+                        gas_limit: self.function.ethereum.transact.gas_limit,
+                        action: self.function.ethereum.transact.action,
+                        value: self.function.ethereum.transact.value,
+                        input: self.function.ethereum.transact.input.clone(),
+                        signature: self.function.ethereum.transact.signature.clone(),
+                    },
+                },
+            },
+        };
+
+        H256::from_slice(Keccak256::digest(&rlp::encode(&tx)).as_slice())
+    }
+}
+
 impl Encodable for FindoraEVMTx {
     fn rlp_append(&self, s: &mut RlpStream) {
         self.function.ethereum.transact.rlp_append(s)

@@ -4,6 +4,7 @@ use crate::AppState;
 use axum::extract::{Query, State};
 use axum::Json;
 use module::schema::TransactionResponse;
+use scanner::types::FindoraEVMTxWrap;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sqlx::Row;
@@ -80,9 +81,17 @@ pub async fn get_txs(
         let result: Value = row.try_get("result").map_err(internal_error)?;
         let value: Value = row.try_get("value").map_err(internal_error)?;
 
+        let evm_tx_hash = if ty == 1 {
+            let evm_tx: FindoraEVMTxWrap = serde_json::from_value(value.clone()).unwrap();
+            let hash = evm_tx.hash();
+            format!("{hash:?}")
+        } else {
+            "".to_string()
+        };
+
         txs.push(TransactionResponse {
             tx_hash,
-            evm_tx_hash: "".to_string(),
+            evm_tx_hash,
             block_hash,
             height,
             timestamp,
@@ -134,9 +143,17 @@ pub async fn get_tx_by_hash(
     let result: Value = row.try_get("result").map_err(internal_error)?;
     let value: Value = row.try_get("value").map_err(internal_error)?;
 
+    let evm_tx_hash = if ty == 1 {
+        let evm_tx: FindoraEVMTxWrap = serde_json::from_value(value.clone()).unwrap();
+        let hash = evm_tx.hash();
+        format!("{hash:?}")
+    } else {
+        "".to_string()
+    };
+
     let tx = TransactionResponse {
         tx_hash,
-        evm_tx_hash: "".to_string(),
+        evm_tx_hash,
         block_hash,
         height,
         timestamp,
