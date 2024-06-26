@@ -1,4 +1,4 @@
-use crate::service::error::{internal_error, Result};
+use crate::service::error::Result;
 use crate::service::QueryResult;
 use crate::AppState;
 use axum::extract::{Query, State};
@@ -30,25 +30,24 @@ pub async fn get_delegation_by_tx_hash(
     State(state): State<Arc<AppState>>,
     Query(params): Query<GetDelegationByHashParams>,
 ) -> Result<Json<DelegationResponse>> {
-    let mut conn = state.pool.acquire().await.map_err(internal_error)?;
+    let mut conn = state.pool.acquire().await?;
     let sql_query = r#"SELECT tx,block,amount,sender,validator,new_validator,height,timestamp,content
         FROM delegations WHERE tx=$1"#;
 
     let row = sqlx::query(sql_query)
         .bind(params.hash)
         .fetch_one(&mut *conn)
-        .await
-        .map_err(internal_error)?;
+        .await?;
 
-    let tx_hash: String = row.try_get("tx").map_err(internal_error)?;
-    let block_hash: String = row.try_get("block").map_err(internal_error)?;
-    let amount: i64 = row.try_get("amount").map_err(internal_error)?;
-    let from: String = row.try_get("sender").map_err(internal_error)?;
-    let validator: String = row.try_get("validator").map_err(internal_error)?;
-    let new_validator: String = row.try_get("new_validator").map_err(internal_error)?;
-    let height: i64 = row.try_get("height").map_err(internal_error)?;
-    let timestamp: i64 = row.try_get("timestamp").map_err(internal_error)?;
-    let value: Value = row.try_get("content").map_err(internal_error)?;
+    let tx_hash: String = row.try_get("tx")?;
+    let block_hash: String = row.try_get("block")?;
+    let amount: i64 = row.try_get("amount")?;
+    let from: String = row.try_get("sender")?;
+    let validator: String = row.try_get("validator")?;
+    let new_validator: String = row.try_get("new_validator")?;
+    let height: i64 = row.try_get("height")?;
+    let timestamp: i64 = row.try_get("timestamp")?;
+    let value: Value = row.try_get("content")?;
 
     let delegation = DelegationResponse {
         tx_hash,
@@ -77,7 +76,7 @@ pub async fn get_delegations(
     State(state): State<Arc<AppState>>,
     Query(params): Query<GetDelegationsParams>,
 ) -> Result<Json<QueryResult<Vec<DelegationResponse>>>> {
-    let mut conn = state.pool.acquire().await.map_err(internal_error)?;
+    let mut conn = state.pool.acquire().await?;
     let page = params.page.unwrap_or(1);
     let page_size = params.page_size.unwrap_or(10);
 
@@ -107,28 +106,22 @@ pub async fn get_delegations(
         )
     };
 
-    let row_cnt = sqlx::query(&sql_count)
-        .fetch_one(&mut *conn)
-        .await
-        .map_err(internal_error)?;
-    let total: i64 = row_cnt.try_get("count").map_err(internal_error)?;
+    let row_cnt = sqlx::query(&sql_count).fetch_one(&mut *conn).await?;
+    let total: i64 = row_cnt.try_get("count")?;
 
     let mut delegations: Vec<DelegationResponse> = vec![];
-    let rows = sqlx::query(&sql_query)
-        .fetch_all(&mut *conn)
-        .await
-        .map_err(internal_error)?;
+    let rows = sqlx::query(&sql_query).fetch_all(&mut *conn).await?;
 
     for row in rows {
-        let tx_hash: String = row.try_get("tx").map_err(internal_error)?;
-        let block_hash: String = row.try_get("block").map_err(internal_error)?;
-        let amount: i64 = row.try_get("amount").map_err(internal_error)?;
-        let from: String = row.try_get("sender").map_err(internal_error)?;
-        let validator: String = row.try_get("validator").map_err(internal_error)?;
-        let new_validator: String = row.try_get("new_validator").map_err(internal_error)?;
-        let height: i64 = row.try_get("height").map_err(internal_error)?;
-        let timestamp: i64 = row.try_get("timestamp").map_err(internal_error)?;
-        let value: Value = row.try_get("content").map_err(internal_error)?;
+        let tx_hash: String = row.try_get("tx")?;
+        let block_hash: String = row.try_get("block")?;
+        let amount: i64 = row.try_get("amount")?;
+        let from: String = row.try_get("sender")?;
+        let validator: String = row.try_get("validator")?;
+        let new_validator: String = row.try_get("new_validator")?;
+        let height: i64 = row.try_get("height")?;
+        let timestamp: i64 = row.try_get("timestamp")?;
+        let value: Value = row.try_get("content")?;
 
         delegations.push(DelegationResponse {
             tx_hash,

@@ -1,4 +1,4 @@
-use crate::service::error::{internal_error, Result};
+use crate::service::error::Result;
 use crate::service::QueryResult;
 use crate::AppState;
 use axum::extract::{Query, State};
@@ -32,7 +32,7 @@ pub async fn get_assets(
     State(state): State<Arc<AppState>>,
     Query(params): Query<GetAssetsParams>,
 ) -> Result<Json<QueryResult<Vec<AssetResponse>>>> {
-    let mut conn = state.pool.acquire().await.map_err(internal_error)?;
+    let mut conn = state.pool.acquire().await?;
     let page = params.page.unwrap_or(1);
     let page_size = params.page_size.unwrap_or(10);
 
@@ -60,27 +60,23 @@ pub async fn get_assets(
         .as_str(),
     );
 
-    let row = sqlx::query(&sql_total)
-        .fetch_one(&mut *conn)
-        .await
-        .map_err(internal_error)?;
-    let total: i64 = row.try_get("count").map_err(internal_error)?;
+    let row = sqlx::query(&sql_total).fetch_one(&mut *conn).await?;
+    let total: i64 = row.try_get("count")?;
 
     let rows = sqlx::query(sql_query.as_str())
         .fetch_all(&mut *conn)
-        .await
-        .map_err(internal_error)?;
+        .await?;
 
     let mut assets: Vec<AssetResponse> = vec![];
     for row in rows {
-        let asset: String = row.try_get("asset").map_err(internal_error)?;
-        let tx: String = row.try_get("tx").map_err(internal_error)?;
-        let block: String = row.try_get("block").map_err(internal_error)?;
-        let issuer: String = row.try_get("issuer").map_err(internal_error)?;
-        let height: i64 = row.try_get("height").map_err(internal_error)?;
-        let timestamp: i64 = row.try_get("timestamp").map_err(internal_error)?;
-        let ty: i32 = row.try_get("ty").map_err(internal_error)?;
-        let value: Value = row.try_get("content").map_err(internal_error)?;
+        let asset: String = row.try_get("asset")?;
+        let tx: String = row.try_get("tx")?;
+        let block: String = row.try_get("block")?;
+        let issuer: String = row.try_get("issuer")?;
+        let height: i64 = row.try_get("height")?;
+        let timestamp: i64 = row.try_get("timestamp")?;
+        let ty: i32 = row.try_get("ty")?;
+        let value: Value = row.try_get("content")?;
         assets.push(AssetResponse {
             asset,
             tx,

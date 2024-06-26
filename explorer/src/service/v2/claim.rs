@@ -1,4 +1,4 @@
-use crate::service::error::{internal_error, Result};
+use crate::service::error::Result;
 use crate::service::QueryResult;
 use crate::AppState;
 use axum::extract::{Query, State};
@@ -29,7 +29,7 @@ pub async fn get_claim_by_tx_hash(
     State(state): State<Arc<AppState>>,
     Query(params): Query<GetClaimByTxHash>,
 ) -> Result<Json<ClaimResponse>> {
-    let mut conn = state.pool.acquire().await.map_err(internal_error)?;
+    let mut conn = state.pool.acquire().await?;
 
     let sql_query =
         r#"SELECT tx,block,sender,amount,height,timestamp,content FROM claims WHERE tx=$1"#;
@@ -37,16 +37,15 @@ pub async fn get_claim_by_tx_hash(
     let row = sqlx::query(sql_query)
         .bind(params.hash)
         .fetch_one(&mut *conn)
-        .await
-        .map_err(internal_error)?;
+        .await?;
 
-    let tx_hash: String = row.try_get("tx").map_err(internal_error)?;
-    let block_hash: String = row.try_get("block").map_err(internal_error)?;
-    let from: String = row.try_get("sender").map_err(internal_error)?;
-    let amount: i64 = row.try_get("amount").map_err(internal_error)?;
-    let height: i64 = row.try_get("height").map_err(internal_error)?;
-    let timestamp: i64 = row.try_get("timestamp").map_err(internal_error)?;
-    let value: Value = row.try_get("content").map_err(internal_error)?;
+    let tx_hash: String = row.try_get("tx")?;
+    let block_hash: String = row.try_get("block")?;
+    let from: String = row.try_get("sender")?;
+    let amount: i64 = row.try_get("amount")?;
+    let height: i64 = row.try_get("height")?;
+    let timestamp: i64 = row.try_get("timestamp")?;
+    let value: Value = row.try_get("content")?;
 
     let claim = ClaimResponse {
         tx_hash,
@@ -73,7 +72,7 @@ pub async fn get_claims(
     State(state): State<Arc<AppState>>,
     Query(params): Query<GetClaimsParams>,
 ) -> Result<Json<QueryResult<Vec<ClaimResponse>>>> {
-    let mut conn = state.pool.acquire().await.map_err(internal_error)?;
+    let mut conn = state.pool.acquire().await?;
     let page = params.page.unwrap_or(1);
     let page_size = params.page_size.unwrap_or(10);
 
@@ -93,25 +92,21 @@ pub async fn get_claims(
          ))
     };
 
-    let row_cnt = sqlx::query(&sql_count)
-        .fetch_one(&mut *conn)
-        .await
-        .map_err(internal_error)?;
-    let total: i64 = row_cnt.try_get("count").map_err(internal_error)?;
+    let row_cnt = sqlx::query(&sql_count).fetch_one(&mut *conn).await?;
+    let total: i64 = row_cnt.try_get("count")?;
 
     let mut claims: Vec<ClaimResponse> = vec![];
     let rows = sqlx::query(sql_query.as_str())
         .fetch_all(&mut *conn)
-        .await
-        .map_err(internal_error)?;
+        .await?;
     for row in rows {
-        let tx_hash: String = row.try_get("tx").map_err(internal_error)?;
-        let block_hash: String = row.try_get("block").map_err(internal_error)?;
-        let from: String = row.try_get("sender").map_err(internal_error)?;
-        let amount: i64 = row.try_get("amount").map_err(internal_error)?;
-        let height: i64 = row.try_get("height").map_err(internal_error)?;
-        let timestamp: i64 = row.try_get("timestamp").map_err(internal_error)?;
-        let value: Value = row.try_get("content").map_err(internal_error)?;
+        let tx_hash: String = row.try_get("tx")?;
+        let block_hash: String = row.try_get("block")?;
+        let from: String = row.try_get("sender")?;
+        let amount: i64 = row.try_get("amount")?;
+        let height: i64 = row.try_get("height")?;
+        let timestamp: i64 = row.try_get("timestamp")?;
+        let value: Value = row.try_get("content")?;
         claims.push(ClaimResponse {
             tx_hash,
             block_hash,
