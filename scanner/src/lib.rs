@@ -7,7 +7,7 @@ pub mod error;
 pub mod rpc;
 pub mod scanner;
 pub mod tx;
-mod types;
+pub mod types;
 mod util;
 
 pub use error::{Error, Result};
