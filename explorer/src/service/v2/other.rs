@@ -179,6 +179,7 @@ pub struct AddressCountParams {
     pub start_time: Option<i64>,
     pub end_time: Option<i64>,
 }
+
 #[derive(Serialize, Deserialize)]
 pub struct AddressCountResponse {
     count: i64,
@@ -192,10 +193,10 @@ pub async fn get_address_count(
 
     let mut query_params: Vec<String> = vec![];
     if let Some(start_time) = params.start_time {
-        query_params.push(format!("timestamp > {start_time} "));
+        query_params.push(format!("timestamp >= {start_time} "));
     }
     if let Some(end_time) = params.end_time {
-        query_params.push(format!("timestamp < {end_time} "));
+        query_params.push(format!("timestamp <= {end_time} "));
     }
 
     let mut sql_native = "SELECT count(distinct address) FROM native_addrs ".to_string();
