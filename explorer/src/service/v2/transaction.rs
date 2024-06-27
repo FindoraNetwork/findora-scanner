@@ -43,10 +43,10 @@ pub async fn get_txs(
         query_params.push(format!("ty={} ", ty));
     }
     if let Some(start_time) = params.start_time {
-        query_params.push(format!("timestamp >= {} ", start_time));
+        query_params.push(format!("timestamp>={} ", start_time));
     }
     if let Some(end_time) = params.end_time {
-        query_params.push(format!("timestamp <={} ", end_time));
+        query_params.push(format!("timestamp<={} ", end_time));
     }
     if !query_params.is_empty() {
         sql_query = sql_query
