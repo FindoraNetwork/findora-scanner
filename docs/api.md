@@ -97,13 +97,15 @@
 
 <h3 id="1.2">1.2 获取交易列表</h3>
 
-| 参数        | 类型     | 必传 | 说明         |
-|-----------|--------|----|------------|
-| from      | string | N  | 发送者        |
-| to        | string | N  | 接收者        |
-| ty        | number | N  | 类型         |
-| page      | number | N  | 页码，缺省值为1   |
-| page_size | number | N  | 页大小，缺省值为10 |
+| 参数         | 类型     | 必传 | 说明         |
+|------------|--------|----|------------|
+| from       | string | N  | 发送者        |
+| to         | string | N  | 接收者        |
+| ty         | number | N  | 类型         |
+| start_time | number | N  | 开始时间戳      |
+| end_time   | number | N  | 结束时间戳      |
+| page       | number | N  | 页码，缺省值为1   |
+| page_size  | number | N  | 页大小，缺省值为10 |
 
 * Request: `/api/txs?page=2&page_size=2`
 * Response:
