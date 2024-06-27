@@ -1,27 +1,33 @@
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
+use std::num::ParseFloatError;
 
 #[derive(Debug)]
 pub enum ExplorerError {
     Custom(String),
-    DBError(sqlx::Error),
-    IOError(std::io::Error),
-    TomlDeError(toml::de::Error),
-    HexError(rustc_hex::FromHexError),
-    ParseUrlError(url::ParseError),
-    SerdeJsonError(serde_json::Error),
-    ReqwestError(reqwest::Error),
+    DBErr(sqlx::Error),
+    IOErr(std::io::Error),
+    TomlDeErr(toml::de::Error),
+    HexErr(rustc_hex::FromHexError),
+    ParseUrlErr(url::ParseError),
+    SerdeJsonErr(serde_json::Error),
+    ReqwestErr(reqwest::Error),
+    ParseFloatErr(ParseFloatError),
 }
-
+impl From<ParseFloatError> for ExplorerError {
+    fn from(e: ParseFloatError) -> Self {
+        ExplorerError::ParseFloatErr(e)
+    }
+}
 impl From<reqwest::Error> for ExplorerError {
     fn from(e: reqwest::Error) -> Self {
-        ExplorerError::ReqwestError(e)
+        ExplorerError::ReqwestErr(e)
     }
 }
 
 impl From<serde_json::Error> for ExplorerError {
     fn from(e: serde_json::Error) -> Self {
-        ExplorerError::SerdeJsonError(e)
+        ExplorerError::SerdeJsonErr(e)
     }
 }
 
@@ -33,31 +39,31 @@ impl From<String> for ExplorerError {
 
 impl From<url::ParseError> for ExplorerError {
     fn from(e: url::ParseError) -> Self {
-        ExplorerError::ParseUrlError(e)
+        ExplorerError::ParseUrlErr(e)
     }
 }
 
 impl From<rustc_hex::FromHexError> for ExplorerError {
     fn from(e: rustc_hex::FromHexError) -> Self {
-        ExplorerError::HexError(e)
+        ExplorerError::HexErr(e)
     }
 }
 
 impl From<std::io::Error> for ExplorerError {
     fn from(e: std::io::Error) -> Self {
-        ExplorerError::IOError(e)
+        ExplorerError::IOErr(e)
     }
 }
 
 impl From<toml::de::Error> for ExplorerError {
     fn from(e: toml::de::Error) -> Self {
-        ExplorerError::TomlDeError(e)
+        ExplorerError::TomlDeErr(e)
     }
 }
 
 impl From<sqlx::Error> for ExplorerError {
     fn from(e: sqlx::Error) -> Self {
-        ExplorerError::DBError(e)
+        ExplorerError::DBErr(e)
     }
 }
 
@@ -67,13 +73,14 @@ impl IntoResponse for ExplorerError {
     fn into_response(self) -> Response {
         let err_msg = match self {
             ExplorerError::Custom(e) => e,
-            ExplorerError::DBError(e) => e.to_string(),
-            ExplorerError::IOError(e) => e.to_string(),
-            ExplorerError::TomlDeError(e) => e.to_string(),
-            ExplorerError::HexError(e) => e.to_string(),
-            ExplorerError::ParseUrlError(e) => e.to_string(),
-            ExplorerError::SerdeJsonError(e) => e.to_string(),
-            ExplorerError::ReqwestError(e) => e.to_string(),
+            ExplorerError::DBErr(e) => e.to_string(),
+            ExplorerError::IOErr(e) => e.to_string(),
+            ExplorerError::TomlDeErr(e) => e.to_string(),
+            ExplorerError::HexErr(e) => e.to_string(),
+            ExplorerError::ParseUrlErr(e) => e.to_string(),
+            ExplorerError::SerdeJsonErr(e) => e.to_string(),
+            ExplorerError::ReqwestErr(e) => e.to_string(),
+            ExplorerError::ParseFloatErr(e) => e.to_string(),
         };
 
         (StatusCode::INTERNAL_SERVER_ERROR, err_msg).into_response()

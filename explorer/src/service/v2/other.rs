@@ -1,5 +1,5 @@
 use crate::service::error::Result;
-use crate::service::v1::price::{FraMarketChart, MarketChartResult};
+use crate::service::v1::price::{FraMarketChart, FraPrice, SimplePrice};
 use crate::AppState;
 use axum::extract::{Path, Query, State};
 use axum::Json;
@@ -205,8 +205,6 @@ pub async fn get_address_count(
     }))
 }
 
-//https://mainnet.backend.findorascan.io/api/coins/findora/market_chart?vs_currency=usd&days=7&interval=daily
-
 #[derive(Serialize, Deserialize)]
 pub struct MarketParams {
     pub vs_currency: Option<String>,
@@ -236,7 +234,7 @@ pub async fn get_market(
     State(state): State<Arc<AppState>>,
     Path(id): Path<String>,
     Query(params): Query<MarketParams>,
-) -> Result<Json<MarketChartResult>> {
+) -> Result<Json<FraMarketChart>> {
     let conn = state.pool.acquire().await?;
 
     let vs_currency = params.vs_currency.unwrap_or("usd".to_string());
@@ -251,29 +249,71 @@ pub async fn get_market(
     let resp1 = reqwest::get(url).await;
     if resp1.is_err() {
         let fmc = get_market_data(conn).await?;
-        return Ok(Json(MarketChartResult {
-            code: 200,
-            message: "".to_string(),
-            data: Some(fmc),
-        }));
+        return Ok(Json(fmc));
     }
     let resp2 = resp1?.json::<FraMarketChart>().await;
     if resp2.is_err() {
         let fmc = get_market_data(conn).await?;
-        return Ok(Json(MarketChartResult {
-            code: 200,
-            message: "".to_string(),
-            data: Some(fmc),
-        }));
+        return Ok(Json(fmc));
     }
 
     let fmc = resp2?;
     let v = serde_json::to_value(&fmc)?;
     upsert_market_data(conn, v).await?;
 
-    Ok(Json(MarketChartResult {
-        code: 200,
-        message: "".to_string(),
-        data: Some(fmc),
-    }))
+    Ok(Json(fmc))
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct PriceParams {
+    pub ids: Option<String>,
+    pub vs_currencies: Option<String>,
+}
+
+async fn get_price_data(mut conn: PoolConnection<Postgres>) -> Result<FraPrice> {
+    let row = sqlx::query("SELECT price FROM prices")
+        .fetch_one(&mut *conn)
+        .await?;
+    let p: String = row.try_get("price")?;
+    let fra_price = FraPrice { usd: p.parse()? };
+    Ok(fra_price)
+}
+
+async fn upsert_price_data(mut conn: PoolConnection<Postgres>, price: &str) -> Result<()> {
+    sqlx::query("INSERT INTO prices VALUES($1,$2) ON CONFLICT(name) DO UPDATE SET price=$2")
+        .bind("fra")
+        .bind(price)
+        .execute(&mut *conn)
+        .await?;
+
+    Ok(())
+}
+
+pub async fn get_price(
+    State(state): State<Arc<AppState>>,
+    Query(params): Query<PriceParams>,
+) -> Result<Json<SimplePrice>> {
+    let conn = state.pool.acquire().await?;
+    let ids = params.ids.unwrap_or("findora".to_string());
+    let vs_currencies = params.vs_currencies.unwrap_or("usd".to_string());
+
+    let url = format!(
+        "https://api.coingecko.com/api/v3/simple/price?ids={}&vs_currencies={}",
+        ids, vs_currencies
+    );
+    let resp1 = reqwest::get(url).await;
+    if resp1.is_err() {
+        let fra_price = get_price_data(conn).await?;
+        return Ok(Json(SimplePrice { findora: fra_price }));
+    }
+    let resp2 = resp1?.json::<SimplePrice>().await;
+    if resp2.is_err() {
+        let fra_price = get_price_data(conn).await?;
+        return Ok(Json(SimplePrice { findora: fra_price }));
+    }
+
+    let fra_price = resp2?.findora;
+    upsert_price_data(conn, fra_price.usd.to_string().as_str()).await?;
+
+    Ok(Json(SimplePrice { findora: fra_price }))
 }
