@@ -6,6 +6,7 @@
 * [1.3 交易分布](#1.3)
 * [1.4 获取cliam交易列表](#1.4)
 * [1.5 获取delegate交易列表](#1.5)
+* [1.6 获取undelegate交易列表](#1.6)
 
 ## Block
 * [2.1 根据哈希获取区块](#2.1)
@@ -348,6 +349,86 @@
                     "pubkey": "OmZMrZBVsPjQwvHsROCI3mRw2pdVnYER8Xa5lzQ3Ek0=",
                     "signature": "HEh--QNjRhigsXtOddRFaJISvHc-in86C8xDp3RW2icffPzOJlU7OS_nHsKpVO6wHlXC6vnzsEHm6ju2Qmi1DQ==",
                     "v_signature": null
+                }
+            }
+        }
+    ]
+}
+```
+
+<h3 id="1.6">1.6 获取undelegate交易列表</h3>
+
+* `GET /api/undelegations`
+
+
+| 参数        | 类型     | 必传 | 说明         |
+|-----------|--------|----|------------|
+| from      | string | N  | 交易发起者      |
+| page      | number | N  | 页码，缺省值为1   |
+| page_size | number | N  | 页大小，缺省值为10 |
+
+* Request: `/api/undelegations?page=1&page_size=10`
+* Response:
+```json
+{
+    "total": 1,
+    "page": 1,
+    "page_size": 10,
+    "data": [
+        {
+            "tx_hash": "91001c320aa13cef240f00b1cd941a429b72de9f089ccd301111998aa55d6562",
+            "block_hash": "CF66FCF9C09FA13C4838DB8DBDCB3D22950D575FD65A1CF0025489E356FF8555",
+            "from": "fra18fnyetvs2kc035xz78kyfcygmej8pk5h2kwczy03w6uewdphzfxsk74dym",
+            "new_delegator": "Vp_Ph2OobZuAOQ7vS7uXyjYcToAVoDGpo-hX55yAKLQ=",
+            "target_validator": "9E6717392EFDCFA101E33449A7C2A238251315B1",
+            "amount": 1000000,
+            "height": 2799433,
+            "timestamp": 1661765687,
+            "value": {
+                "UnDelegation": {
+                    "body": {
+                        "nonce": [
+                            [
+                                153,
+                                102,
+                                51,
+                                31,
+                                1,
+                                178,
+                                206,
+                                47
+                            ],
+                            39961
+                        ],
+                        "pu": {
+                            "am": 1000000,
+                            "new_delegator_id": "Vp_Ph2OobZuAOQ7vS7uXyjYcToAVoDGpo-hX55yAKLQ=",
+                            "target_validator": [
+                                158,
+                                103,
+                                23,
+                                57,
+                                46,
+                                253,
+                                207,
+                                161,
+                                1,
+                                227,
+                                52,
+                                73,
+                                167,
+                                194,
+                                162,
+                                56,
+                                37,
+                                19,
+                                21,
+                                177
+                            ]
+                        }
+                    },
+                    "pubkey": "OmZMrZBVsPjQwvHsROCI3mRw2pdVnYER8Xa5lzQ3Ek0=",
+                    "signature": "uvIqs2b8YXCTgHcGZKYYCcEwBCFl2cUg5xn5fXzBXNPimQNBIe6xf8naxBH_2Mr9sWFsgI-WgRIPGju61T9XBA=="
                 }
             }
         }
