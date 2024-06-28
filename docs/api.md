@@ -5,6 +5,7 @@
 * [1.2 获取交易列表](#1.2)
 * [1.3 交易分布](#1.3)
 * [1.4 获取cliam交易列表](#1.4)
+* [1.5 获取delegate交易列表](#1.5)
 
 ## Block
 * [2.1 根据哈希获取区块](#2.1)
@@ -296,6 +297,63 @@
 }
 ```
 
+<h3 id="1.5">1.5 获取delegate交易列表</h3>
+
+* `GET /api/delegations`
+
+
+| 参数        | 类型     | 必传 | 说明         |
+|-----------|--------|----|------------|
+| from      | string | N  | 交易发起者      |
+| page      | number | N  | 页码，缺省值为1   |
+| page_size | number | N  | 页大小，缺省值为10 |
+
+* Request: `/api/delegations?page=1&page_size=10`
+* Response:
+```json
+{
+    "total": 1,
+    "page": 1,
+    "page_size": 10,
+    "data": [
+        {
+            "tx_hash": "5ca21da32f029318e811db17f9240659c98e86169bd42c1b7901afff71b425b3",
+            "block_hash": "AF9C552F9A24283E8493823F4B188F63D3B3EFB5C7A23CEC3D31C13EAA038024",
+            "amount": 1000000,
+            "from": "fra18fnyetvs2kc035xz78kyfcygmej8pk5h2kwczy03w6uewdphzfxsk74dym",
+            "validator": "9E6717392EFDCFA101E33449A7C2A238251315B1",
+            "new_validator": "",
+            "height": 2799430,
+            "timestamp": 1661765633,
+            "value": {
+                "Delegation": {
+                    "body": {
+                        "amount": 1000000,
+                        "new_validator": null,
+                        "nonce": [
+                            [
+                                234,
+                                72,
+                                153,
+                                142,
+                                247,
+                                120,
+                                11,
+                                7
+                            ],
+                            39960
+                        ],
+                        "validator": "9E6717392EFDCFA101E33449A7C2A238251315B1"
+                    },
+                    "pubkey": "OmZMrZBVsPjQwvHsROCI3mRw2pdVnYER8Xa5lzQ3Ek0=",
+                    "signature": "HEh--QNjRhigsXtOddRFaJISvHc-in86C8xDp3RW2icffPzOJlU7OS_nHsKpVO6wHlXC6vnzsEHm6ju2Qmi1DQ==",
+                    "v_signature": null
+                }
+            }
+        }
+    ]
+}
+```
 
 <h3 id="2.1">2.1 根据哈希获取区块</h3>
 
