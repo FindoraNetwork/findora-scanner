@@ -4,6 +4,7 @@
 * [1.1 根据哈希获取交易](#1.1)
 * [1.2 获取交易列表](#1.2)
 * [1.3 交易分布](#1.3)
+* [1.4 获取cliam交易列表](#1.4)
 
 ## Block
 * [2.1 根据哈希获取区块](#2.1)
@@ -250,6 +251,48 @@
   "privacy": 2810,
   "prism": 10090,
   "evm_compatible": 2518950
+}
+```
+
+<h3 id="1.4">1.4 获取cliam交易列表</h3>
+
+* `GET /api/claims`
+
+
+| 参数        | 类型     | 必传 | 说明         |
+|-----------|--------|----|------------|
+| from      | string | N  | 交易发起者      |
+| page      | number | N  | 页码，缺省值为1   |
+| page_size | number | N  | 页大小，缺省值为10 |
+
+
+* Request: `/api/claims?page=1&page_size=10`
+* Response:
+```json
+{
+	"total": 1,
+	"page": 1,
+	"page_size": 10,
+	"data": [{
+		"tx_hash": "114710d4828472bc3e2da38089b70efe92d47f25b8b0439b918de227a9cbf392",
+		"block_hash": "951992A07625251F2CBF7805C063DD182AF3FD06641CC1400EBEA46A0D5834C1",
+		"from": "fra1xczgryuz65as77gf8d5f07xd0wetd8qpm5hvgqkfgc60gxdjpmkshnq9ys",
+		"amount": 20000,
+		"height": 2799448,
+		"timestamp": 1661765944,
+		"value": {
+			"Claim": {
+				"body": {
+					"amount": 20000,
+					"nonce": [
+						[216, 83, 96, 111, 84, 31, 175, 85], 39962
+					]
+				},
+				"pubkey": "NgSBk4LVOw95CTtol_jNe7K2nAHdLsQCyUY09BmyDu0=",
+				"signature": "2DMtKlq-VM17sLI7xJVql5lXR1v4W-wYDZ8Zlf8gVu09GWmgGjPQuaD9BrtX_0dYQ4bRgiMe9SrbK7qJOI6qAg=="
+			}
+		}
+	}]
 }
 ```
 
