@@ -16,7 +16,6 @@ use crate::{Error, Result};
 const DEFAULT_TIMEOUT_SECS: u64 = 32;
 const DEFAULT_RETIES: usize = 3;
 const DEFAULT_CONCURRENCY: usize = 8;
-//const DEFAULT_INTERVAL: Duration = Duration::from_secs(15);
 
 /// load block at specific height.
 #[derive(Parser, Debug)]
@@ -141,7 +140,7 @@ impl Subscribe {
 
         let itv = env::var("INTERVAL")
             .ok()
-            .unwrap_or(String::from("15"))
+            .unwrap_or("10".to_string())
             .parse::<u64>()?;
         let interval = Duration::from_secs(itv);
         info!("interval={:?}", interval);
