@@ -39,7 +39,7 @@ pub async fn get_statistics(
     let start_time = Local::now().date_naive().and_hms_opt(0, 0, 0).unwrap();
 
     if let Some(tx_type) = params.ty {
-        let sql_txs_count = format!("SELECT count(*) FROM transaction WHERE ty={}", tx_type);
+        let sql_txs_count = format!("SELECT count(height) FROM transaction WHERE ty={}", tx_type);
         let row_txs_count = sqlx::query(sql_txs_count.as_str())
             .fetch_one(&mut *conn)
             .await?;
@@ -51,14 +51,14 @@ pub async fn get_statistics(
             0 => {
                 sql_addrs_count = "SELECT count(distinct address) FROM native_addrs".to_string();
                 sql_daily_txs = format!(
-                    "SELECT count(*) FROM transaction WHERE ty=0 AND timestamp>={}",
+                    "SELECT count(height) FROM transaction WHERE ty=0 AND timestamp>={}",
                     start_time.and_utc().timestamp()
                 );
             }
             _ => {
                 sql_addrs_count = "SELECT count(distinct address) FROM evm_addrs".to_string();
                 sql_daily_txs = format!(
-                    "SELECT count(*) FROM transaction WHERE ty=1 AND timestamp>={}",
+                    "SELECT count(height) FROM transaction WHERE ty=1 AND timestamp>={}",
                     start_time.and_utc().timestamp()
                 );
             }
@@ -78,7 +78,7 @@ pub async fn get_statistics(
         stat.total_txs = txs_count;
         stat.daily_txs = daily_txs
     } else {
-        let sql_txs_count = "SELECT count(*) FROM transaction".to_string();
+        let sql_txs_count = "SELECT count(height) FROM transaction".to_string();
         let row_txs_count = sqlx::query(sql_txs_count.as_str())
             .fetch_one(&mut *conn)
             .await?;
@@ -97,7 +97,7 @@ pub async fn get_statistics(
         let native_addrs: i64 = row_native_addr.try_get("count")?;
 
         let sql_daily_txs = format!(
-            "SELECT count(*) FROM transaction WHERE timestamp>={}",
+            "SELECT count(height) FROM transaction WHERE timestamp>={}",
             start_time.and_utc().timestamp()
         );
         let row_daily = sqlx::query(sql_daily_txs.as_str())
@@ -127,23 +127,24 @@ pub async fn get_tx_distribute(
 ) -> Result<Json<TxsDistributeResponse>> {
     let mut conn = state.pool.acquire().await?;
 
-    let sql_native = "SELECT count(*) FROM transaction WHERE ty=0";
+    let sql_native = "SELECT count(height) FROM transaction WHERE ty=0";
     let row_native = sqlx::query(sql_native).fetch_one(&mut *conn).await?;
     let native_count: i64 = row_native.try_get("count")?;
 
-    let sql_privacy = "SELECT count(*) FROM transaction WHERE ty_sub=2 or ty_sub=3 or ty_sub=4";
+    let sql_privacy =
+        "SELECT count(height) FROM transaction WHERE ty_sub=2 or ty_sub=3 or ty_sub=4";
     let row_privacy = sqlx::query(sql_privacy).fetch_one(&mut *conn).await?;
     let privacy: i64 = row_privacy.try_get("count")?;
 
-    let sql_evm = "SELECT count(*) FROM transaction WHERE ty=1";
+    let sql_evm = "SELECT count(height) FROM transaction WHERE ty=1";
     let row_evm = sqlx::query(sql_evm).fetch_one(&mut *conn).await?;
     let evm_count: i64 = row_evm.try_get("count")?;
 
-    let sql_prism_n2e = "SELECT count(*) FROM n2e";
+    let sql_prism_n2e = "SELECT count(height) FROM n2e";
     let row_n2e = sqlx::query(sql_prism_n2e).fetch_one(&mut *conn).await?;
     let n2e_count: i64 = row_n2e.try_get("count")?;
 
-    let sql_prism_e2n = "SELECT count(*) FROM e2n";
+    let sql_prism_e2n = "SELECT count(height) FROM e2n";
     let row_e2n = sqlx::query(sql_prism_e2n).fetch_one(&mut *conn).await?;
     let e2n_count: i64 = row_e2n.try_get("count")?;
 

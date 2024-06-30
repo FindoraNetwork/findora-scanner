@@ -36,7 +36,7 @@ pub async fn get_assets(
     let page = params.page.unwrap_or(1);
     let page_size = params.page_size.unwrap_or(10);
 
-    let mut sql_total = "SELECT count(*) FROM assets ".to_string();
+    let mut sql_total = "SELECT count(height) FROM assets ".to_string();
     let mut sql_query =
         "SELECT asset,tx,block,issuer,height,timestamp,ty,content FROM assets ".to_string();
     let mut query_params: Vec<String> = vec![];
