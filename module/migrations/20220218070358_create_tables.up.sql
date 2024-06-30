@@ -90,6 +90,7 @@ create table native_addrs(
     address varchar(64) not null,
     timestamp bigint not null
 );
+create index idx_ntvaddr on native_addrs(address);
 
 create table evm_addrs(
     id bigserial primary key,
@@ -97,6 +98,7 @@ create table evm_addrs(
     address varchar(64) not null,
     timestamp bigint not null
 );
+create index idx_evmaddr on evm_addrs(address);
 
 create table assets(
     asset varchar(64) not null,
