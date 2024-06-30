@@ -82,7 +82,7 @@ pub async fn get_undelegations(
     let (sql_count, sql_query) = if let Some(from) = params.from {
         (
             format!(
-                "SELECT count(*) FROM undelegations WHERE sender='{}'",
+                "SELECT count(height) FROM undelegations WHERE sender='{}'",
                 from.to_lowercase()
             ),
             format!(
@@ -92,7 +92,7 @@ pub async fn get_undelegations(
         )
     } else {
         (
-            "SELECT count(*) FROM undelegations".to_string(),
+            "SELECT count(height) FROM undelegations".to_string(),
             format!("SELECT tx,block,sender,amount,target_validator,new_delegator,height,timestamp,content \
             FROM undelegations ORDER BY timestamp DESC LIMIT {} OFFSET {}", page_size, (page-1)*page_size)
         )

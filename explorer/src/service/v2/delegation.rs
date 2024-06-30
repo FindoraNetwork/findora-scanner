@@ -83,7 +83,7 @@ pub async fn get_delegations(
     let (sql_count, sql_query) = if let Some(addr) = params.from {
         (
             format!(
-                "SELECT count(*) FROM delegations WHERE sender='{}'",
+                "SELECT count(height) FROM delegations WHERE sender='{}'",
                 addr.to_lowercase()
             ),
             format!(
@@ -96,7 +96,7 @@ pub async fn get_delegations(
         )
     } else {
         (
-            "SELECT count(*) FROM delegations".to_string(),
+            "SELECT count(height) FROM delegations".to_string(),
             format!(
                 "SELECT tx,block,sender,amount,validator,new_validator,timestamp,height,content \
                 FROM delegations ORDER BY timestamp DESC LIMIT {} OFFSET {}",

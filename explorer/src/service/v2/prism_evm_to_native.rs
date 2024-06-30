@@ -81,7 +81,7 @@ pub async fn get_e2n_txs(
     let page = params.page.unwrap_or(1);
     let page_size = params.page_size.unwrap_or(10);
 
-    let mut sql_total = "SELECT count(*) FROM e2n ".to_string();
+    let mut sql_total = "SELECT count(height) FROM e2n ".to_string();
     let mut sql_query = "SELECT tx_hash,block_hash,sender,receiver,asset,amount,decimal,height,timestamp,value FROM e2n ".to_string();
 
     let mut query_params: Vec<String> = vec![];

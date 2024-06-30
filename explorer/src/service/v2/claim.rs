@@ -78,14 +78,14 @@ pub async fn get_claims(
 
     let (sql_count, sql_query) = if let Some(from) = params.from {
         (format!(
-            "SELECT count(*) FROM claims WHERE sender='{}'",
+            "SELECT count(height) FROM claims WHERE sender='{}'",
             from.to_lowercase()
         ),format!(
             "SELECT tx,block,sender,amount,height,timestamp,content FROM claims WHERE sender='{}' ORDER BY timestamp DESC LIMIT {} OFFSET {}",
             from.to_lowercase(), page_size, (page-1)*page_size
         ))
     } else {
-        ("SELECT count(*) FROM claims".to_string(),
+        ("SELECT count(height) FROM claims".to_string(),
          format!(
              "SELECT tx,block,sender,amount,height,timestamp,content FROM claims ORDER BY timestamp DESC LIMIT {} OFFSET {}",
              page_size, (page-1)*page_size

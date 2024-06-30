@@ -37,7 +37,7 @@ pub async fn get_n2e_txs(
     let mut conn = state.pool.acquire().await?;
     let page = params.page.unwrap_or(1);
     let page_size = params.page_size.unwrap_or(10);
-    let mut sql_total = "SELECT count(*) FROM n2e ".to_string();
+    let mut sql_total = "SELECT count(height) FROM n2e ".to_string();
     let mut sql_query =
         "SELECT tx,block,sender,receiver,asset,amount,height,timestamp,content FROM n2e "
             .to_string();

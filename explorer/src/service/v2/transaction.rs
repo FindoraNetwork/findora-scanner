@@ -31,7 +31,7 @@ pub async fn get_txs(
     let page_size = params.page_size.unwrap_or(10);
 
     let mut sql_query = String::from("SELECT tx_hash,block_hash,ty,timestamp,height,code,log,origin,result,value FROM transaction ");
-    let mut sql_total = String::from("SELECT count(*) FROM transaction ");
+    let mut sql_total = String::from("SELECT count(height) FROM transaction ");
     let mut query_params: Vec<String> = vec![];
     if let Some(from) = params.from {
         query_params.push(format!("sender='{}' ", from))
