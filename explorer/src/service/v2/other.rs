@@ -186,13 +186,15 @@ pub async fn get_address_count(
             .add(query_params.join(" AND ").as_str());
     }
 
-    let row_native = sqlx::query(sql_native.as_str())
+    let sql_query = format!(
+        "select ({}) as native_count, ({}) as evm_count",
+        sql_native, sql_evm
+    );
+    let row = sqlx::query(sql_query.as_str())
         .fetch_one(&mut *conn)
         .await?;
-    let native_count: i64 = row_native.try_get("count")?;
-
-    let row_evm = sqlx::query(sql_evm.as_str()).fetch_one(&mut *conn).await?;
-    let evm_count: i64 = row_evm.try_get("count")?;
+    let native_count: i64 = row.try_get("native_count")?;
+    let evm_count: i64 = row.try_get("evm_count")?;
 
     Ok(Json(AddressCountResponse {
         count: native_count + evm_count,
