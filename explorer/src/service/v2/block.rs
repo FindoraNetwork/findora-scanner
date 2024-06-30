@@ -229,7 +229,7 @@ pub async fn get_blocks(
 ) -> Result<Json<QueryResult<Vec<BlockResponse>>>> {
     let mut pool = state.pool.acquire().await?;
     let page = params.page.unwrap_or(1);
-    let page_size = params.page_size.unwrap_or(10);
+    let page_size = params.page_size.unwrap_or(0);
 
     let sql_total = "SELECT max(height) FROM block";
     let row = sqlx::query(sql_total).fetch_one(&mut *pool).await?;
