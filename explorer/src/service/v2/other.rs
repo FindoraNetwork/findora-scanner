@@ -131,7 +131,8 @@ pub async fn get_tx_distribute(
     let row_native = sqlx::query(sql_native).fetch_one(&mut *conn).await?;
     let native_count: i64 = row_native.try_get("count")?;
 
-    let sql_privacy = "SELECT count(height) FROM transaction WHERE ty_sub=2 or ty_sub=3 or ty_sub=4";
+    let sql_privacy =
+        "SELECT count(height) FROM transaction WHERE ty_sub=2 or ty_sub=3 or ty_sub=4";
     let row_privacy = sqlx::query(sql_privacy).fetch_one(&mut *conn).await?;
     let privacy: i64 = row_privacy.try_get("count")?;
 
