@@ -127,26 +127,19 @@ pub async fn get_tx_distribute(
 ) -> Result<Json<TxsDistributeResponse>> {
     let mut conn = state.pool.acquire().await?;
 
-    let sql_native = "SELECT count(height) FROM transaction WHERE ty=0";
-    let row_native = sqlx::query(sql_native).fetch_one(&mut *conn).await?;
-    let native_count: i64 = row_native.try_get("count")?;
+    let sql_query = "select (SELECT count(height) FROM transaction WHERE ty=0) as native_count,\
+        (SELECT count(height) FROM transaction WHERE ty_sub in (2,3,4)) as privacy_count,\
+        (SELECT count(height) FROM transaction WHERE ty=1) as evm_count,\
+        (SELECT count(height) FROM n2e) as n2e_count,\
+        (SELECT count(height) FROM e2n) as e2n_count";
 
-    let sql_privacy =
-        "SELECT count(height) FROM transaction WHERE ty_sub=2 or ty_sub=3 or ty_sub=4";
-    let row_privacy = sqlx::query(sql_privacy).fetch_one(&mut *conn).await?;
-    let privacy: i64 = row_privacy.try_get("count")?;
+    let row = sqlx::query(sql_query).fetch_one(&mut *conn).await?;
 
-    let sql_evm = "SELECT count(height) FROM transaction WHERE ty=1";
-    let row_evm = sqlx::query(sql_evm).fetch_one(&mut *conn).await?;
-    let evm_count: i64 = row_evm.try_get("count")?;
-
-    let sql_prism_n2e = "SELECT count(height) FROM n2e";
-    let row_n2e = sqlx::query(sql_prism_n2e).fetch_one(&mut *conn).await?;
-    let n2e_count: i64 = row_n2e.try_get("count")?;
-
-    let sql_prism_e2n = "SELECT count(height) FROM e2n";
-    let row_e2n = sqlx::query(sql_prism_e2n).fetch_one(&mut *conn).await?;
-    let e2n_count: i64 = row_e2n.try_get("count")?;
+    let native_count: i64 = row.try_get("native_count")?;
+    let privacy: i64 = row.try_get("privacy_count")?;
+    let evm_count: i64 = row.try_get("evm_count")?;
+    let n2e_count: i64 = row.try_get("n2e_count")?;
+    let e2n_count: i64 = row.try_get("e2n_count")?;
 
     Ok(Json(TxsDistributeResponse {
         transparent: native_count - privacy,
