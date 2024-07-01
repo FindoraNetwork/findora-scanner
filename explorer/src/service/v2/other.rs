@@ -40,11 +40,6 @@ pub async fn get_statistics(
 
     if let Some(tx_type) = params.ty {
         let sql_txs_count = format!("SELECT count(height) FROM transaction WHERE ty={}", tx_type);
-        let row_txs_count = sqlx::query(sql_txs_count.as_str())
-            .fetch_one(&mut *conn)
-            .await?;
-        let txs_count = row_txs_count.try_get("count")?;
-
         let sql_addrs_count: String;
         let sql_daily_txs: String;
         match tx_type {
@@ -64,46 +59,39 @@ pub async fn get_statistics(
             }
         }
 
-        let row_addr_count = sqlx::query(sql_addrs_count.as_str())
+        let sql_query = format!(
+            "select ({}) as txs_count, ({}) as addrs_count, ({}) as daily_count",
+            sql_txs_count, sql_addrs_count, sql_daily_txs
+        );
+        let row = sqlx::query(sql_query.as_str())
             .fetch_one(&mut *conn)
             .await?;
-        let addr_count: i64 = row_addr_count.try_get("count")?;
 
-        let row_daily = sqlx::query(sql_daily_txs.as_str())
-            .fetch_one(&mut *conn)
-            .await?;
-        let daily_txs = row_daily.try_get("count")?;
+        let txs_count: i64 = row.try_get("txs_count")?;
+        let addr_count: i64 = row.try_get("addrs_count")?;
+        let daily_txs: i64 = row.try_get("daily_count")?;
 
         stat.active_addrs = addr_count;
         stat.total_txs = txs_count;
         stat.daily_txs = daily_txs
     } else {
         let sql_txs_count = "SELECT count(height) FROM transaction".to_string();
-        let row_txs_count = sqlx::query(sql_txs_count.as_str())
-            .fetch_one(&mut *conn)
-            .await?;
-        let txs_count = row_txs_count.try_get("count")?;
-
         let sql_evm_addrs_count = "SELECT count(distinct address) FROM evm_addrs".to_string();
-        let row_evm_addr = sqlx::query(sql_evm_addrs_count.as_str())
-            .fetch_one(&mut *conn)
-            .await?;
-        let evm_addrs: i64 = row_evm_addr.try_get("count")?;
-
         let sql_native_addrs_count = "SELECT count(distinct address) FROM native_addrs".to_string();
-        let row_native_addr = sqlx::query(sql_native_addrs_count.as_str())
-            .fetch_one(&mut *conn)
-            .await?;
-        let native_addrs: i64 = row_native_addr.try_get("count")?;
-
         let sql_daily_txs = format!(
             "SELECT count(height) FROM transaction WHERE timestamp>={}",
             start_time.and_utc().timestamp()
         );
-        let row_daily = sqlx::query(sql_daily_txs.as_str())
+
+        let sql_query = format!("select ({}) as txs_count, ({}) as evm_addrs_count, ({}) as native_addrs_count, ({}) as daily_count", sql_txs_count, sql_evm_addrs_count, sql_native_addrs_count, sql_daily_txs);
+        let row = sqlx::query(sql_query.as_str())
             .fetch_one(&mut *conn)
             .await?;
-        let daily_txs = row_daily.try_get("count")?;
+
+        let txs_count: i64 = row.try_get("txs_count")?;
+        let evm_addrs: i64 = row.try_get("evm_addrs_count")?;
+        let native_addrs: i64 = row.try_get("native_addrs_count")?;
+        let daily_txs: i64 = row.try_get("daily_count")?;
 
         stat.active_addrs = native_addrs + evm_addrs;
         stat.total_txs = txs_count;
