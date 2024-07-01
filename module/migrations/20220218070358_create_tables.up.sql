@@ -33,6 +33,7 @@ create index tx_block_index on transaction (block_hash);
 create index tx_height_index on transaction (height);
 create index tx_time_index on transaction (timestamp);
 create index tx_sender_index on transaction(sender);
+create index tx_recv_index on transaction(receiver);
 
 create table e2n (
     tx_hash varchar(64) not null,
