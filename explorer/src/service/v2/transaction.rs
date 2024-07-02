@@ -30,7 +30,7 @@ pub async fn get_txs(
     let page = params.page.unwrap_or(1);
     let page_size = params.page_size.unwrap_or(10);
 
-    let mut sql_query = String::from("SELECT tx_hash,block_hash,ty,timestamp,height,code,log,origin,result,value FROM transaction ");
+    let mut sql_query = String::from("SELECT tx_hash,block_hash,ty,ty_sub,timestamp,height,code,log,origin,result,value FROM transaction ");
     let mut sql_total = String::from("SELECT count(height) FROM transaction ");
     let mut query_params: Vec<String> = vec![];
     if let Some(from) = params.from {
@@ -75,6 +75,7 @@ pub async fn get_txs(
         let tx_hash: String = row.try_get("tx_hash")?;
         let block_hash: String = row.try_get("block_hash")?;
         let ty: i32 = row.try_get("ty")?;
+        let ty_sub: i32 = row.try_get("ty_sub")?;
         let timestamp: i64 = row.try_get("timestamp")?;
         let height: i64 = row.try_get("height")?;
         let code: i64 = row.try_get("code")?;
@@ -97,7 +98,7 @@ pub async fn get_txs(
             block_hash,
             height,
             timestamp,
-            ty,
+            ty: if ty == 0 { ty_sub } else { ty },
             code,
             log,
             origin,
@@ -125,7 +126,7 @@ pub async fn get_tx_by_hash(
 ) -> Result<Json<TransactionResponse>> {
     let mut conn = state.pool.acquire().await?;
 
-    let sql_query = r#"SELECT tx_hash,block_hash,height,timestamp,ty,code,log,origin,result,value
+    let sql_query = r#"SELECT tx_hash,block_hash,height,timestamp,ty,ty_sub,code,log,origin,result,value
         FROM transaction WHERE tx_hash=$1"#;
 
     let row = sqlx::query(sql_query)
@@ -136,6 +137,7 @@ pub async fn get_tx_by_hash(
     let tx_hash: String = row.try_get("tx_hash")?;
     let block_hash: String = row.try_get("block_hash")?;
     let ty: i32 = row.try_get("ty")?;
+    let ty_sub: i32 = row.try_get("ty_sub")?;
     let timestamp: i64 = row.try_get("timestamp")?;
     let height: i64 = row.try_get("height")?;
     let code: i64 = row.try_get("code")?;
@@ -158,7 +160,7 @@ pub async fn get_tx_by_hash(
         block_hash,
         height,
         timestamp,
-        ty,
+        ty: if ty == 0 { ty_sub } else { ty },
         code,
         log,
         origin,
