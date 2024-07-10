@@ -15,11 +15,13 @@ pub enum ExplorerError {
     ReqwestErr(reqwest::Error),
     ParseFloatErr(ParseFloatError),
 }
+
 impl From<ParseFloatError> for ExplorerError {
     fn from(e: ParseFloatError) -> Self {
         ExplorerError::ParseFloatErr(e)
     }
 }
+
 impl From<reqwest::Error> for ExplorerError {
     fn from(e: reqwest::Error) -> Self {
         ExplorerError::ReqwestErr(e)
@@ -74,12 +76,12 @@ impl IntoResponse for ExplorerError {
     fn into_response(self) -> Response {
         let err_msg = match self {
             ExplorerError::Custom(e) => e,
-            ExplorerError::DBErr(e) => {
-                if let RowNotFound = e {
+            ExplorerError::DBErr(e) => match e {
+                RowNotFound => {
                     return (StatusCode::NOT_FOUND, "not found").into_response();
                 }
-                e.to_string()
-            }
+                _ => e.to_string(),
+            },
             ExplorerError::IOErr(e) => e.to_string(),
             ExplorerError::TomlDeErr(e) => e.to_string(),
             ExplorerError::HexErr(e) => e.to_string(),
